@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -173,13 +174,18 @@ private fun SetupDialog(model: MathViewModel) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 row.forEach { operation ->
                     val selected = model.selectedOperation == operation
-                    val modifier = Modifier.weight(1f).height(56.dp).semantics { this.selected = selected }
+                    val modifier = Modifier.weight(1f).height(72.dp).semantics { this.selected = selected }
                         .testTag("operation-${operation.name}")
+                    val padding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
                     val label: @Composable () -> Unit = {
-                        Text("${operation.symbol}  ${operation.label}", maxLines = 1, softWrap = false)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(operation.symbol, style = MaterialTheme.typography.titleLarge)
+                            Text(operation.label, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                                overflow = TextOverflow.Ellipsis)
+                        }
                     }
-                    if (selected) Button(onClick = { model.selectOperation(operation) }, modifier) { label() }
-                    else OutlinedButton(onClick = { model.selectOperation(operation) }, modifier) { label() }
+                    if (selected) Button(onClick = { model.selectOperation(operation) }, modifier, contentPadding = padding) { label() }
+                    else OutlinedButton(onClick = { model.selectOperation(operation) }, modifier, contentPadding = padding) { label() }
                 }
             }
         }
