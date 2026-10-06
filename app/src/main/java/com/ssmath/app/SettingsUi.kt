@@ -76,6 +76,15 @@ fun SettingsScreen(model: MathViewModel) {
                 Switch(model.showTimer, model::chooseShowTimer,
                     modifier = Modifier.semantics { contentDescription = "Show timer" })
             }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Show correct answers")
+                    Text("Reveal correct answers after mistakes, including in results and history",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(model.showCorrectAnswers, model::chooseShowCorrectAnswers,
+                    modifier = Modifier.semantics { contentDescription = "Show correct answers" })
+            }
             HorizontalDivider()
             Text("Appearance", style = MaterialTheme.typography.titleMedium)
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -119,7 +128,7 @@ fun HistoryScreen(model: MathViewModel) {
         ScreenScaffold("Practice result", model::closeOverlay, actions = {
             IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") }
         }) {
-            ResultsContent(detail, title = null) {
+            ResultsContent(detail, title = null, showCorrectAnswers = model.showCorrectAnswers) {
                 OutlinedButton(onClick = model::closeOverlay, modifier = Modifier.widthIn(min = 160.dp)) { Text("Back") }
             }
         }
