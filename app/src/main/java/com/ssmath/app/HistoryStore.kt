@@ -22,7 +22,8 @@ data class PracticeResult(
     val operation: Operation,
     val maximum: Int,
     val durationMs: Long,
-    val attempts: List<Attempt>
+    val attempts: List<Attempt>,
+    val minimum: Int = MIN_MAXIMUM
 ) {
     val correct: Int get() = attempts.count { it.correct }
     val wrong: Int get() = attempts.count { !it.correct }

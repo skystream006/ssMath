@@ -65,20 +65,21 @@ fun parseAnswer(text: String): Int? {
 
 class ProblemGenerator(private val random: Random = Random.Default) {
     /**
-     * Creates a random problem whose two numbers are each between 1 and [maximum].
+     * Creates a random problem whose two numbers are each between [minimum] and [maximum].
      * Subtraction never goes below zero and division always has a whole-number answer.
      */
-    fun next(operation: Operation, maximum: Int, previous: Problem? = null): Problem {
+    fun next(operation: Operation, maximum: Int, previous: Problem? = null, minimum: Int = MIN_MAXIMUM): Problem {
         require(maximum in MIN_MAXIMUM..MAX_MAXIMUM) { "Maximum must be between $MIN_MAXIMUM and $MAX_MAXIMUM." }
-        var problem = create(operation, maximum)
+        require(minimum in MIN_MAXIMUM..maximum) { "Minimum must be between $MIN_MAXIMUM and the maximum." }
+        var problem = create(operation, minimum, maximum)
         // Avoid showing the identical problem twice in a row whenever another one exists.
         var retries = 0
-        while (problem == previous && retries++ < 20) problem = create(operation, maximum)
+        while (problem == previous && retries++ < 20) problem = create(operation, minimum, maximum)
         return problem
     }
 
-    private fun create(operation: Operation, maximum: Int): Problem {
-        fun number() = random.nextInt(1, maximum + 1)
+    private fun create(operation: Operation, minimum: Int, maximum: Int): Problem {
+        fun number() = random.nextInt(minimum, maximum + 1)
         return when (operation) {
             Operation.ADDITION, Operation.MULTIPLICATION -> Problem(number(), number(), operation)
             Operation.SUBTRACTION -> {
@@ -87,10 +88,10 @@ class ProblemGenerator(private val random: Random = Random.Default) {
                 Problem(maxOf(a, b), minOf(a, b), operation)
             }
             Operation.DIVISION -> {
-                // Pick uniformly among every (divisor, quotient) pair whose dividend fits the maximum.
-                val total = (1..maximum).sumOf { maximum / it }
+                // Each divisor is in range, so every positive multiple up to the maximum is too.
+                val total = (minimum..maximum).sumOf { maximum / it }
                 var pick = random.nextInt(total)
-                var divisor = 1
+                var divisor = minimum
                 while (pick >= maximum / divisor) {
                     pick -= maximum / divisor
                     divisor++
@@ -107,9 +108,11 @@ data class GameState(
     val maximum: Int,
     val problem: Problem,
     val attempts: List<Attempt> = emptyList(),
-    val questionCount: Int = DEFAULT_QUESTION_COUNT
+    val questionCount: Int = DEFAULT_QUESTION_COUNT,
+    val minimum: Int = MIN_MAXIMUM
 ) {
     init {
+        require(minimum in MIN_MAXIMUM..maximum) { "Minimum must be between $MIN_MAXIMUM and the maximum." }
         require(questionCount in MIN_QUESTION_COUNT..MAX_QUESTION_COUNT) {
             "Question count must be between $MIN_QUESTION_COUNT and $MAX_QUESTION_COUNT."
         }
@@ -124,13 +127,14 @@ data class GameState(
     fun answer(value: Int, generator: ProblemGenerator): GameState {
         check(!finished) { "The game is over." }
         val next = copy(attempts = attempts + Attempt(problem, value))
-        return if (next.finished) next else next.copy(problem = generator.next(operation, maximum, problem))
+        return if (next.finished) next else next.copy(problem = generator.next(operation, maximum, problem, minimum))
     }
 
     companion object {
         fun start(operation: Operation, maximum: Int, generator: ProblemGenerator,
-            questionCount: Int = DEFAULT_QUESTION_COUNT) =
-            GameState(operation, maximum, generator.next(operation, maximum), questionCount = questionCount)
+            questionCount: Int = DEFAULT_QUESTION_COUNT, minimum: Int = MIN_MAXIMUM) =
+            GameState(operation, maximum, generator.next(operation, maximum, minimum = minimum),
+                questionCount = questionCount, minimum = minimum)
     }
 }
 

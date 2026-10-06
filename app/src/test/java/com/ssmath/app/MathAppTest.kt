@@ -54,13 +54,16 @@ class MathAppTest {
         val model = model()
         compose.setContent { MathAppContent(model) }
         compose.onNodeWithText("What would you like to practice?").assertIsDisplayed()
-        compose.onNodeWithText("What is the maximum number?").assertIsDisplayed()
+        compose.onNodeWithText("What is the minimum number?").assertIsDisplayed()
+        compose.onNodeWithText("What is the maximum number?").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("submit-setup").assertIsNotEnabled()
-        compose.onNodeWithTag("operation-MULTIPLICATION").performClick()
-        compose.onNodeWithTag("maximum-input").performTextReplacement("6")
-        compose.onNodeWithTag("submit-setup").performClick()
+        compose.onNodeWithTag("operation-MULTIPLICATION").performScrollTo().performClick()
+        compose.onNodeWithTag("minimum-input").performScrollTo().performTextReplacement("4")
+        compose.onNodeWithTag("maximum-input").performScrollTo().performTextReplacement("6")
+        compose.onNodeWithTag("submit-setup").performScrollTo().performClick()
 
         compose.onNodeWithText("Press Start when Ready").assertIsDisplayed()
+        compose.onNodeWithText("numbers 4 to 6", substring = true).assertIsDisplayed()
         compose.onNodeWithTag("start-button").performClick()
         compose.onNodeWithTag("timer").assertIsDisplayed()
         compose.onNodeWithTag("wrong-tally").assertTextEquals("Wrong: 0")
@@ -80,9 +83,20 @@ class MathAppTest {
         assertEquals(MAX_WRONG_ANSWERS, compose.onAllNodesWithContentDescription("Wrong").fetchSemanticsNodes().size)
         compose.waitUntil(5_000) { model.history.size == 1 }
         assertEquals(1, HistoryStore(File(application.filesDir, "practice_history.json")).load().single().correct)
+        assertEquals(4, model.lastResult!!.minimum)
+        assertEquals(4, HistoryStore(File(application.filesDir, "practice_history.json")).load().single().minimum)
+        model.lastResult!!.attempts.forEach {
+            assertTrue(it.problem.left in 4..6)
+            assertTrue(it.problem.right in 4..6)
+        }
+        compose.onNodeWithText("Multiplication · numbers 4 to 6").assertIsDisplayed()
 
         compose.onNodeWithTag("done-button").performClick()
         compose.onNodeWithText("What would you like to practice?").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithTag("practice-history").performClick()
+        compose.onNodeWithText("Multiplication · 4 to 6").performClick()
+        compose.onNodeWithText("Multiplication · numbers 4 to 6").assertIsDisplayed()
     }
 
     @Test fun settingsCanHideTheTimerAndOpenPracticeHistory() {
@@ -98,7 +112,7 @@ class MathAppTest {
         compose.onNodeWithContentDescription("Back").performClick()
 
         compose.onNodeWithTag("operation-ADDITION").performClick()
-        compose.onNodeWithTag("submit-setup").performClick()
+        compose.onNodeWithTag("submit-setup").performScrollTo().performClick()
         compose.onNodeWithTag("start-button").performClick()
         compose.onNodeWithTag("problem").assertIsDisplayed()
         compose.onNodeWithTag("timer").assertDoesNotExist()
@@ -196,15 +210,63 @@ class MathAppTest {
 
         compose.onNodeWithContentDescription("Settings").performClick()
         compose.onNodeWithTag("practice-history").performClick()
-        compose.onNodeWithText("Addition · up to 10").performClick()
+        compose.onNodeWithText("Addition · 1 to 10").performClick()
         compose.onNodeWithText("${problem.text} = $given").assertIsDisplayed()
         compose.onNodeWithText("Correct answer:", substring = true).assertDoesNotExist()
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithContentDescription("Show correct answers").performClick()
         compose.onNodeWithTag("practice-history").performClick()
-        compose.onNodeWithText("Addition · up to 10").performClick()
+        compose.onNodeWithText("Addition · 1 to 10").performClick()
         compose.onNodeWithText("Correct answer: ${problem.answer}").assertIsDisplayed()
+    }
+
+    @Test fun setupShowsMinimumBeforeMaximumAndAQuestionCountHeading() {
+        val model = model()
+        compose.setContent { MathAppContent(model) }
+        val minimumHeading = compose.onNodeWithText("What is the minimum number?")
+        val minimumInput = compose.onNodeWithTag("minimum-input")
+        val maximumHeading = compose.onNodeWithText("What is the maximum number?")
+        maximumHeading.performScrollTo().assertIsDisplayed()
+        minimumHeading.assertIsDisplayed()
+        minimumInput.assertIsDisplayed()
+        assertTrue(minimumHeading.fetchSemanticsNode().boundsInRoot.bottom <=
+            minimumInput.fetchSemanticsNode().boundsInRoot.top)
+        assertTrue(minimumInput.fetchSemanticsNode().boundsInRoot.bottom <=
+            maximumHeading.fetchSemanticsNode().boundsInRoot.top)
+        compose.onNodeWithTag("question-count-input").performScrollTo().assertIsDisplayed()
+        val questionHeading = compose.onNodeWithText("How many questions would you like?")
+        questionHeading.assertIsDisplayed()
+        assertTrue(questionHeading.fetchSemanticsNode().boundsInRoot.bottom <=
+            compose.onNodeWithTag("question-count-input").fetchSemanticsNode().boundsInRoot.top)
+    }
+
+    @Test fun minimumIsValidatedAndRemembered() {
+        val model = model()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("operation-ADDITION").performClick()
+        compose.onNodeWithTag("minimum-input").assertTextContains("1")
+        listOf("", "0", "-1", "1.5", "abc", "11", (MAX_MAXIMUM + 1).toString(), "999999").forEach { invalid ->
+            compose.onNodeWithTag("minimum-input").performScrollTo().performTextReplacement(invalid)
+            compose.onNodeWithTag("submit-setup").assertIsNotEnabled()
+            compose.runOnIdle {
+                model.submitSetup()
+                model.start()
+            }
+            assertEquals(Screen.SETUP, model.screen)
+            assertNull(model.game)
+        }
+        compose.onNodeWithTag("minimum-input").performTextReplacement("7")
+        compose.onNodeWithTag("maximum-input").performScrollTo().performTextReplacement("6")
+        compose.onNodeWithTag("submit-setup").assertIsNotEnabled()
+        compose.onNodeWithTag("question-count-input").performScrollTo().performImeAction()
+        assertEquals(Screen.SETUP, model.screen)
+        compose.onNodeWithTag("maximum-input").performScrollTo().performTextReplacement("7")
+        compose.onNodeWithTag("submit-setup").performScrollTo().assertIsEnabled().performClick()
+        assertEquals(7, model().minimum)
+        assertEquals(7, model().maximum)
+        compose.onNodeWithTag("start-button").performClick()
+        assertEquals(Problem(7, 7, Operation.ADDITION), model.game!!.problem)
     }
 
     @Test fun questionCountIsValidatedAndRemembered() {
@@ -213,7 +275,7 @@ class MathAppTest {
         compose.onNodeWithTag("operation-ADDITION").performClick()
         compose.onNodeWithTag("question-count-input").assertTextContains(DEFAULT_QUESTION_COUNT.toString())
         listOf("", "0", "-1", "1.5", "abc", (MAX_QUESTION_COUNT + 1).toString(), "999999").forEach { invalid ->
-            compose.onNodeWithTag("question-count-input").performTextReplacement(invalid)
+            compose.onNodeWithTag("question-count-input").performScrollTo().performTextReplacement(invalid)
             compose.onNodeWithTag("submit-setup").assertIsNotEnabled()
             compose.runOnIdle { model.submitSetup() }
             assertEquals(Screen.SETUP, model.screen)

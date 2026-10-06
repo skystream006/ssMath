@@ -32,6 +32,22 @@ class HistoryStoreTest {
         assertEquals(result(3_000, correct = 4), loaded.first())
     }
 
+    @Test fun savesTheSelectedMinimum() {
+        val result = result(1_000).copy(minimum = 4,
+            attempts = listOf(Attempt(Problem(4, 5, Operation.ADDITION), 9)))
+        store.add(result)
+        assertEquals(result, HistoryStore(file).load().single())
+    }
+
+    @Test fun olderResultsWithoutAMinimumStillLoad() {
+        file.writeText("""[{"id":1000,"finishedAt":1000,"operation":"ADDITION","maximum":10,
+            "durationMs":1000,"attempts":[{"problem":{"left":2,"right":3,"operation":"ADDITION"},"given":5}]}]""")
+        val result = store.load().single()
+        assertEquals(1, result.minimum)
+        assertEquals(10, result.maximum)
+        assertEquals(1, result.correct)
+    }
+
     @Test fun deletesAndClearsResults() {
         store.add(result(1_000))
         store.add(result(2_000))
