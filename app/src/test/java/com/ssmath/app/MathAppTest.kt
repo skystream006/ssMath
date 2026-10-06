@@ -104,6 +104,109 @@ class MathAppTest {
         compose.onNodeWithTag("timer").assertDoesNotExist()
     }
 
+    @Test fun correctAnswerVisibilityIsRemembered() {
+        val model = model()
+        assertTrue(model.showCorrectAnswers)
+        model.chooseShowCorrectAnswers(false)
+        assertFalse(model.showCorrectAnswers)
+        val restored = model()
+        assertFalse(restored.showCorrectAnswers)
+        restored.chooseShowCorrectAnswers(true)
+        assertTrue(model().showCorrectAnswers)
+    }
+
+    @Test fun settingsCanHideWrongAnswerFeedbackDuringPractice() {
+        val model = model()
+        model.selectOperation(Operation.ADDITION)
+        model.submitSetup()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("start-button").performClick()
+        assertNull(model.feedback)
+
+        val first = model.game!!.problem
+        answer(first.answer + 1)
+        val revealedFeedback = "Not quite: ${first.text} = ${first.answer}"
+        compose.onNodeWithText(revealedFeedback).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithContentDescription("Show correct answers").assertIsOn().performClick().assertIsOff()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText(revealedFeedback).assertDoesNotExist()
+        compose.onNodeWithText("Not quite!").assertIsDisplayed()
+        assertEquals(Feedback("Not quite!", false), model.feedback)
+
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithContentDescription("Show correct answers").performClick().assertIsOn()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText(revealedFeedback).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithContentDescription("Show correct answers").performClick().assertIsOff()
+        compose.onNodeWithContentDescription("Back").performClick()
+
+        val second = model.game!!.problem
+        answer(second.answer + 1)
+        compose.onNodeWithText("Not quite: ${second.text} = ${second.answer}").assertDoesNotExist()
+        compose.onNodeWithText("Not quite!").assertIsDisplayed()
+        compose.onNodeWithTag("points").assertTextEquals("Points: 0")
+        compose.onNodeWithTag("wrong-tally").assertTextEquals("Wrong: 2")
+        compose.onNodeWithTag("question-progress").assertTextEquals("Question 3 of 10")
+        answer(model.game!!.problem.answer)
+        compose.onNodeWithText("Correct! +1 point").assertIsDisplayed()
+        compose.onNodeWithTag("points").assertTextEquals("Points: 1")
+        compose.onNodeWithTag("wrong-tally").assertTextEquals("Wrong: 2")
+        compose.runOnIdle {
+            model.backToSetup()
+            assertNull(model.feedback)
+            model.start()
+            assertNull(model.feedback)
+        }
+    }
+
+    @Test fun hiddenCorrectAnswersStayHiddenInResultsAndHistory() {
+        val model = model()
+        model.chooseShowCorrectAnswers(false)
+        model.selectOperation(Operation.ADDITION)
+        model.updateQuestionCount("1")
+        model.submitSetup()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("start-button").performClick()
+        val problem = model.game!!.problem
+        val given = problem.answer + 1
+        answer(given)
+
+        compose.onNodeWithTag("result-correct").assertTextEquals("You got 0 right!")
+        compose.onNodeWithContentDescription("Wrong").assertIsDisplayed()
+        compose.onNodeWithText("${problem.text} = $given").assertIsDisplayed()
+        compose.onNodeWithText("Correct answer:", substring = true).assertDoesNotExist()
+        assertNull(model.celebration)
+        compose.waitUntil(5_000) { model.history.size == 1 }
+        val saved = HistoryStore(File(application.filesDir, "practice_history.json")).load().single()
+        assertEquals(listOf(Attempt(problem, given)), saved.attempts)
+        assertEquals(1, saved.wrong)
+
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithContentDescription("Show correct answers").performClick()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Correct answer: ${problem.answer}").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithContentDescription("Show correct answers").performClick()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithText("Correct answer:", substring = true).assertDoesNotExist()
+        compose.onNodeWithTag("done-button").performClick()
+        assertNull(model.feedback)
+
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithTag("practice-history").performClick()
+        compose.onNodeWithText("Addition · up to 10").performClick()
+        compose.onNodeWithText("${problem.text} = $given").assertIsDisplayed()
+        compose.onNodeWithText("Correct answer:", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Show correct answers").performClick()
+        compose.onNodeWithTag("practice-history").performClick()
+        compose.onNodeWithText("Addition · up to 10").performClick()
+        compose.onNodeWithText("Correct answer: ${problem.answer}").assertIsDisplayed()
+    }
+
     @Test fun questionCountIsValidatedAndRemembered() {
         val model = model()
         compose.setContent { MathAppContent(model) }

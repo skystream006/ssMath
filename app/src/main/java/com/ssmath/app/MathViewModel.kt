@@ -46,8 +46,6 @@ class MathViewModel(
         private set
     var answerText by mutableStateOf("")
         private set
-    var feedback by mutableStateOf<Feedback?>(null)
-        private set
     var lastResult by mutableStateOf<PracticeResult?>(null)
         private set
     var celebration by mutableStateOf<Celebration?>(null)
@@ -60,6 +58,8 @@ class MathViewModel(
         private set
 
     var showTimer by mutableStateOf(settings.getBoolean("show_timer", true))
+        private set
+    var showCorrectAnswers by mutableStateOf(settings.getBoolean("show_correct_answers", true))
         private set
     var waveAppearance by mutableStateOf(settings.getBoolean("wave_appearance", true))
         private set
@@ -79,6 +79,14 @@ class MathViewModel(
     val maximum: Int? get() = parseMaximum(maximumText)
     val questionCount: Int? get() = parseQuestionCount(questionCountText)
     val canSubmitSetup: Boolean get() = selectedOperation != null && maximum != null && questionCount != null
+    val feedback: Feedback?
+        get() = game?.attempts?.lastOrNull()?.let { attempt ->
+            when {
+                attempt.correct -> Feedback("Correct! +1 point", true)
+                showCorrectAnswers -> Feedback("Not quite: ${attempt.problem.text} = ${attempt.problem.answer}", false)
+                else -> Feedback("Not quite!", false)
+            }
+        }
 
     init {
         viewModelScope.launch { reloadHistory() }
@@ -103,7 +111,6 @@ class MathViewModel(
         if (screen == Screen.PLAYING) DebugLog.event(DebugEvent.GAME_ABANDONED)
         game = null
         answerText = ""
-        feedback = null
         celebration = null
         resetTimer()
         screen = Screen.SETUP
@@ -115,7 +122,6 @@ class MathViewModel(
         val questionCount = questionCount ?: return
         game = GameState.start(operation, maximum, generator, questionCount)
         answerText = ""
-        feedback = null
         celebration = null
         resetTimer()
         screen = Screen.PLAYING
@@ -129,12 +135,9 @@ class MathViewModel(
         val current = game ?: return
         if (screen != Screen.PLAYING || current.finished) return
         val value = parseAnswer(answerText) ?: return
-        val problem = current.problem
         val next = current.answer(value, generator)
         game = next
         answerText = ""
-        feedback = if (value == problem.answer) Feedback("Correct! +1 point", true)
-            else Feedback("Not quite: ${problem.text} = ${problem.answer}", false)
         if (next.finished) finish(next)
     }
 
@@ -162,7 +165,6 @@ class MathViewModel(
         lastResult = null
         game = null
         answerText = ""
-        feedback = null
         celebration = null
         screen = Screen.SETUP
     }
@@ -248,6 +250,11 @@ class MathViewModel(
     fun chooseShowTimer(value: Boolean) {
         showTimer = value
         settings.edit().putBoolean("show_timer", value).apply()
+    }
+
+    fun chooseShowCorrectAnswers(value: Boolean) {
+        showCorrectAnswers = value
+        settings.edit().putBoolean("show_correct_answers", value).apply()
     }
 
     fun chooseWaveAppearance(enabled: Boolean) {

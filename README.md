@@ -32,6 +32,9 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
 - **Practice History** – review any previously saved result, delete one, or clear all.
 - **Show timer** – show or hide the timer while practicing. The timer pauses while
   Settings or Practice History is open, or the app is in the background.
+- **Show correct answers** – on by default. Turn off to hide correct answers after
+  mistakes during practice, in Results, and in Practice History. Wrong answers are
+  still marked and counted, and saved attempts are unchanged. This choice is remembered.
 - **Appearance** – the **Blue Wave** look or a **Color theme** (midnight, royal
   purple, gold, green, pink, black) with a **Dark appearance** switch.
 - **Skins** – optional background images (Cherry Blossom Sunset, Starry City

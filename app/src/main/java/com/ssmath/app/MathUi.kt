@@ -141,7 +141,7 @@ private fun MainContent(model: MathViewModel) {
         Screen.READY -> ReadyDialog(model)
         Screen.PLAYING -> PlayingScreen(model)
         Screen.RESULTS -> model.lastResult?.let { result ->
-            ResultsContent(result, title = "Results") {
+            ResultsContent(result, title = "Results", showCorrectAnswers = model.showCorrectAnswers) {
                 Button(onClick = model::done, modifier = Modifier.widthIn(min = 160.dp).testTag("done-button")) { Text("Done") }
             }
             model.celebration?.let { CelebrationDialog(it, onFinished = model::dismissCelebration) }
@@ -279,7 +279,7 @@ private fun TimerText(model: MathViewModel) {
 
 /** Shows a practice result: the score and every answered problem with a check or an X. */
 @Composable
-internal fun ResultsContent(result: PracticeResult, title: String?, modifier: Modifier = Modifier,
+internal fun ResultsContent(result: PracticeResult, title: String?, showCorrectAnswers: Boolean, modifier: Modifier = Modifier,
     actions: @Composable () -> Unit) {
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 16.dp),
@@ -298,14 +298,14 @@ internal fun ResultsContent(result: PracticeResult, title: String?, modifier: Mo
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            itemsIndexed(result.attempts) { index, attempt -> AttemptRow(index + 1, attempt) }
+            itemsIndexed(result.attempts) { index, attempt -> AttemptRow(index + 1, attempt, showCorrectAnswers) }
         }
         Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) { actions() }
     }
 }
 
 @Composable
-private fun AttemptRow(number: Int, attempt: Attempt) {
+private fun AttemptRow(number: Int, attempt: Attempt, showCorrectAnswers: Boolean) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -315,7 +315,7 @@ private fun AttemptRow(number: Int, attempt: Attempt) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.weight(1f)) {
                 Text("${attempt.problem.text} = ${attempt.given}", style = MaterialTheme.typography.titleMedium)
-                if (!attempt.correct) Text("Correct answer: ${attempt.problem.answer}",
+                if (!attempt.correct && showCorrectAnswers) Text("Correct answer: ${attempt.problem.answer}",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
