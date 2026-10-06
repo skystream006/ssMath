@@ -147,7 +147,7 @@ fun HistoryScreen(model: MathViewModel) {
                 LazyColumn(Modifier.fillMaxSize().testTag("history-list"), contentPadding = PaddingValues(bottom = 16.dp)) {
                     items(model.history, key = { it.id }) { result ->
                         ListItem(
-                            headlineContent = { Text("${result.operation.label} · up to ${result.maximum}") },
+                            headlineContent = { Text("${result.operation.label} · ${result.minimum} to ${result.maximum}") },
                             supportingContent = {
                                 Text("${formatFinishedAt(result.finishedAt)}\n${result.correct} right · ${result.wrong} wrong · ${formatDuration(result.durationMs)}")
                             },

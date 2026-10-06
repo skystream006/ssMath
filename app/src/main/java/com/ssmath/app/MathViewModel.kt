@@ -38,6 +38,8 @@ class MathViewModel(
         private set
     var selectedOperation by mutableStateOf(Operation.fromPreference(settings.getString("operation", null)))
         private set
+    var minimumText by mutableStateOf(settings.getInt("minimum", MIN_MAXIMUM).toString())
+        private set
     var maximumText by mutableStateOf(settings.getInt("maximum", 10).toString())
         private set
     var questionCountText by mutableStateOf(settings.getInt("question_count", DEFAULT_QUESTION_COUNT).toString())
@@ -77,8 +79,9 @@ class MathViewModel(
     private var foreground = true
 
     val maximum: Int? get() = parseMaximum(maximumText)
+    val minimum: Int? get() = parseMaximum(minimumText)?.takeIf { it <= (maximum ?: MAX_MAXIMUM) }
     val questionCount: Int? get() = parseQuestionCount(questionCountText)
-    val canSubmitSetup: Boolean get() = selectedOperation != null && maximum != null && questionCount != null
+    val canSubmitSetup: Boolean get() = selectedOperation != null && minimum != null && maximum != null && questionCount != null
     val feedback: Feedback?
         get() = game?.attempts?.lastOrNull()?.let { attempt ->
             when {
@@ -94,16 +97,19 @@ class MathViewModel(
 
     fun selectOperation(operation: Operation) { selectedOperation = operation }
 
+    fun updateMinimum(text: String) { minimumText = text.take(6) }
+
     fun updateMaximum(text: String) { maximumText = text.filter { it in '0'..'9' }.take(6) }
 
     fun updateQuestionCount(text: String) { questionCountText = text.take(6) }
 
     fun submitSetup() {
         val operation = selectedOperation ?: return
+        val minimum = minimum ?: return
         val maximum = maximum ?: return
         val questionCount = questionCount ?: return
         settings.edit().putString("operation", operation.name).putInt("maximum", maximum)
-            .putInt("question_count", questionCount).apply()
+            .putInt("minimum", minimum).putInt("question_count", questionCount).apply()
         screen = Screen.READY
     }
 
@@ -118,9 +124,10 @@ class MathViewModel(
 
     fun start() {
         val operation = selectedOperation ?: return
+        val minimum = minimum ?: return
         val maximum = maximum ?: return
         val questionCount = questionCount ?: return
-        game = GameState.start(operation, maximum, generator, questionCount)
+        game = GameState.start(operation, maximum, generator, questionCount, minimum)
         answerText = ""
         celebration = null
         resetTimer()
@@ -145,7 +152,8 @@ class MathViewModel(
         val duration = elapsedMs()
         resetTimer()
         val finishedAt = wallClock()
-        val result = PracticeResult(finishedAt, finishedAt, state.operation, state.maximum, duration, state.attempts)
+        val result = PracticeResult(finishedAt, finishedAt, state.operation, state.maximum, duration, state.attempts,
+            minimum = state.minimum)
         lastResult = result
         celebration = if (state.perfect) Celebration.entries.random() else null
         screen = Screen.RESULTS

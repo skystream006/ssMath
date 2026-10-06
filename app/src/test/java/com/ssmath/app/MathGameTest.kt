@@ -20,6 +20,48 @@ class MathGameTest {
         }
     }
 
+    @Test fun everyOperationKeepsBothNumbersWithinTheSelectedRange() {
+        listOf(1..1, 3..12, 7..9, 10..10, 9_999..MAX_MAXIMUM, MAX_MAXIMUM..MAX_MAXIMUM).forEach { range ->
+            Operation.entries.forEach { operation ->
+                repeat(100) {
+                    val problem = generator.next(operation, range.last, minimum = range.first)
+                    assertEquals(operation, problem.operation)
+                    assertTrue("$problem", problem.left in range)
+                    assertTrue("$problem", problem.right in range)
+                    if (operation == Operation.SUBTRACTION) assertTrue(problem.answer >= 0)
+                    if (operation == Operation.DIVISION) assertEquals(0, problem.left % problem.right)
+                }
+            }
+        }
+    }
+
+    @Test fun minimumMustBePositiveAndNoGreaterThanMaximum() {
+        Operation.entries.forEach { operation ->
+            listOf(-1, 0, 11, MAX_MAXIMUM + 1).forEach { minimum ->
+                assertThrows(IllegalArgumentException::class.java) {
+                    generator.next(operation, 10, minimum = minimum)
+                }
+                assertThrows(IllegalArgumentException::class.java) {
+                    GameState.start(operation, 10, generator, minimum = minimum)
+                }
+            }
+        }
+    }
+
+    @Test fun selectedRangeIsRetainedThroughoutTheGame() {
+        Operation.entries.forEach { operation ->
+            var game = GameState.start(operation, 12, generator, minimum = 7)
+            repeat(DEFAULT_QUESTION_COUNT) {
+                assertEquals(7, game.minimum)
+                assertEquals(12, game.maximum)
+                assertTrue(game.problem.left in 7..12)
+                assertTrue(game.problem.right in 7..12)
+                game = game.answer(game.problem.answer, generator)
+            }
+            assertTrue(game.perfect)
+        }
+    }
+
     @Test fun answersMatchTheOperation() {
         assertEquals(12, Problem(7, 5, Operation.ADDITION).answer)
         assertEquals(2, Problem(7, 5, Operation.SUBTRACTION).answer)
@@ -43,6 +85,14 @@ class MathGameTest {
         assertTrue(divisors.size > 5)
     }
 
+    @Test fun divisionCanUseEveryValidPairInTheSelectedRange() {
+        val problems = (1..1000).map { generator.next(Operation.DIVISION, 12, minimum = 3) }.toSet()
+        val expected = (3..12).flatMap { divisor ->
+            (1..12 / divisor).map { quotient -> Problem(divisor * quotient, divisor, Operation.DIVISION) }
+        }.toSet()
+        assertEquals(expected, problems)
+    }
+
     @Test fun avoidsRepeatingTheSameProblemConsecutively() {
         var previous = generator.next(Operation.ADDITION, 3)
         repeat(200) {
@@ -52,6 +102,8 @@ class MathGameTest {
         }
         // With only one possible problem the generator still returns it.
         assertEquals(Problem(1, 1, Operation.DIVISION), generator.next(Operation.DIVISION, 1, Problem(1, 1, Operation.DIVISION)))
+        assertEquals(Problem(7, 7, Operation.DIVISION),
+            generator.next(Operation.DIVISION, 7, Problem(7, 7, Operation.DIVISION), minimum = 7))
     }
 
     @Test fun maximumMustBeAWholeNumberInRange() {

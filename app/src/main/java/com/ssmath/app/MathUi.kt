@@ -191,6 +191,13 @@ private fun SetupDialog(model: MathViewModel) {
                 }
             }
         }
+        Text("What is the minimum number?", style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(model.minimumText, model::updateMinimum, singleLine = true,
+            label = { Text("Minimum number") },
+            supportingText = { Text("Whole number from $MIN_MAXIMUM to the maximum number") },
+            isError = model.minimumText.isNotEmpty() && model.minimum == null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+            modifier = Modifier.fillMaxWidth().testTag("minimum-input"))
         Text("What is the maximum number?", style = MaterialTheme.typography.titleLarge)
         OutlinedTextField(model.maximumText, model::updateMaximum, singleLine = true,
             label = { Text("Maximum number") },
@@ -198,6 +205,7 @@ private fun SetupDialog(model: MathViewModel) {
             isError = model.maximumText.isNotEmpty() && model.maximum == null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth().testTag("maximum-input"))
+        Text("How many questions would you like?", style = MaterialTheme.typography.titleLarge)
         OutlinedTextField(model.questionCountText, model::updateQuestionCount, singleLine = true,
             label = { Text("Number of questions") },
             supportingText = { Text("Whole number from $MIN_QUESTION_COUNT to ${"%,d".format(MAX_QUESTION_COUNT)}") },
@@ -215,7 +223,7 @@ private fun ReadyDialog(model: MathViewModel) {
     DialogCard {
         Text("Press Start when Ready", style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Text("${model.selectedOperation?.label} · numbers up to ${model.maximum} · ${model.questionCount} questions",
+        Text("${model.selectedOperation?.label} · numbers ${model.minimum} to ${model.maximum} · ${model.questionCount} questions",
             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
         Button(onClick = model::start, modifier = Modifier.fillMaxWidth().height(56.dp).testTag("start-button")) {
@@ -290,7 +298,7 @@ internal fun ResultsContent(result: PracticeResult, title: String?, showCorrectA
                     title?.let { Text(it, style = MaterialTheme.typography.headlineMedium) }
                     Text("You got ${result.correct} right!", style = MaterialTheme.typography.titleLarge,
                         color = CorrectGreen, modifier = Modifier.testTag("result-correct"))
-                    Text("${result.operation.label} · numbers up to ${result.maximum}",
+                    Text("${result.operation.label} · numbers ${result.minimum} to ${result.maximum}",
                         style = MaterialTheme.typography.bodyMedium)
                     Text("Wrong: ${result.wrong} · Time: ${formatDuration(result.durationMs)}",
                         style = MaterialTheme.typography.bodyMedium)

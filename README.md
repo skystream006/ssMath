@@ -6,12 +6,14 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
 ## How it works
 
 1. **Setup dialog** – choose what to practice (**Addition**, **Subtraction**,
-   **Multiplication** or **Division**), enter the maximum number
-   (1 to 10,000), and choose the **Number of questions** (1 to 1,000; defaults
-   to 10), then press **Submit**. Your choices are remembered for next time.
+   **Multiplication** or **Division**), enter the **Minimum number** (defaults to 1)
+   above the **Maximum number** (both 1 to 10,000; minimum cannot exceed maximum),
+   and answer **How many questions would you like?** using the **Number of questions**
+   field (1 to 1,000; defaults to 10), then press **Submit**.
+   Your choices are remembered for next time.
 2. **Press Start when Ready** – press **Start** to begin. The timer starts now.
-3. **Practice** – every problem uses two random numbers that are each no greater
-   than the maximum. Subtraction never goes below zero and division always has a
+3. **Practice** – every problem uses two random numbers between the minimum
+   and maximum, inclusive. Subtraction never goes below zero and division always has a
    whole-number answer. A correct answer earns a point; a wrong answer is added to
    the **Wrong** tally in the bottom-left corner. Either way, a new problem of the
    same type follows, with your question progress shown above it.
