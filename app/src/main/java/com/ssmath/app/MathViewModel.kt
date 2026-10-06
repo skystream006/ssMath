@@ -50,6 +50,8 @@ class MathViewModel(
         private set
     var lastResult by mutableStateOf<PracticeResult?>(null)
         private set
+    var celebration by mutableStateOf<Celebration?>(null)
+        private set
     var history by mutableStateOf<List<PracticeResult>>(emptyList())
         private set
     var historyDetail by mutableStateOf<PracticeResult?>(null)
@@ -102,6 +104,7 @@ class MathViewModel(
         game = null
         answerText = ""
         feedback = null
+        celebration = null
         resetTimer()
         screen = Screen.SETUP
     }
@@ -113,6 +116,7 @@ class MathViewModel(
         game = GameState.start(operation, maximum, generator, questionCount)
         answerText = ""
         feedback = null
+        celebration = null
         resetTimer()
         screen = Screen.PLAYING
         updateTimer()
@@ -140,6 +144,7 @@ class MathViewModel(
         val finishedAt = wallClock()
         val result = PracticeResult(finishedAt, finishedAt, state.operation, state.maximum, duration, state.attempts)
         lastResult = result
+        celebration = if (state.perfect) Celebration.entries.random() else null
         screen = Screen.RESULTS
         DebugLog.event(DebugEvent.GAME_FINISHED)
         viewModelScope.launch {
@@ -158,8 +163,11 @@ class MathViewModel(
         game = null
         answerText = ""
         feedback = null
+        celebration = null
         screen = Screen.SETUP
     }
+
+    fun dismissCelebration() { celebration = null }
 
     fun elapsedMs(): Long = elapsedBefore + (runningSince?.let { clock() - it } ?: 0L)
 

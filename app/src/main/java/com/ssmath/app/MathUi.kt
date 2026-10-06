@@ -144,6 +144,7 @@ private fun MainContent(model: MathViewModel) {
             ResultsContent(result, title = "Results") {
                 Button(onClick = model::done, modifier = Modifier.widthIn(min = 160.dp).testTag("done-button")) { Text("Done") }
             }
+            model.celebration?.let { CelebrationDialog(it, onFinished = model::dismissCelebration) }
         }
     }
     if (confirmQuit && model.screen == Screen.PLAYING) {

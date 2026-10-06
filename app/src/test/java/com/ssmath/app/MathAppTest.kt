@@ -73,6 +73,8 @@ class MathAppTest {
         }
         answer(model.game!!.problem.answer + 1)
 
+        assertNull(model.celebration)
+        compose.onNodeWithText("Congratulations!").assertDoesNotExist()
         compose.onNodeWithTag("result-correct").assertTextEquals("You got 1 right!")
         assertEquals(1, compose.onAllNodesWithContentDescription("Correct").fetchSemanticsNodes().size)
         assertEquals(MAX_WRONG_ANSWERS, compose.onAllNodesWithContentDescription("Wrong").fetchSemanticsNodes().size)
@@ -100,6 +102,90 @@ class MathAppTest {
         compose.onNodeWithTag("start-button").performClick()
         compose.onNodeWithTag("problem").assertIsDisplayed()
         compose.onNodeWithTag("timer").assertDoesNotExist()
+    }
+
+    @Test fun questionCountIsValidatedAndRemembered() {
+        val model = model()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("operation-ADDITION").performClick()
+        compose.onNodeWithTag("question-count-input").assertTextContains(DEFAULT_QUESTION_COUNT.toString())
+        listOf("", "0", "-1", "1.5", "abc", (MAX_QUESTION_COUNT + 1).toString(), "999999").forEach { invalid ->
+            compose.onNodeWithTag("question-count-input").performTextReplacement(invalid)
+            compose.onNodeWithTag("submit-setup").assertIsNotEnabled()
+            compose.runOnIdle { model.submitSetup() }
+            assertEquals(Screen.SETUP, model.screen)
+        }
+        compose.onNodeWithTag("question-count-input").performTextReplacement("3")
+        compose.onNodeWithTag("submit-setup").performScrollTo().assertIsEnabled().performClick()
+        compose.onNodeWithText("3 questions", substring = true).assertIsDisplayed()
+        assertEquals(3, MathViewModel(application).questionCount)
+        compose.onNodeWithTag("start-button").performClick()
+        compose.onNodeWithTag("question-progress").assertTextEquals("Question 1 of 3")
+        answer(model.game!!.problem.answer)
+        compose.onNodeWithTag("question-progress").assertTextEquals("Question 2 of 3")
+    }
+
+    @Test fun perfectPracticeCelebratesSavesOnceAndShowsResults() {
+        val model = model()
+        model.selectOperation(Operation.ADDITION)
+        model.updateQuestionCount("2")
+        model.submitSetup()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("start-button").performClick()
+        answer(model.game!!.problem.answer)
+        assertNull(model.celebration)
+        now += 3_000
+        compose.onNodeWithTag("answer-input").performTextReplacement(model.game!!.problem.answer.toString())
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithTag("submit-answer").performClick()
+        compose.mainClock.advanceTimeBy(64)
+
+        val celebration = model.celebration!!
+        compose.onNodeWithText("Congratulations!").assertIsDisplayed()
+        compose.onNodeWithText("Hurray!!").assertIsDisplayed()
+        compose.onNodeWithContentDescription(celebration.description).assertIsDisplayed()
+        assertEquals(Screen.RESULTS, model.screen)
+        assertEquals(2, model.lastResult!!.correct)
+        assertEquals(0, model.lastResult!!.wrong)
+        assertEquals(3_000L, model.lastResult!!.durationMs)
+        compose.runOnIdle {
+            model.updateAnswer("0")
+            model.submitAnswer()
+        }
+        assertEquals(2, model.lastResult!!.attempts.size)
+        assertEquals(celebration, model.celebration)
+        compose.waitUntil(5_000) { model.history.size == 1 }
+        assertEquals(model.lastResult, HistoryStore(File(application.filesDir, "practice_history.json")).load().single())
+
+        compose.onNodeWithTag("view-results").performClick()
+        compose.mainClock.autoAdvance = true
+        compose.onNodeWithText("Congratulations!").assertDoesNotExist()
+        compose.onNodeWithTag("result-correct").assertTextEquals("You got 2 right!")
+        compose.onNodeWithTag("done-button").performClick()
+        assertNull(model.celebration)
+        compose.onNodeWithTag("submit-setup").performScrollTo().performClick()
+        compose.onNodeWithTag("start-button").performClick()
+        compose.onNodeWithTag("question-progress").assertTextEquals("Question 1 of 2")
+        assertEquals(0, model.game!!.attempts.size)
+    }
+
+    @Test fun reachingQuestionCountWithMistakesShowsResultsWithoutCelebrating() {
+        val model = model()
+        model.selectOperation(Operation.DIVISION)
+        model.updateQuestionCount("2")
+        model.submitSetup()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("start-button").performClick()
+        answer(model.game!!.problem.answer + 1)
+        compose.onNodeWithTag("question-progress").assertTextEquals("Question 2 of 2")
+        answer(model.game!!.problem.answer)
+        compose.onNodeWithTag("result-correct").assertTextEquals("You got 1 right!")
+        compose.onNodeWithText("Congratulations!").assertDoesNotExist()
+        assertNull(model.celebration)
+        assertEquals(2, model.lastResult!!.attempts.size)
+        assertEquals(1, model.lastResult!!.wrong)
+        compose.waitUntil(5_000) { model.history.size == 1 }
+        assertEquals(model.lastResult, HistoryStore(File(application.filesDir, "practice_history.json")).load().single())
     }
 
     private fun answer(value: Int) {
