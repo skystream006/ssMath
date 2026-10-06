@@ -149,7 +149,8 @@ private fun MainContent(model: MathViewModel) {
     if (confirmQuit && model.screen == Screen.PLAYING) {
         AlertDialog(onDismissRequest = { confirmQuit = false },
             title = { Text("Quit this practice?") },
-            text = { Text("Results are only saved when a practice ends after $MAX_WRONG_ANSWERS wrong answers.") },
+            text = { Text("Results are only saved after answering all ${model.game?.questionCount} questions or " +
+                "reaching $MAX_WRONG_ANSWERS wrong answers.") },
             confirmButton = { TextButton(onClick = { confirmQuit = false; model.backToSetup() }) { Text("Quit") } },
             dismissButton = { TextButton(onClick = { confirmQuit = false }) { Text("Keep practicing") } })
     }
@@ -194,9 +195,15 @@ private fun SetupDialog(model: MathViewModel) {
             label = { Text("Maximum number") },
             supportingText = { Text("Whole number from $MIN_MAXIMUM to ${"%,d".format(MAX_MAXIMUM)}") },
             isError = model.maximumText.isNotEmpty() && model.maximum == null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+            modifier = Modifier.fillMaxWidth().testTag("maximum-input"))
+        OutlinedTextField(model.questionCountText, model::updateQuestionCount, singleLine = true,
+            label = { Text("Number of questions") },
+            supportingText = { Text("Whole number from $MIN_QUESTION_COUNT to ${"%,d".format(MAX_QUESTION_COUNT)}") },
+            isError = model.questionCountText.isNotEmpty() && model.questionCount == null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { model.submitSetup() }),
-            modifier = Modifier.fillMaxWidth().testTag("maximum-input"))
+            modifier = Modifier.fillMaxWidth().testTag("question-count-input"))
         Button(onClick = model::submitSetup, enabled = model.canSubmitSetup,
             modifier = Modifier.fillMaxWidth().testTag("submit-setup")) { Text("Submit") }
     }
@@ -207,7 +214,7 @@ private fun ReadyDialog(model: MathViewModel) {
     DialogCard {
         Text("Press Start when Ready", style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Text("${model.selectedOperation?.label} · numbers up to ${model.maximum}",
+        Text("${model.selectedOperation?.label} · numbers up to ${model.maximum} · ${model.questionCount} questions",
             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
         Button(onClick = model::start, modifier = Modifier.fillMaxWidth().height(56.dp).testTag("start-button")) {
@@ -231,6 +238,8 @@ private fun PlayingScreen(model: MathViewModel) {
         Column(Modifier.align(Alignment.Center).widthIn(max = 440.dp).fillMaxWidth()
             .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 64.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("Question ${game.attempts.size + 1} of ${game.questionCount}",
+               style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("question-progress"))
             Text("${game.problem.text} = ?", style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.testTag("problem"))
             OutlinedTextField(model.answerText, model::updateAnswer, singleLine = true,

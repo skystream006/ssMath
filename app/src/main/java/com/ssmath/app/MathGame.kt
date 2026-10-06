@@ -6,6 +6,9 @@ import kotlinx.serialization.Serializable
 const val MIN_MAXIMUM = 1
 const val MAX_MAXIMUM = 10_000
 const val MAX_WRONG_ANSWERS = 5
+const val MIN_QUESTION_COUNT = 1
+const val MAX_QUESTION_COUNT = 1_000
+const val DEFAULT_QUESTION_COUNT = 10
 private const val MAX_ANSWER_DIGITS = 9
 
 @Serializable
@@ -44,6 +47,13 @@ fun parseMaximum(text: String): Int? {
     val trimmed = text.trim()
     if (trimmed.isEmpty() || trimmed.length > 6 || !trimmed.all { it in '0'..'9' }) return null
     return trimmed.toInt().takeIf { it in MIN_MAXIMUM..MAX_MAXIMUM }
+}
+
+/** Accepts a whole-number session length from [MIN_QUESTION_COUNT] to [MAX_QUESTION_COUNT]. */
+fun parseQuestionCount(text: String): Int? {
+    val trimmed = text.trim()
+    if (trimmed.isEmpty() || trimmed.length > 6 || !trimmed.all { it in '0'..'9' }) return null
+    return trimmed.toIntOrNull()?.takeIf { it in MIN_QUESTION_COUNT..MAX_QUESTION_COUNT }
 }
 
 /** Accepts a non-negative whole-number answer. */
@@ -96,11 +106,19 @@ data class GameState(
     val operation: Operation,
     val maximum: Int,
     val problem: Problem,
-    val attempts: List<Attempt> = emptyList()
+    val attempts: List<Attempt> = emptyList(),
+    val questionCount: Int = DEFAULT_QUESTION_COUNT
 ) {
+    init {
+        require(questionCount in MIN_QUESTION_COUNT..MAX_QUESTION_COUNT) {
+            "Question count must be between $MIN_QUESTION_COUNT and $MAX_QUESTION_COUNT."
+        }
+    }
+
     val correct: Int get() = attempts.count { it.correct }
     val wrong: Int get() = attempts.count { !it.correct }
-    val finished: Boolean get() = wrong >= MAX_WRONG_ANSWERS
+    val finished: Boolean get() = attempts.size >= questionCount || wrong >= MAX_WRONG_ANSWERS
+    val perfect: Boolean get() = attempts.size == questionCount && wrong == 0
 
     /** Records an answer and moves on to a new problem of the same type until the game ends. */
     fun answer(value: Int, generator: ProblemGenerator): GameState {
@@ -110,8 +128,9 @@ data class GameState(
     }
 
     companion object {
-        fun start(operation: Operation, maximum: Int, generator: ProblemGenerator) =
-            GameState(operation, maximum, generator.next(operation, maximum))
+        fun start(operation: Operation, maximum: Int, generator: ProblemGenerator,
+            questionCount: Int = DEFAULT_QUESTION_COUNT) =
+            GameState(operation, maximum, generator.next(operation, maximum), questionCount = questionCount)
     }
 }
 
