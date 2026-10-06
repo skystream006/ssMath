@@ -105,7 +105,7 @@ fun UpdateSettings(model: AppUpdater = viewModel()) {
     if (confirm && state.availableVersion != null) {
         AlertDialog(onDismissRequest = { confirm = false },
             title = { Text("Download and install ${state.availableVersion}?") },
-            text = { Text("Download ${state.total / (1024 * 1024)} MB from GitHub. You may need to allow this app to install updates. Android will ask for final confirmation; your settings and practice history are kept.") },
+            text = { Text("Download ${"%.1f".format(state.total / (1024.0 * 1024.0))} MB from GitHub. You may need to allow this app to install updates. Android will ask for final confirmation; your settings and practice history are kept.") },
             confirmButton = { TextButton(onClick = { confirm = false; model.download() }) { Text("Download and install") } },
             dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } })
     }

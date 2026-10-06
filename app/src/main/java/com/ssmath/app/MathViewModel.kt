@@ -148,6 +148,7 @@ class MathViewModel(
     fun done() {
         lastResult = null
         game = null
+        answerText = ""
         feedback = null
         screen = Screen.SETUP
     }
