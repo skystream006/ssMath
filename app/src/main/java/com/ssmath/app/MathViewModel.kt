@@ -40,6 +40,8 @@ class MathViewModel(
         private set
     var maximumText by mutableStateOf(settings.getInt("maximum", 10).toString())
         private set
+    var questionCountText by mutableStateOf(settings.getInt("question_count", DEFAULT_QUESTION_COUNT).toString())
+        private set
     var game by mutableStateOf<GameState?>(null)
         private set
     var answerText by mutableStateOf("")
@@ -47,6 +49,8 @@ class MathViewModel(
     var feedback by mutableStateOf<Feedback?>(null)
         private set
     var lastResult by mutableStateOf<PracticeResult?>(null)
+        private set
+    var celebration by mutableStateOf<Celebration?>(null)
         private set
     var history by mutableStateOf<List<PracticeResult>>(emptyList())
         private set
@@ -73,7 +77,8 @@ class MathViewModel(
     private var foreground = true
 
     val maximum: Int? get() = parseMaximum(maximumText)
-    val canSubmitSetup: Boolean get() = selectedOperation != null && maximum != null
+    val questionCount: Int? get() = parseQuestionCount(questionCountText)
+    val canSubmitSetup: Boolean get() = selectedOperation != null && maximum != null && questionCount != null
 
     init {
         viewModelScope.launch { reloadHistory() }
@@ -83,10 +88,14 @@ class MathViewModel(
 
     fun updateMaximum(text: String) { maximumText = text.filter { it in '0'..'9' }.take(6) }
 
+    fun updateQuestionCount(text: String) { questionCountText = text.take(6) }
+
     fun submitSetup() {
         val operation = selectedOperation ?: return
         val maximum = maximum ?: return
-        settings.edit().putString("operation", operation.name).putInt("maximum", maximum).apply()
+        val questionCount = questionCount ?: return
+        settings.edit().putString("operation", operation.name).putInt("maximum", maximum)
+            .putInt("question_count", questionCount).apply()
         screen = Screen.READY
     }
 
@@ -95,6 +104,7 @@ class MathViewModel(
         game = null
         answerText = ""
         feedback = null
+        celebration = null
         resetTimer()
         screen = Screen.SETUP
     }
@@ -102,9 +112,11 @@ class MathViewModel(
     fun start() {
         val operation = selectedOperation ?: return
         val maximum = maximum ?: return
-        game = GameState.start(operation, maximum, generator)
+        val questionCount = questionCount ?: return
+        game = GameState.start(operation, maximum, generator, questionCount)
         answerText = ""
         feedback = null
+        celebration = null
         resetTimer()
         screen = Screen.PLAYING
         updateTimer()
@@ -132,6 +144,7 @@ class MathViewModel(
         val finishedAt = wallClock()
         val result = PracticeResult(finishedAt, finishedAt, state.operation, state.maximum, duration, state.attempts)
         lastResult = result
+        celebration = if (state.perfect) Celebration.entries.random() else null
         screen = Screen.RESULTS
         DebugLog.event(DebugEvent.GAME_FINISHED)
         viewModelScope.launch {
@@ -150,8 +163,11 @@ class MathViewModel(
         game = null
         answerText = ""
         feedback = null
+        celebration = null
         screen = Screen.SETUP
     }
+
+    fun dismissCelebration() { celebration = null }
 
     fun elapsedMs(): Long = elapsedBefore + (runningSince?.let { clock() - it } ?: 0L)
 

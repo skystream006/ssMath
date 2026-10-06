@@ -70,6 +70,54 @@ class MathGameTest {
         listOf("", "-1", "2.5", "x", "1234567890").forEach { assertNull(it, parseAnswer(it)) }
     }
 
+    @Test fun questionCountMustBeAWholeNumberInRange() {
+        assertEquals(MIN_QUESTION_COUNT, parseQuestionCount("1"))
+        assertEquals(12, parseQuestionCount(" 12 "))
+        assertEquals(MAX_QUESTION_COUNT, parseQuestionCount(MAX_QUESTION_COUNT.toString()))
+        listOf("", "0", "-3", "1.5", "abc", (MAX_QUESTION_COUNT + 1).toString(), "99999999999").forEach {
+            assertNull(it, parseQuestionCount(it))
+        }
+        listOf(0, -1, MAX_QUESTION_COUNT + 1).forEach { count ->
+            assertThrows(IllegalArgumentException::class.java) {
+                GameState.start(Operation.ADDITION, 10, generator, count)
+            }
+        }
+    }
+
+    @Test fun perfectGameEndsExactlyAtTheQuestionCount() {
+        Operation.entries.forEach { operation ->
+            listOf(1, 3, DEFAULT_QUESTION_COUNT).forEach { count ->
+                var game = GameState.start(operation, 12, generator, count)
+                repeat(count) {
+                    assertFalse(game.finished)
+                    assertFalse(game.perfect)
+                    val problem = game.problem
+                    game = game.answer(problem.answer, generator)
+                    if (it == count - 1) assertEquals(problem, game.problem)
+                }
+                assertTrue(game.finished)
+                assertTrue(game.perfect)
+                assertEquals(count, game.correct)
+                assertEquals(count, game.attempts.size)
+                val finished = game
+                assertThrows(IllegalStateException::class.java) { finished.answer(0, generator) }
+            }
+        }
+    }
+
+    @Test fun wrongAnswersAlsoCountTowardsTheQuestionLimit() {
+        var game = GameState.start(Operation.ADDITION, 12, generator, 3)
+        game = game.answer(game.problem.answer + 1, generator)
+        game = game.answer(game.problem.answer, generator)
+        assertFalse(game.finished)
+        game = game.answer(game.problem.answer + 1, generator)
+        assertTrue(game.finished)
+        assertFalse(game.perfect)
+        assertEquals(1, game.correct)
+        assertEquals(2, game.wrong)
+        assertEquals(3, game.attempts.size)
+    }
+
     @Test fun correctAnswersScoreAndWrongAnswersAreTalliedUntilFive() {
         var game = GameState.start(Operation.MULTIPLICATION, 12, generator)
         repeat(3) {
@@ -88,6 +136,7 @@ class MathGameTest {
         val last = game.problem
         game = game.answer(last.answer + 1, generator)
         assertTrue(game.finished)
+        assertFalse(game.perfect)
         assertEquals(MAX_WRONG_ANSWERS, game.wrong)
         assertEquals(3, game.correct)
         assertEquals(3 + MAX_WRONG_ANSWERS, game.attempts.size)
