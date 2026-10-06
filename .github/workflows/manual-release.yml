@@ -22,6 +22,18 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Resolve build plugins with retries
+        run: |
+          for attempt in 1 2 3; do
+            if sh ./gradlew help --refresh-dependencies; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            echo "::warning::Gradle configuration failed; retrying plugin dependency resolution."
+            sleep 10
+          done
       - name: Check release signing configuration
         id: signing
         env:
