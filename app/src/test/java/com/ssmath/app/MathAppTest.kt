@@ -153,7 +153,7 @@ class MathAppTest {
 
     @Test fun textSizeIsClampedWhenChangedOrRestored() {
         val model = model()
-        listOf(Int.MIN_VALUE to 80, Int.MAX_VALUE to 150).forEach { (invalid, expected) ->
+        listOf(Int.MIN_VALUE to 80, 79 to 80, 201 to 200, Int.MAX_VALUE to 200).forEach { (invalid, expected) ->
             model.chooseTextSize(invalid)
             assertEquals(expected, model.textSizePercent)
             assertEquals(expected, model().textSizePercent)
@@ -180,7 +180,7 @@ class MathAppTest {
             }
         }
         compose.runOnIdle { assertSame(systemDensity, appliedDensity) }
-        listOf(150, 80, 100).forEach { percent ->
+        listOf(150, 200, 80, 100).forEach { percent ->
             compose.runOnIdle { model.chooseTextSize(percent) }
             compose.runOnIdle {
                 assertSame(systemDensity, appliedDensity)
@@ -201,11 +201,14 @@ class MathAppTest {
         assertEquals(Typography().titleLarge.fontSize, textLayout("What would you like to practice?").layoutInput.style.fontSize)
         compose.onNodeWithContentDescription("Settings").performClick()
         val slider = compose.onNodeWithContentDescription("Text size")
-        slider.performScrollTo().assertRangeInfoEquals(ProgressBarRangeInfo(100f, 80f..150f, 6))
-        listOf(150, 80, 100, 150).forEach { percent ->
+        slider.performScrollTo().assertRangeInfoEquals(ProgressBarRangeInfo(100f, 80f..200f, 11))
+        listOf(150, 80, 100, 160, 170, 180, 190, 200).forEach { percent ->
             slider.performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(percent.toFloat())) }
-            slider.assertRangeInfoEquals(ProgressBarRangeInfo(percent.toFloat(), 80f..150f, 6))
-                .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "$percent%"))
+            val rangeInfo = slider.fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo]
+            assertEquals(percent.toFloat(), rangeInfo.current, 0.001f)
+            assertEquals(80f..200f, rangeInfo.range)
+            assertEquals(11, rangeInfo.steps)
+            slider.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "$percent%"))
             compose.onNodeWithText("Text size: $percent%").performScrollTo().assertIsDisplayed()
             assertEquals(Typography().bodyLarge.fontSize * (percent / 100f),
                 textLayout("Text size: $percent%").layoutInput.style.fontSize)
@@ -218,14 +221,14 @@ class MathAppTest {
         compose.onNodeWithTag("submit-setup").performScrollTo().performClick()
         compose.onNodeWithTag("start-button").performScrollTo().assertIsDisplayed().performClick()
         compose.onNodeWithTag("problem").performScrollTo().assertIsDisplayed()
-        assertEquals(Typography().displayMedium.fontSize * 1.5f, textLayout("${model.game!!.problem.text} = ?").layoutInput.style.fontSize)
+        assertEquals(Typography().displayMedium.fontSize * 2f, textLayout("${model.game!!.problem.text} = ?").layoutInput.style.fontSize)
         compose.onNodeWithTag("answer-input").performScrollTo().performTextReplacement((model.game!!.problem.answer + 1).toString())
         compose.onNodeWithTag("submit-answer").performScrollTo().performClick()
         compose.onNodeWithTag("result-correct").assertTextEquals("You got 0 right!")
-        assertEquals(Typography().titleLarge.fontSize * 1.5f, textLayout("You got 0 right!").layoutInput.style.fontSize)
+        assertEquals(Typography().titleLarge.fontSize * 2f, textLayout("You got 0 right!").layoutInput.style.fontSize)
         compose.onNodeWithTag("done-button").assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription("Settings").performClick()
-        slider.performScrollTo().assertRangeInfoEquals(ProgressBarRangeInfo(150f, 80f..150f, 6))
+        slider.performScrollTo().assertRangeInfoEquals(ProgressBarRangeInfo(200f, 80f..200f, 11))
     }
 
     @Test fun textSizeSliderSupportsOneContinuousDrag() {
@@ -239,12 +242,12 @@ class MathAppTest {
             moveTo(Offset(width * 0.25f, centerY))
             moveTo(center)
         }
-        compose.runOnIdle { assertTrue("Size after first drag: ${model.textSizePercent}", model.textSizePercent in 90..140) }
+        compose.runOnIdle { assertTrue("Size after first drag: ${model.textSizePercent}", model.textSizePercent in 90..190) }
         slider.performTouchInput {
             moveTo(centerRight)
             up()
         }
-        compose.runOnIdle { assertEquals(150, model.textSizePercent) }
+        compose.runOnIdle { assertEquals(200, model.textSizePercent) }
     }
 
     @Test fun textSizeAppliesInsideConfirmationDialogs() {
@@ -252,11 +255,11 @@ class MathAppTest {
         model.selectOperation(Operation.ADDITION)
         model.submitSetup()
         model.start()
-        model.chooseTextSize(150)
+        model.chooseTextSize(200)
         compose.setContent { MathAppContent(model) }
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.onNodeWithText("Quit this practice?").assertIsDisplayed()
-        assertEquals(Typography().headlineSmall.fontSize * 1.5f,
+        assertEquals(Typography().headlineSmall.fontSize * 2f,
             textLayout("Quit this practice?").layoutInput.style.fontSize)
         compose.onNodeWithText("Keep practicing").performClick()
         assertEquals(Screen.PLAYING, model.screen)

@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 
 internal const val DEFAULT_TEXT_SIZE_PERCENT = 100
 internal const val MIN_TEXT_SIZE_PERCENT = 80
-internal const val MAX_TEXT_SIZE_PERCENT = 150
+internal const val MAX_TEXT_SIZE_PERCENT = 200
 
 /** Color themes offered when the Blue Wave appearance is off, matching ssMusic Player. */
 val COLOR_THEMES = listOf("midnight" to 0xFF5F7FF0, "royal-purple" to 0xFF7139C6,
