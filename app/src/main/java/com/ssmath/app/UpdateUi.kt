@@ -78,9 +78,16 @@ fun UpdateSettings(model: AppUpdater = viewModel()) {
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        Text("App updates", style = MaterialTheme.typography.titleMedium)
-        Text("Installed: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-            style = MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("App updates", style = MaterialTheme.typography.titleMedium)
+                Text("Installed: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    style = MaterialTheme.typography.bodySmall)
+            }
+            OutlinedButton(onClick = { model.check() }, enabled = !state.busy && !state.installRequested,
+                modifier = Modifier.weight(1f)) { Text("Check for updates", textAlign = TextAlign.Center) }
+        }
         state.availableVersion?.let { Text("Available: $it", style = MaterialTheme.typography.bodySmall) }
         Text(state.message, style = MaterialTheme.typography.bodySmall)
         if (state.downloading) {
@@ -89,17 +96,17 @@ fun UpdateSettings(model: AppUpdater = viewModel()) {
             Text("${state.downloaded / 1024} / ${state.total / 1024} KB",
                 style = MaterialTheme.typography.bodySmall)
         } else if (state.busy && !state.automaticCheck) LinearProgressIndicator(Modifier.fillMaxWidth())
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { model.check() }, enabled = !state.busy && !state.installRequested,
-                modifier = Modifier.weight(1f)) { Text("Check for updates", textAlign = TextAlign.Center) }
-            if (state.availableVersion != null) {
-                Button(onClick = { if (state.ready) model.requestInstall() else confirm = true }, enabled = !state.busy && !state.installRequested,
-                    modifier = Modifier.weight(1f)) {
-                    Text(if (state.ready) "Install update" else "Download and install", textAlign = TextAlign.Center)
+        if (state.availableVersion != null || (state.busy && !state.automaticCheck)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                if (state.availableVersion != null) {
+                    Button(onClick = { if (state.ready) model.requestInstall() else confirm = true }, enabled = !state.busy && !state.installRequested,
+                        modifier = Modifier.weight(1f)) {
+                        Text(if (state.ready) "Install update" else "Download and install", textAlign = TextAlign.Center)
+                    }
                 }
+                if (state.busy && !state.automaticCheck) TextButton(onClick = model::cancel) { Text("Cancel") }
             }
-            if (state.busy && !state.automaticCheck) TextButton(onClick = model::cancel) { Text("Cancel") }
         }
     }
     if (confirm && state.availableVersion != null) {

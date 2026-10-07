@@ -62,6 +62,8 @@ fun SettingsScreen(model: MathViewModel) {
     ScreenScaffold("Settings", model::closeOverlay) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            UpdateSettings()
+            HorizontalDivider()
             ListItem(headlineContent = { Text("Practice History") },
                 supportingContent = { Text("Review your previous results") },
                 leadingContent = { Icon(Icons.Rounded.History, null) },
@@ -123,8 +125,6 @@ fun SettingsScreen(model: MathViewModel) {
                 }
             }
             SkinSetting(model.skinsEnabled, model.skin, model::chooseSkin, model::chooseSkins)
-            HorizontalDivider()
-            UpdateSettings()
             HorizontalDivider()
             DebugLogSettings()
             Text("ssMath ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall,
