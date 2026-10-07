@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 @Composable
 private fun ScreenScaffold(title: String, onBack: () -> Unit, actions: @Composable RowScope.() -> Unit = {},
@@ -87,6 +88,19 @@ fun SettingsScreen(model: MathViewModel) {
             }
             HorizontalDivider()
             Text("Appearance", style = MaterialTheme.typography.titleMedium)
+            Column {
+                Text("Text size: ${model.textSizePercent}%")
+                Text("Adjust text throughout the app", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Slider(value = model.textSizePercent.toFloat(),
+                    onValueChange = { model.chooseTextSize(it.roundToInt()) },
+                    valueRange = MIN_TEXT_SIZE_PERCENT.toFloat()..MAX_TEXT_SIZE_PERCENT.toFloat(),
+                    steps = (MAX_TEXT_SIZE_PERCENT - MIN_TEXT_SIZE_PERCENT) / 10 - 1,
+                    modifier = Modifier.fillMaxWidth().semantics {
+                        contentDescription = "Text size"
+                        stateDescription = "${model.textSizePercent}%"
+                    })
+            }
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 listOf("Blue Wave", "Color theme").forEachIndexed { index, label ->
                     SegmentedButton(selected = model.waveAppearance == (index == 0),

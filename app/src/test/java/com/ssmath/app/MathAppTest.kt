@@ -2,8 +2,19 @@ package com.ssmath.app
 
 import android.app.Application
 import androidx.activity.ComponentActivity
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ApplicationProvider
 import java.io.File
 import kotlin.random.Random
@@ -127,6 +138,128 @@ class MathAppTest {
         assertFalse(restored.showCorrectAnswers)
         restored.chooseShowCorrectAnswers(true)
         assertTrue(model().showCorrectAnswers)
+    }
+
+    @Test fun textSizeDefaultsToNormalAndIsRemembered() {
+        val model = model()
+        assertEquals(100, model.textSizePercent)
+        model.chooseTextSize(140)
+        assertEquals(140, model.textSizePercent)
+        val restored = model()
+        assertEquals(140, restored.textSizePercent)
+        restored.chooseTextSize(100)
+        assertEquals(100, model().textSizePercent)
+    }
+
+    @Test fun textSizeIsClampedWhenChangedOrRestored() {
+        val model = model()
+        listOf(Int.MIN_VALUE to 80, Int.MAX_VALUE to 150).forEach { (invalid, expected) ->
+            model.chooseTextSize(invalid)
+            assertEquals(expected, model.textSizePercent)
+            assertEquals(expected, model().textSizePercent)
+            application.getSharedPreferences("settings", 0).edit().putInt("text_size_percent", invalid).commit()
+            assertEquals(expected, model().textSizePercent)
+        }
+    }
+
+    @Test fun textSizeRespectsSystemFontScaleWithoutChangingLayoutDensity() {
+        val model = model()
+        val systemDensity = Density(2f, 1.2f)
+        var appliedDensity: Density? = null
+        var appliedTypography: Typography? = null
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides systemDensity) {
+                MathTheme(textSizePercent = model.textSizePercent) {
+                    val density = LocalDensity.current
+                    val typography = MaterialTheme.typography
+                    SideEffect {
+                        appliedDensity = density
+                        appliedTypography = typography
+                    }
+                }
+            }
+        }
+        compose.runOnIdle { assertSame(systemDensity, appliedDensity) }
+        listOf(150, 80, 100).forEach { percent ->
+            compose.runOnIdle { model.chooseTextSize(percent) }
+            compose.runOnIdle {
+                assertSame(systemDensity, appliedDensity)
+                val scale = percent / 100f
+                val typography = requireNotNull(appliedTypography)
+                assertEquals(Typography().bodyLarge.fontSize * scale, typography.bodyLarge.fontSize)
+                assertEquals(Typography().bodyLarge.lineHeight * scale, typography.bodyLarge.lineHeight)
+                assertEquals(Typography().bodyLarge.letterSpacing * scale, typography.bodyLarge.letterSpacing)
+            }
+        }
+        compose.runOnIdle { assertSame(systemDensity, appliedDensity) }
+    }
+
+    @Test fun settingsSliderUpdatesTextImmediatelyAndKeepsPracticeUsable() {
+        val model = model()
+        model.updateQuestionCount("1")
+        compose.setContent { MathAppContent(model) }
+        assertEquals(Typography().titleLarge.fontSize, textLayout("What would you like to practice?").layoutInput.style.fontSize)
+        compose.onNodeWithContentDescription("Settings").performClick()
+        val slider = compose.onNodeWithContentDescription("Text size")
+        slider.performScrollTo().assertRangeInfoEquals(ProgressBarRangeInfo(100f, 80f..150f, 6))
+        listOf(150, 80, 100, 150).forEach { percent ->
+            slider.performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(percent.toFloat())) }
+            slider.assertRangeInfoEquals(ProgressBarRangeInfo(percent.toFloat(), 80f..150f, 6))
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "$percent%"))
+            compose.onNodeWithText("Text size: $percent%").performScrollTo().assertIsDisplayed()
+            assertEquals(Typography().bodyLarge.fontSize * (percent / 100f),
+                textLayout("Text size: $percent%").layoutInput.style.fontSize)
+            assertEquals(percent, model.textSizePercent)
+            assertEquals(percent, model().textSizePercent)
+        }
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithTag("operation-ADDITION").performScrollTo().performClick()
+        assertFalse(textLayout("+").didOverflowHeight)
+        compose.onNodeWithTag("submit-setup").performScrollTo().performClick()
+        compose.onNodeWithTag("start-button").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag("problem").performScrollTo().assertIsDisplayed()
+        assertEquals(Typography().displayMedium.fontSize * 1.5f, textLayout("${model.game!!.problem.text} = ?").layoutInput.style.fontSize)
+        compose.onNodeWithTag("answer-input").performScrollTo().performTextReplacement((model.game!!.problem.answer + 1).toString())
+        compose.onNodeWithTag("submit-answer").performScrollTo().performClick()
+        compose.onNodeWithTag("result-correct").assertTextEquals("You got 0 right!")
+        assertEquals(Typography().titleLarge.fontSize * 1.5f, textLayout("You got 0 right!").layoutInput.style.fontSize)
+        compose.onNodeWithTag("done-button").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        slider.performScrollTo().assertRangeInfoEquals(ProgressBarRangeInfo(150f, 80f..150f, 6))
+    }
+
+    @Test fun textSizeSliderSupportsOneContinuousDrag() {
+        val model = model()
+        model.chooseTextSize(80)
+        model.openSettings()
+        compose.setContent { MathAppContent(model) }
+        val slider = compose.onNodeWithContentDescription("Text size")
+        slider.performScrollTo().assertIsDisplayed().performTouchInput {
+            down(Offset(24f, centerY))
+            moveTo(Offset(width * 0.25f, centerY))
+            moveTo(center)
+        }
+        compose.runOnIdle { assertTrue("Size after first drag: ${model.textSizePercent}", model.textSizePercent in 90..140) }
+        slider.performTouchInput {
+            moveTo(centerRight)
+            up()
+        }
+        compose.runOnIdle { assertEquals(150, model.textSizePercent) }
+    }
+
+    @Test fun textSizeAppliesInsideConfirmationDialogs() {
+        val model = model()
+        model.selectOperation(Operation.ADDITION)
+        model.submitSetup()
+        model.start()
+        model.chooseTextSize(150)
+        compose.setContent { MathAppContent(model) }
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.onNodeWithText("Quit this practice?").assertIsDisplayed()
+        assertEquals(Typography().headlineSmall.fontSize * 1.5f,
+            textLayout("Quit this practice?").layoutInput.style.fontSize)
+        compose.onNodeWithText("Keep practicing").performClick()
+        assertEquals(Screen.PLAYING, model.screen)
     }
 
     @Test fun settingsCanHideWrongAnswerFeedbackDuringPractice() {
@@ -351,6 +484,13 @@ class MathAppTest {
         assertEquals(1, model.lastResult!!.wrong)
         compose.waitUntil(5_000) { model.history.size == 1 }
         assertEquals(model.lastResult, HistoryStore(File(application.filesDir, "practice_history.json")).load().single())
+    }
+
+    private fun textLayout(text: String): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(text, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { assertTrue(it(results)) }
+        return results.single()
     }
 
     private fun answer(value: Int) {
