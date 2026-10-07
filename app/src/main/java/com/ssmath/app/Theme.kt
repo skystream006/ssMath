@@ -4,6 +4,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -11,8 +12,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Density
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 
 internal const val DEFAULT_TEXT_SIZE_PERCENT = 100
@@ -32,11 +32,27 @@ fun isDarkTheme(theme: String, mode: String?): Boolean =
 @Composable
 fun MathTheme(theme: String = "green", mode: String? = null, waveAppearance: Boolean = true,
     skin: AppSkin? = null, textSizePercent: Int = DEFAULT_TEXT_SIZE_PERCENT, content: @Composable () -> Unit) {
-    val density = LocalDensity.current
-    val textDensity = remember(density, textSizePercent) {
-        if (textSizePercent == DEFAULT_TEXT_SIZE_PERCENT) density
-        else Density(density.density,
-            density.fontScale * textSizePercent.coerceIn(MIN_TEXT_SIZE_PERCENT, MAX_TEXT_SIZE_PERCENT) / 100f)
+    val typography = remember(textSizePercent) {
+        val scale = textSizePercent.coerceIn(MIN_TEXT_SIZE_PERCENT, MAX_TEXT_SIZE_PERCENT) / 100f
+        with(Typography()) {
+            copy(
+                displayLarge = displayLarge.scaledBy(scale),
+                displayMedium = displayMedium.scaledBy(scale),
+                displaySmall = displaySmall.scaledBy(scale),
+                headlineLarge = headlineLarge.scaledBy(scale),
+                headlineMedium = headlineMedium.scaledBy(scale),
+                headlineSmall = headlineSmall.scaledBy(scale),
+                titleLarge = titleLarge.scaledBy(scale),
+                titleMedium = titleMedium.scaledBy(scale),
+                titleSmall = titleSmall.scaledBy(scale),
+                bodyLarge = bodyLarge.scaledBy(scale),
+                bodyMedium = bodyMedium.scaledBy(scale),
+                bodySmall = bodySmall.scaledBy(scale),
+                labelLarge = labelLarge.scaledBy(scale),
+                labelMedium = labelMedium.scaledBy(scale),
+                labelSmall = labelSmall.scaledBy(scale)
+            )
+        }
     }
     val accent = when (theme) {
         "midnight" -> Color(0xFF5F7FF0)
@@ -64,13 +80,17 @@ fun MathTheme(theme: String = "green", mode: String? = null, waveAppearance: Boo
     else if (dark) darkColorScheme(primary = accent.copy(alpha = 1f), secondary = Color(0xFFF3B6AA),
         background = Color(0xFF141817), surface = Color(0xFF191E1C), onPrimary = Color.White)
     else lightColorScheme(primary = accent, secondary = Color(0xFF9F4C3B), background = Color(0xFFF6F8F6), surface = Color(0xFFF6F8F6))
-    CompositionLocalProvider(LocalAppSkin provides skin, LocalDensity provides textDensity) {
-        MaterialTheme(colorScheme = colors,
+    CompositionLocalProvider(LocalAppSkin provides skin) {
+        MaterialTheme(colorScheme = colors, typography = typography,
             shapes = Shapes(extraSmall = RoundedCornerShape(4.dp), small = RoundedCornerShape(6.dp),
                 medium = RoundedCornerShape(8.dp), large = RoundedCornerShape(8.dp), extraLarge = RoundedCornerShape(8.dp)),
             content = content)
     }
 }
+
+private fun TextStyle.scaledBy(scale: Float): TextStyle = copy(
+    fontSize = fontSize * scale, lineHeight = lineHeight * scale, letterSpacing = letterSpacing * scale
+)
 
 private fun blackColorScheme(dark: Boolean): ColorScheme {
     val accent = if (dark) Color(0xFFF5D442) else Color(0xFF806000)
