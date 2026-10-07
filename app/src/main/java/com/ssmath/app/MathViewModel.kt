@@ -63,6 +63,9 @@ class MathViewModel(
         private set
     var showCorrectAnswers by mutableStateOf(settings.getBoolean("show_correct_answers", true))
         private set
+    var textSizePercent by mutableStateOf(settings.getInt("text_size_percent", DEFAULT_TEXT_SIZE_PERCENT)
+        .coerceIn(MIN_TEXT_SIZE_PERCENT, MAX_TEXT_SIZE_PERCENT))
+        private set
     var waveAppearance by mutableStateOf(settings.getBoolean("wave_appearance", true))
         private set
     var theme by mutableStateOf(colorThemeFromPreference(settings.getString("theme", null)))
@@ -263,6 +266,11 @@ class MathViewModel(
     fun chooseShowCorrectAnswers(value: Boolean) {
         showCorrectAnswers = value
         settings.edit().putBoolean("show_correct_answers", value).apply()
+    }
+
+    fun chooseTextSize(value: Int) {
+        textSizePercent = value.coerceIn(MIN_TEXT_SIZE_PERCENT, MAX_TEXT_SIZE_PERCENT)
+        settings.edit().putInt("text_size_percent", textSizePercent).apply()
     }
 
     fun chooseWaveAppearance(enabled: Boolean) {

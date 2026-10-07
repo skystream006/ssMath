@@ -39,6 +39,9 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   still marked and counted, and saved attempts are unchanged. This choice is remembered.
 - **Appearance** – the **Blue Wave** look or a **Color theme** (midnight, royal
   purple, gold, green, pink, black) with a **Dark appearance** switch.
+- **Text size** – use the slider under Appearance to adjust app text from 80% to
+  150% in 10% steps (default 100%). Changes apply immediately, work with your
+  device's font-size setting, and are remembered for next time.
 - **Skins** – optional background images (Cherry Blossom Sunset, Starry City
   Sunset, Ocean Wave, Ocean Moonlight, Galaxy, Tropical, Mechanics). Your color
   theme stays the same.

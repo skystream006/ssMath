@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -83,7 +83,8 @@ fun MathApp(model: MathViewModel) {
 
 @Composable
 internal fun MathAppContent(model: MathViewModel) {
-    MathTheme(model.theme, model.mode, model.waveAppearance, if (model.skinsEnabled) model.skin else null) {
+    MathTheme(model.theme, model.mode, model.waveAppearance, if (model.skinsEnabled) model.skin else null,
+        textSizePercent = model.textSizePercent) {
         val snackbar = remember { SnackbarHostState() }
         val lifecycle = LocalLifecycleOwner.current.lifecycle
         DisposableEffect(lifecycle) {
@@ -176,7 +177,7 @@ private fun SetupDialog(model: MathViewModel) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 row.forEach { operation ->
                     val selected = model.selectedOperation == operation
-                    val modifier = Modifier.weight(1f).height(72.dp).semantics { this.selected = selected }
+                    val modifier = Modifier.weight(1f).heightIn(min = 72.dp).semantics { this.selected = selected }
                         .testTag("operation-${operation.name}")
                     val padding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
                     val label: @Composable () -> Unit = {
@@ -226,7 +227,7 @@ private fun ReadyDialog(model: MathViewModel) {
         Text("${model.selectedOperation?.label} · numbers ${model.minimum} to ${model.maximum} · ${model.questionCount} questions",
             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
-        Button(onClick = model::start, modifier = Modifier.fillMaxWidth().height(56.dp).testTag("start-button")) {
+        Button(onClick = model::start, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("start-button")) {
             Text("Start", style = MaterialTheme.typography.titleMedium)
         }
         TextButton(onClick = model::backToSetup, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Back") }
@@ -258,7 +259,7 @@ private fun PlayingScreen(model: MathViewModel) {
                 keyboardActions = KeyboardActions(onDone = { model.submitAnswer() }),
                 modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("answer-input"))
             Button(onClick = model::submitAnswer, enabled = parseAnswer(model.answerText) != null,
-                modifier = Modifier.fillMaxWidth().height(52.dp).testTag("submit-answer")) { Text("Submit") }
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("submit-answer")) { Text("Submit") }
             model.feedback?.let {
                 Text(it.text, color = if (it.correct) CorrectGreen else WrongRed,
                     style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
