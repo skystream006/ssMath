@@ -74,7 +74,7 @@ internal fun CelebrationDialog(celebration: Celebration, onFinished: () -> Unit)
         title = { Text("Congratulations!") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("You answered every question correctly!", modifier = Modifier.padding(bottom = 16.dp))
+                Text("You answered every question!", modifier = Modifier.padding(bottom = 16.dp))
                 CelebrationScene(celebration, progress = { progress.value })
             }
         },

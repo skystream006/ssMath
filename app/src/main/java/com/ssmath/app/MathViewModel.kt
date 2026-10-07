@@ -52,6 +52,8 @@ class MathViewModel(
         private set
     var celebration by mutableStateOf<Celebration?>(null)
         private set
+    var earlyFinishMessage by mutableStateOf<String?>(null)
+        private set
     var history by mutableStateOf<List<PracticeResult>>(emptyList())
         private set
     var historyDetail by mutableStateOf<PracticeResult?>(null)
@@ -121,6 +123,7 @@ class MathViewModel(
         game = null
         answerText = ""
         celebration = null
+        earlyFinishMessage = null
         resetTimer()
         screen = Screen.SETUP
     }
@@ -133,6 +136,7 @@ class MathViewModel(
         game = GameState.start(operation, maximum, generator, questionCount, minimum)
         answerText = ""
         celebration = null
+        earlyFinishMessage = null
         resetTimer()
         screen = Screen.PLAYING
         updateTimer()
@@ -158,7 +162,10 @@ class MathViewModel(
         val result = PracticeResult(finishedAt, finishedAt, state.operation, state.maximum, duration, state.attempts,
             minimum = state.minimum)
         lastResult = result
-        celebration = if (state.perfect) Celebration.entries.random() else null
+        val answeredAllQuestions = state.attempts.size >= state.questionCount
+        celebration = if (answeredAllQuestions) Celebration.entries.random() else null
+        earlyFinishMessage = if (answeredAllQuestions) null
+            else "Nice try! You got ${state.correct} right out of ${state.questionCount}"
         screen = Screen.RESULTS
         DebugLog.event(DebugEvent.GAME_FINISHED)
         viewModelScope.launch {
@@ -177,10 +184,13 @@ class MathViewModel(
         game = null
         answerText = ""
         celebration = null
+        earlyFinishMessage = null
         screen = Screen.SETUP
     }
 
     fun dismissCelebration() { celebration = null }
+
+    fun dismissEarlyFinishDialog() { earlyFinishMessage = null }
 
     fun elapsedMs(): Long = elapsedBefore + (runningSince?.let { clock() - it } ?: 0L)
 

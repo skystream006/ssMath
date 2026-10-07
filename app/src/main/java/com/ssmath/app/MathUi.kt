@@ -146,6 +146,14 @@ private fun MainContent(model: MathViewModel) {
                 Button(onClick = model::done, modifier = Modifier.widthIn(min = 160.dp).testTag("done-button")) { Text("Done") }
             }
             model.celebration?.let { CelebrationDialog(it, onFinished = model::dismissCelebration) }
+            model.earlyFinishMessage?.let { message ->
+                AlertDialog(onDismissRequest = model::dismissEarlyFinishDialog,
+                    text = { Text(message) },
+                    confirmButton = {
+                        TextButton(onClick = model::dismissEarlyFinishDialog,
+                            modifier = Modifier.testTag("view-results")) { Text("View results") }
+                    })
+            }
         }
     }
     if (confirmQuit && model.screen == Screen.PLAYING) {
