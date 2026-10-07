@@ -25,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class, qualifiers = "w360dp-h800dp")
@@ -110,7 +111,9 @@ class MathAppTest {
         compose.onNodeWithText("Multiplication · numbers 4 to 6").assertIsDisplayed()
     }
 
-    @Test fun appUpdatesAppearFirstWithTheCheckButtonBesideTheDetails() {
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun appUpdatesAppearFirstWithTheCheckButtonBesideTheDetails() {
         val model = model()
         compose.setContent { MathTheme { SettingsScreen(model) } }
 
@@ -133,6 +136,7 @@ class MathAppTest {
 
     @Test
     @Config(qualifiers = "w320dp-h800dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun appUpdateDetailsAndCheckButtonFitWithLargeTextOnNarrowScreens() {
         val model = model()
         model.chooseTextSize(200)
