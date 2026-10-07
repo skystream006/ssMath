@@ -31,6 +31,8 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
 The semi-transparent (50% opacity) settings button in the bottom-right corner opens
 **Settings**:
 
+- **App updates** – at the top, check GitHub for a newer release using the button
+  beside the installed version, then download and install it.
 - **Practice History** – review any previously saved result, delete one, or clear all.
 - **Show timer** – show or hide the timer while practicing. The timer pauses while
   Settings or Practice History is open, or the app is in the background.
@@ -45,7 +47,6 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
 - **Skins** – optional background images (Cherry Blossom Sunset, Starry City
   Sunset, Ocean Wave, Ocean Moonlight, Galaxy, Tropical, Mechanics). Your color
   theme stays the same.
-- **App updates** – check GitHub for a newer release, then download and install it.
 - **Debug logging** – off by default. See [Debug logging](#debug-logging).
 
 ## Build and Install

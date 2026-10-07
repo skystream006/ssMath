@@ -25,6 +25,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class, qualifiers = "w360dp-h800dp")
@@ -108,6 +109,49 @@ class MathAppTest {
         compose.onNodeWithTag("practice-history").performClick()
         compose.onNodeWithText("Multiplication · 4 to 6").performClick()
         compose.onNodeWithText("Multiplication · numbers 4 to 6").assertIsDisplayed()
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun appUpdatesAppearFirstWithTheCheckButtonBesideTheDetails() {
+        val model = model()
+        compose.setContent { MathTheme { SettingsScreen(model) } }
+
+        val heading = compose.onNodeWithText("App updates").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val installed = compose.onNodeWithText("Installed:", substring = true)
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val check = compose.onNodeWithText("Check for updates").assertIsDisplayed().assertHasClickAction()
+            .assertIsEnabled().fetchSemanticsNode().boundsInRoot
+        val message = compose.onNodeWithText(UpdateState().message).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val history = compose.onNodeWithTag("practice-history").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+
+        assertTrue(heading.right <= check.left)
+        assertTrue(installed.right <= check.left)
+        assertEquals((heading.top + installed.bottom) / 2f, check.center.y, 1f)
+        assertTrue(maxOf(installed.bottom, check.bottom) <= message.top)
+        assertTrue(message.bottom <= history.top)
+        compose.onNodeWithText("Download and install").assertDoesNotExist()
+        compose.onNodeWithText("Cancel").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h800dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun appUpdateDetailsAndCheckButtonFitWithLargeTextOnNarrowScreens() {
+        val model = model()
+        model.chooseTextSize(200)
+        compose.setContent { MathTheme(textSizePercent = model.textSizePercent) { SettingsScreen(model) } }
+
+        val heading = compose.onNodeWithText("App updates").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val check = compose.onNodeWithText("Check for updates").assertIsDisplayed().assertIsEnabled()
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(heading.right <= check.left)
+        listOf("App updates", "Installed: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", "Check for updates").forEach {
+            compose.onNodeWithText(it).assertIsDisplayed()
+            val layout = textLayout(it)
+            assertFalse("$it overflows horizontally", layout.didOverflowWidth)
+            assertFalse("$it overflows vertically", layout.didOverflowHeight)
+        }
     }
 
     @Test fun settingsCanHideTheTimerAndOpenPracticeHistory() {
