@@ -57,7 +57,9 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
 - **My Pokémons** – directly below My Rewards, collect a still image of each
   celebration you see after completing a practice, even when rewards are disabled.
   Each celebration is collected only once and labelled with its name, grouped under
-  **Pokémons** or **Other**. Each section heading shows its own collected/total
+  **Pokémons** or **Other**. Pokémon are sorted by their National Pokédex number
+  (Ndex) and labelled with a four-digit number and name, such as **#0025 Pikachu**.
+  Other celebrations keep their names without numbers. Each section heading shows its own collected/total
   fraction (out of 13 Pokémon or 5 Other), including zero when none are collected.
   Tap an image to replay its animation; close it or wait for it to finish to return to your collection.
   The collection is saved on this device and is not removed when history is deleted.

@@ -238,7 +238,7 @@ fun PokemonsScreen(model: MathViewModel) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             CelebrationCategory.entries.forEach { category ->
-                val categoryCelebrations = collected.filter { it.category == category }
+                val categoryCelebrations = collected.filter { it.category == category }.sortedBy { it.ndex }
                 val categoryTotal = Celebration.entries.count { it.category == category }
                 item(key = "category-${category.name}", span = { GridItemSpan(maxLineSpan) }) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -268,7 +268,7 @@ fun PokemonsScreen(model: MathViewModel) {
                             }) {
                             drawCelebrationArtwork(pokemon, 0.6f)
                         }
-                        Text(pokemon.label, Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                        Text(pokemon.collectionLabel, Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.labelLarge)
                     }
                 }

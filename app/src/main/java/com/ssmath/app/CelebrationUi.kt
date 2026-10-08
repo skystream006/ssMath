@@ -58,26 +58,30 @@ enum class CelebrationCategory(val label: String) {
 enum class Celebration(
     val label: String,
     val description: String,
-    val category: CelebrationCategory = CelebrationCategory.OTHER
+    val category: CelebrationCategory = CelebrationCategory.OTHER,
+    val ndex: Int? = null
 ) {
     DOLPHINS("Dolphins", "Dolphins jumping out of the water saying Hurray!!"),
     WHALES("Whales", "Whales jumping out of the water saying Hurray!!"),
     ANCHOVIES("Anchovies", "Anchovies jumping out of the water saying Hurray!!"),
     PARTY("Party", "Congratulations party with balloons and confetti"),
     CANDY_SHOWER("Candy shower", "A colorful shower of candy"),
-    PIKACHU("Pikachu", "Pikachu running toward you and zapping lightning", CelebrationCategory.POKEMONS),
-    SQUIRTLE("Squirtle", "Squirtle shooting water from his mouth", CelebrationCategory.POKEMONS),
-    BULBASAUR("Bulbasaur", "Bulbasaur shooting leaves from his bulb", CelebrationCategory.POKEMONS),
-    CHARMANDER("Charmander", "Charmander shooting fire into the air", CelebrationCategory.POKEMONS),
-    JIGGLYPUFF("Jigglypuff", "Jigglypuff rolling and jumping", CelebrationCategory.POKEMONS),
-    PALAFIN("Palafin", "Palafin leaping through sparkling water", CelebrationCategory.POKEMONS),
-    FINIZEN("Finizen", "Finizen jumping through bubbles", CelebrationCategory.POKEMONS),
-    WAILMER("Wailmer", "Wailmer bouncing and spraying water", CelebrationCategory.POKEMONS),
-    WAILORD("Wailord", "Wailord gliding and spouting water", CelebrationCategory.POKEMONS),
-    BOUFFALANT("Bouffalant", "Bouffalant charging and leaping in celebration", CelebrationCategory.POKEMONS),
-    VELUZA("Veluza", "Veluza darting through the water", CelebrationCategory.POKEMONS),
-    MANTYKE("Mantyke", "Mantyke flapping and jumping above the waves", CelebrationCategory.POKEMONS),
-    MANTINE("Mantine", "Mantine soaring over the sea with a little fish", CelebrationCategory.POKEMONS);
+    PIKACHU("Pikachu", "Pikachu running toward you and zapping lightning", CelebrationCategory.POKEMONS, ndex = 25),
+    SQUIRTLE("Squirtle", "Squirtle shooting water from his mouth", CelebrationCategory.POKEMONS, ndex = 7),
+    BULBASAUR("Bulbasaur", "Bulbasaur shooting leaves from his bulb", CelebrationCategory.POKEMONS, ndex = 1),
+    CHARMANDER("Charmander", "Charmander shooting fire into the air", CelebrationCategory.POKEMONS, ndex = 4),
+    JIGGLYPUFF("Jigglypuff", "Jigglypuff rolling and jumping", CelebrationCategory.POKEMONS, ndex = 39),
+    PALAFIN("Palafin", "Palafin leaping through sparkling water", CelebrationCategory.POKEMONS, ndex = 964),
+    FINIZEN("Finizen", "Finizen jumping through bubbles", CelebrationCategory.POKEMONS, ndex = 963),
+    WAILMER("Wailmer", "Wailmer bouncing and spraying water", CelebrationCategory.POKEMONS, ndex = 320),
+    WAILORD("Wailord", "Wailord gliding and spouting water", CelebrationCategory.POKEMONS, ndex = 321),
+    BOUFFALANT("Bouffalant", "Bouffalant charging and leaping in celebration", CelebrationCategory.POKEMONS, ndex = 626),
+    VELUZA("Veluza", "Veluza darting through the water", CelebrationCategory.POKEMONS, ndex = 976),
+    MANTYKE("Mantyke", "Mantyke flapping and jumping above the waves", CelebrationCategory.POKEMONS, ndex = 458),
+    MANTINE("Mantine", "Mantine soaring over the sea with a little fish", CelebrationCategory.POKEMONS, ndex = 226);
+
+    val collectionLabel: String
+        get() = ndex?.let { "#${it.toString().padStart(4, '0')} $label" } ?: label
 
     companion object {
         val pokemons: List<Celebration> = entries.filter { it.category == CelebrationCategory.POKEMONS }
