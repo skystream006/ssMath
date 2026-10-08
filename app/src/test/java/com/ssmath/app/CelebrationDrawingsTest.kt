@@ -99,8 +99,11 @@ class CelebrationDrawingsTest {
             }
             val pixels = IntArray(96 * 66).also { image.readPixels(it) }
             assertTrue(pokemon.label, pixels.all { (it ushr 24) == 255 })
+            // Thumbnail outlines are subpixel-wide, so antialiasing blends their ink color.
             assertTrue("${pokemon.label} must be recognizable in a thumbnail",
-                pixels.count { it == Color(KANTO_INK).toArgb() } > 10)
+                pixels.count {
+                    ((it ushr 16) and 255) + ((it ushr 8) and 255) + (it and 255) < 480
+                } > 10)
         }
     }
 

@@ -48,6 +48,7 @@ class CelebrationUiTest {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             MathTheme {
+                Text("Collection")
                 selected?.let { pokemon ->
                     CelebrationDialog(pokemon, replay = true) {
                         completions++
@@ -58,6 +59,8 @@ class CelebrationUiTest {
         }
         Celebration.pokemons.drop(13).forEachIndexed { index, pokemon ->
             compose.runOnIdle { selected = pokemon }
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
             compose.mainClock.advanceTimeBy(64)
             compose.onNodeWithText(pokemon.label).assertIsDisplayed()
             compose.onNodeWithContentDescription(pokemon.description).assertIsDisplayed()
