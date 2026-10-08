@@ -62,6 +62,7 @@ class RewardUiTest {
         compose.onNodeWithContentDescription("Ice Cream Cone").assertExists()
         compose.onNodeWithContentDescription("One third of an ice cream cone").assertExists()
         compose.onNodeWithContentDescription("One third of a video game controller").assertExists()
+        compose.onAllNodesWithText("1/3").assertCountEquals(RewardType.entries.size)
     }
 
     @Test fun giftIsAnAccessibleButtonAndRapidTapsOnlyOpenOnce() {
@@ -230,18 +231,22 @@ class RewardUiTest {
         compose.onNodeWithTag("awarded-fragment").assertIsDisplayed()
     }
 
-    @Test fun inventoryDisplaysFourRewardsPerRow() {
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun inventoryDisplaysFourRewardsPerRow() {
         assertFourRewardsPerRow()
     }
 
     @Test
     @Config(qualifiers = "w320dp-h800dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun inventoryDisplaysFourRewardsPerRowOnNarrowScreens() {
         assertFourRewardsPerRow()
     }
 
     @Test
     @Config(qualifiers = "w800dp-h600dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun inventoryDisplaysFourRewardsPerRowOnWideScreens() {
         assertFourRewardsPerRow()
     }
@@ -262,6 +267,7 @@ class RewardUiTest {
         }
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithText("3 fragments = 1 reward").assertIsDisplayed()
+        compose.onNodeWithText("1/3").assertDoesNotExist()
         RewardType.entries.forEach { type ->
             val balance = balances.getValue(type)
             compose.onNodeWithTag("reward-inventory").performScrollToKey(type.name)
@@ -333,9 +339,10 @@ class RewardUiTest {
         firstRow.zipWithNext().forEach { (left, right) ->
             assertTrue(left.right < right.left)
         }
-        val header = compose.onNodeWithText("3 fragments = 1 reward").fetchSemanticsNode().boundsInRoot
+        val header = compose.onNodeWithTag("reward-inventory-header").fetchSemanticsNode().boundsInRoot
         assertTrue(header.bottom <= firstRow.first().top)
-        assertTrue(header.width > firstRow.first().width)
+        assertEquals(firstRow.first().left, header.left, 1f)
+        assertEquals(firstRow.last().right, header.right, 1f)
         val nextRow = compose.onNodeWithTag("reward-card-${RewardType.entries[4].name}")
             .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         assertEquals(firstRow.first().left, nextRow.left, 1f)

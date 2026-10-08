@@ -67,13 +67,18 @@ internal fun rewardImageDescription(type: RewardType, fragment: Boolean): String
 }
 
 @Composable
-internal fun RewardImage(type: RewardType, fragment: Boolean, modifier: Modifier = Modifier) {
+internal fun RewardImage(
+    type: RewardType,
+    fragment: Boolean,
+    modifier: Modifier = Modifier,
+    showFragmentBadge: Boolean = true
+) {
     Box(modifier.size(144.dp).semantics(mergeDescendants = true) {
         contentDescription = rewardImageDescription(type, fragment)
         role = Role.Image
     }) {
         Canvas(Modifier.matchParentSize()) { drawRewardArtwork(type, fragment) }
-        if (fragment) {
+        if (fragment && showFragmentBadge) {
             Surface(
                 modifier = Modifier.align(Alignment.BottomEnd),
                 shape = RoundedCornerShape(12.dp),
@@ -220,7 +225,10 @@ internal fun RewardInventory(balances: Map<RewardType, RewardBalance>, modifier:
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                Modifier.fillMaxWidth().testTag("reward-inventory-header"),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text("3 fragments = 1 reward", style = MaterialTheme.typography.titleMedium)
                 Text("Collect three matching fragments to complete a reward. Your collection stays on this device.")
             }
@@ -263,7 +271,8 @@ private fun RewardInventoryPart(type: RewardType, fragment: Boolean, count: Stri
                 RewardType.VIDEO_GAME -> Color(0xFFEAE5FF)
             }
         ) {
-            RewardImage(type, fragment, Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp))
+            RewardImage(type, fragment, Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp),
+                showFragmentBadge = false)
         }
         Text(count, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
     }
