@@ -22,12 +22,14 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    got right, plus every answered problem with a green check (correct) or a red X
    (wrong, with the correct answer if **Show correct answers** is enabled).
    Results are saved with the date and time.
-   If all the chosen questions were answered, even with mistakes, one of ten randomly chosen
+   If all the chosen questions were answered, even with mistakes, one of eighteen randomly chosen
    congratulations animations plays: dolphins, whales, or anchovies jumping out
    of the water, a balloon-and-confetti party, a candy shower, Pikachu running toward
    the screen and zapping lightning, Squirtle shooting water from his mouth,
    Bulbasaur shooting leaves from his bulb, Charmander shooting fire into the air,
-   or Jigglypuff rolling and jumping. Each scene says **Hurray!!**. These animations
+   Jigglypuff rolling and jumping, or Palafin, Finizen, Wailmer, Wailord, Bouffalant,
+   Veluza, Mantyke, or Mantine celebrating. The thirteen Pokémon scenes belong to the
+   **Pokémons** category. Each scene says **Hurray!!**. These animations
    are drawn in the app and work offline. Press **View results** to
    skip the animation, or wait for it to finish.
    The wrong-answer limit is 5 for up to 50 questions; above 50 it is 10% of the
@@ -50,6 +52,12 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   available counts grouped by tier. Tap a reward and confirm **Yes** to use one; **No** cancels.
   Only whole rewards can be used. Remaining counts are saved on this device;
   fragments and practice history are unchanged.
+- **My Pokémons** – directly below My Rewards, collect a still image of each Pokémon
+  celebration you see after completing a practice, even when rewards are disabled.
+  Each Pokémon is collected only once and labelled with its name. The header shows
+  your collected count out of the 13 available Pokémons. Tap an image to replay its
+  animation; close it or wait for it to finish to return to your collection.
+  The collection is saved on this device and is not removed when history is deleted.
 - **Practice History** – review any previously saved result, delete one, or clear all.
 - **Rewards system** – on by default. Earn
   prizes for completing **25 or more questions** with **more than 90% correct**.
@@ -64,7 +72,7 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   A gift dismissed before opening can still be claimed from its history entry.
   All reward illustrations and animations are drawn in the app and work offline.
 - **Show timer** – off by default. Show or hide the timer while practicing. The timer pauses while
-  Settings, Practice History, or My Rewards is open, or the app is in the background.
+  Settings, Practice History, My Rewards, or My Pokémons is open, or the app is in the background.
   When both Rewards system and Show timer are enabled, **Time limit** offers
   **None** or **5–60 minutes** in 5-minute increments. The selection applies to the
   next practice. A timed practice shows time remaining and ends when time runs out,

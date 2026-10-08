@@ -79,6 +79,59 @@ class HistoryStoreTest {
         assertTrue(text, text.contains("1970"))
     }
 
+    @Test fun collectsOnlyPokemonsOnceAndReloadsWithoutChangingHistoryOrRewards() {
+        store.add(eligible(1))
+        store.claimReward(1)
+        val before = store.loadSnapshot()
+        Celebration.entries.forEach { store.collectPokemon(it) }
+        val expected = before.copy(pokemons = Celebration.pokemons.toSet())
+        assertEquals(expected, HistoryStore(file).loadSnapshot())
+        val bytes = file.readText()
+        Celebration.entries.forEach { assertEquals(expected, store.collectPokemon(it)) }
+        assertEquals(bytes, file.readText())
+    }
+
+    @Test fun clearingOrDeletingHistoryNeverRemovesPokemons() {
+        store.collectPokemon(Celebration.PIKACHU)
+        store.clear()
+        assertEquals(setOf(Celebration.PIKACHU), HistoryStore(file).loadSnapshot().pokemons)
+        val saved = store.addNewResult(eligible(1))
+        store.claimReward(saved.result.id)
+        store.delete(saved.result.id)
+        store.clear()
+        val restored = HistoryStore(file).loadSnapshot()
+        assertEquals(setOf(Celebration.PIKACHU), restored.pokemons)
+        assertEquals(RewardBalance(fragments = 1), restored.rewards[RewardType.LOLLIPOP])
+        assertTrue(restored.history.isEmpty())
+    }
+
+    @Test fun collectionMigratesBothLegacyHistoryFormats() {
+        listOf(
+            """[{"id":1,"finishedAt":1,"operation":"ADDITION","maximum":10,"durationMs":1000,"attempts":[]}]""",
+            """{"history":[{"id":1,"finishedAt":1,"operation":"ADDITION","maximum":10,"durationMs":1000,"attempts":[]}],
+                "rewards":{"LOLLIPOP":{"whole":2,"fragments":1}}}"""
+        ).forEach { legacy ->
+            file.writeText(legacy)
+            val before = store.loadSnapshot()
+            assertTrue(before.pokemons.isEmpty())
+            val collected = store.collectPokemon(Celebration.FINIZEN)
+            assertEquals(before.copy(pokemons = setOf(Celebration.FINIZEN)), collected)
+            assertEquals(collected, HistoryStore(file).loadSnapshot())
+        }
+    }
+
+    @Test fun failedCollectionPreservesSavedDataAndCanBeRetried() {
+        store.add(eligible(1))
+        store.collectPokemon(Celebration.SQUIRTLE)
+        val before = file.readText()
+        val blocked = File(directory, "${file.name}.tmp").apply { mkdir() }
+        assertThrows(IOException::class.java) { store.collectPokemon(Celebration.PALAFIN) }
+        assertEquals(before, file.readText())
+        assertTrue(blocked.delete())
+        assertEquals(setOf(Celebration.SQUIRTLE, Celebration.PALAFIN),
+            store.collectPokemon(Celebration.PALAFIN).pokemons)
+    }
+
     private fun eligible(id: Long, type: RewardType = RewardType.LOLLIPOP) = PracticeResult(
         id, id, Operation.ADDITION, 10, 1_000,
         List(if (type == RewardType.VIDEO_GAME) 50 else 26) { Attempt(Problem(1, 1, Operation.ADDITION), 2) },

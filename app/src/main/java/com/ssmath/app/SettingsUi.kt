@@ -3,6 +3,7 @@
 package com.ssmath.app
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,6 +11,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -24,6 +28,7 @@ import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.material.icons.rounded.Collections
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,10 +41,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import kotlin.math.roundToInt
 
 @Composable
@@ -70,6 +77,17 @@ fun SettingsScreen(model: MathViewModel) {
                 trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 modifier = Modifier.clickable(onClick = model::openRewards).testTag("my-rewards"))
+            ListItem(headlineContent = { Text("My Pokémons") },
+                supportingContent = { Text("Your collected Pokémon celebrations") },
+                leadingContent = { Icon(Icons.Rounded.Collections, null) },
+                trailingContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("${model.pokemons.size}/${Celebration.pokemons.size}")
+                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null)
+                    }
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable(onClick = model::openPokemons).testTag("my-pokemons"))
             HorizontalDivider()
             ListItem(headlineContent = { Text("Practice History") },
                 supportingContent = { Text("Review your previous results") },
@@ -189,6 +207,57 @@ fun RewardsScreen(model: MathViewModel) {
             model.rewardBalances, model.usingReward, model.rewardUseError,
             model::useReward, { usingRewards = false }
         )
+    }
+}
+
+@Composable
+fun PokemonsScreen(model: MathViewModel) {
+    var replay by rememberSaveable { mutableStateOf<Celebration?>(null) }
+    val collected = Celebration.pokemons.filter { it in model.pokemons }
+    ScreenScaffold("My Pokémons", model::closeOverlay, actions = {
+        Text("${collected.size}/${Celebration.pokemons.size}",
+            modifier = Modifier.padding(horizontal = 12.dp).testTag("pokemon-count").semantics {
+                contentDescription = "${collected.size} of ${Celebration.pokemons.size} Pokémons collected"
+            })
+    }) {
+        if (collected.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                Text("Finish practices to discover Pokémon celebrations and collect them here.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(112.dp),
+                modifier = Modifier.fillMaxSize().testTag("pokemon-gallery"),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(collected, key = { it.name }) { pokemon ->
+                    Column(
+                        Modifier.clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .clickable(role = Role.Button, onClickLabel = "Replay ${pokemon.label}") { replay = pokemon }
+                            .padding(8.dp).testTag("pokemon-${pokemon.name}"),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Canvas(Modifier.fillMaxWidth().aspectRatio(320f / 220f)
+                            .clip(MaterialTheme.shapes.small).semantics {
+                                contentDescription = "${pokemon.label} celebration"
+                                role = Role.Image
+                            }) {
+                            drawCelebrationArtwork(pokemon, 0.6f)
+                        }
+                        Text(pokemon.label, textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+        }
+    }
+    replay?.let { pokemon ->
+        CelebrationDialog(pokemon, onFinished = { replay = null }, replay = true)
     }
 }
 
