@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -49,6 +50,60 @@ class CelebrationDrawingsTest {
                 assertTrue("$name must fill the scene", frame.all { (it ushr 24) == 255 })
                 previous = frame
             }
+        }
+    }
+
+    @Test fun everyAddedPokemonHasDistinctVisibleArtworkWithoutTheStage() {
+        val fingerprints = mutableSetOf<Int>()
+        Celebration.pokemons.drop(13).forEach { pokemon ->
+            val frame = render({
+                drawRect(Color.White)
+                withTransform({ translate(160f, 148f) }) {
+                    drawKantoPokemon(pokemon.ndex!!, 0f)
+                }
+            }, 0f)
+            assertTrue("${pokemon.label} needs visible artwork",
+                frame.count { it != Color.White.toArgb() } > 1000)
+            assertTrue("${pokemon.label} needs distinct artwork", fingerprints.add(frame.contentHashCode()))
+            assertFalse("${pokemon.label} must fit its collection preview", frame.indices.any {
+                (it % 320 !in 55..265 || it / 320 !in 70..208) && frame[it] != Color.White.toArgb()
+            })
+        }
+    }
+
+    @Test fun everyAddedPokemonMovesItsBodyAndRendersOpaqueUnclippedFrames() {
+        val ink = Color(KANTO_INK).toArgb()
+        Celebration.pokemons.drop(13).forEach { pokemon ->
+            val draw: DrawScope.(Float) -> Unit = { drawCelebrationArtwork(pokemon, it) }
+            var previous = render(draw, 0f)
+            listOf(0.2f, 0.4f, 0.6f, 0.8f, 1f).forEach { progress ->
+                val frame = render(draw, progress)
+                assertTrue("${pokemon.label} must fill the scene", frame.all { (it ushr 24) == 255 })
+                assertTrue("${pokemon.label} must animate at $progress",
+                    frame.indices.count { frame[it] != previous[it] } > 300)
+                assertTrue("${pokemon.label}'s body must move, not just the confetti",
+                    frame.indices.count { (frame[it] == ink) != (previous[it] == ink) } > 80)
+                assertFalse("${pokemon.label} clips at $progress", frame.indices.any {
+                    (it % 320 == 0 || it % 320 == 319 || it / 320 == 0 || it / 320 == 219) && frame[it] == ink
+                })
+                previous = frame
+            }
+        }
+    }
+
+    @Test fun addedPokemonArtworkScalesToCollectionThumbnails() {
+        Celebration.pokemons.drop(13).forEach { pokemon ->
+            val image = ImageBitmap(96, 66)
+            CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(image), Size(96f, 66f)) {
+                drawCelebrationArtwork(pokemon, 0.6f)
+            }
+            val pixels = IntArray(96 * 66).also { image.readPixels(it) }
+            assertTrue(pokemon.label, pixels.all { (it ushr 24) == 255 })
+            // Thumbnail outlines are subpixel-wide, so antialiasing blends their ink color.
+            assertTrue("${pokemon.label} must be recognizable in a thumbnail",
+                pixels.count {
+                    ((it ushr 16) and 255) + ((it ushr 8) and 255) + (it and 255) < 480
+                } > 10)
         }
     }
 

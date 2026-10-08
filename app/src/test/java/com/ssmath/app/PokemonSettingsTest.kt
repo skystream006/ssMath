@@ -41,7 +41,7 @@ class PokemonSettingsTest {
     }
 
     private fun model(chosen: Celebration = Celebration.PIKACHU, questionCount: Int = 15): MathViewModel {
-        val seed = (0..1_000).first { Celebration.select(questionCount, Random(it)) == chosen }
+        val seed = (0..10_000).first { Celebration.select(questionCount, Random(it)) == chosen }
         return MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate,
             celebrationRandom = Random(seed)).also { models.put("model", it) }
     }
@@ -59,7 +59,7 @@ class PokemonSettingsTest {
         assertEquals(Overlay.POKEMONS, model.overlay)
         compose.onNodeWithText("My Pokémons").assertIsDisplayed()
         compose.onNodeWithTag("pokemon-count").assertDoesNotExist()
-        assertSectionCount(CelebrationCategory.POKEMONS, "0/13")
+        assertSectionCount(CelebrationCategory.POKEMONS, "0/157")
         assertSectionCount(CelebrationCategory.OTHER, "0/5")
         compose.onNodeWithText("Finish practices", substring = true).assertIsDisplayed()
         compose.onNodeWithContentDescription("Back").performClick()
@@ -76,7 +76,7 @@ class PokemonSettingsTest {
         compose.mainClock.autoAdvance = false
         compose.setContent { MathAppContent(model) }
         compose.mainClock.advanceTimeBy(64)
-        assertSectionCount(CelebrationCategory.POKEMONS, "1/13")
+        assertSectionCount(CelebrationCategory.POKEMONS, "1/157")
         assertSectionCount(CelebrationCategory.OTHER, "0/5")
         compose.onAllNodesWithTag("pokemon-PALAFIN").assertCountEquals(1)
         compose.onNodeWithTag("pokemon-PIKACHU").assertDoesNotExist()
@@ -95,7 +95,7 @@ class PokemonSettingsTest {
         compose.onNodeWithTag("celebration-PALAFIN").assertIsDisplayed()
         compose.mainClock.advanceTimeBy(CELEBRATION_DURATION_MS.toLong())
         compose.onNodeWithTag("celebration-PALAFIN").assertDoesNotExist()
-        assertSectionCount(CelebrationCategory.POKEMONS, "1/13")
+        assertSectionCount(CelebrationCategory.POKEMONS, "1/157")
         assertSectionCount(CelebrationCategory.OTHER, "0/5")
         assertEquals(Overlay.POKEMONS, model.overlay)
         assertEquals(Screen.SETUP, model.screen)
@@ -106,6 +106,9 @@ class PokemonSettingsTest {
 
     @Test fun presentingAPokemonAddsItBeforeSkippingTheAnimation() =
         presentationCollects(Celebration.PIKACHU, questionCount = 15)
+
+    @Test fun presentingANewPokemonAddsItBeforeSkippingTheAnimation() =
+        presentationCollects(Celebration.MEW, questionCount = 15)
 
     @Test fun presentingAnOtherCelebrationAfterAShortPracticeCollectsIt() =
         presentationCollects(Celebration.PARTY, questionCount = 1)
@@ -140,7 +143,7 @@ class PokemonSettingsTest {
         }
         compose.onNodeWithTag("my-pokemons").performClick()
         assertSectionCount(CelebrationCategory.POKEMONS,
-            if (celebration.category == CelebrationCategory.POKEMONS) "1/13" else "0/13")
+            if (celebration.category == CelebrationCategory.POKEMONS) "1/157" else "0/157")
         assertSectionCount(CelebrationCategory.OTHER,
             if (celebration.category == CelebrationCategory.OTHER) "1/5" else "0/5")
         compose.onNodeWithText(celebration.category.label).assertIsDisplayed()
@@ -159,10 +162,10 @@ class PokemonSettingsTest {
         compose.setContent { MathAppContent(model) }
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("pokemon-count").assertDoesNotExist()
-        assertSectionCount(CelebrationCategory.POKEMONS, "1/13")
+        assertSectionCount(CelebrationCategory.POKEMONS, "1/157")
         assertSectionCount(CelebrationCategory.OTHER, "1/5")
         compose.onNodeWithTag("pokemon-count-POKEMONS")
-            .assertContentDescriptionEquals("1 of 13 collected in Pokémons")
+            .assertContentDescriptionEquals("1 of 157 collected in Pokémons")
         compose.onNodeWithTag("pokemon-count-OTHER")
             .assertContentDescriptionEquals("1 of 5 collected in Other")
         compose.onNodeWithText("Pokémons").assertIsDisplayed()
@@ -183,18 +186,21 @@ class PokemonSettingsTest {
     }
 
     @Test fun gallerySortsPokemonsByNdexAndKeepsOtherCelebrationsInTheirOriginalOrder() {
-        HistoryStore(file).collectPokemons(Celebration.entries.reversed())
-        val model = model()
-        model.openPokemons()
-        compose.setContent { MathAppContent(model) }
         val expected = listOf(
-            Celebration.BULBASAUR, Celebration.CHARMANDER, Celebration.SQUIRTLE,
-            Celebration.PIKACHU, Celebration.JIGGLYPUFF, Celebration.MANTINE,
+            Celebration.BULBASAUR, Celebration.IVYSAUR, Celebration.VENUSAUR,
+            Celebration.CHARMANDER, Celebration.CHARIZARD, Celebration.SQUIRTLE,
+            Celebration.BLASTOISE, Celebration.PIKACHU, Celebration.NIDORAN_FEMALE,
+            Celebration.NIDORAN_MALE, Celebration.JIGGLYPUFF, Celebration.TENTACRUEL_GEODUDE,
+            Celebration.FARFETCHD, Celebration.MR_MIME, Celebration.MEWTWO, Celebration.MEW, Celebration.MANTINE,
             Celebration.WAILMER, Celebration.WAILORD, Celebration.MANTYKE,
             Celebration.BOUFFALANT, Celebration.FINIZEN, Celebration.PALAFIN, Celebration.VELUZA,
             Celebration.DOLPHINS, Celebration.WHALES, Celebration.ANCHOVIES,
             Celebration.PARTY, Celebration.CANDY_SHOWER
         )
+        HistoryStore(file).collectPokemons(expected.reversed())
+        val model = model()
+        model.openPokemons()
+        compose.setContent { MathAppContent(model) }
         expected.zipWithNext().forEach { (first, second) ->
             compose.onNodeWithTag("pokemon-gallery").performScrollToKey(first.name)
             val firstBounds = compose.onNodeWithTag("pokemon-${first.name}")
@@ -229,7 +235,7 @@ class PokemonSettingsTest {
         assertFalse(DebugLog.enabled.value)
         compose.onNodeWithContentDescription("Debug logging").performScrollTo().assertIsOff()
         compose.onNodeWithTag("my-pokemons").performScrollTo().performClick()
-        assertSectionCount(CelebrationCategory.POKEMONS, "13/13")
+        assertSectionCount(CelebrationCategory.POKEMONS, "157/157")
         assertSectionCount(CelebrationCategory.OTHER, "5/5")
     }
 
@@ -245,7 +251,7 @@ class PokemonSettingsTest {
         compose.onNodeWithTag("pokemon-count").assertDoesNotExist()
         assertTextFits("My Pokémons")
         CelebrationCategory.entries.forEach { category ->
-            val fraction = if (category == CelebrationCategory.POKEMONS) "13/13" else "5/5"
+            val fraction = if (category == CelebrationCategory.POKEMONS) "157/157" else "5/5"
             assertSectionCount(category, fraction)
             assertTextFits(category.label)
             assertTextFits(fraction)
