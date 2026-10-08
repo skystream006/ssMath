@@ -121,7 +121,7 @@ private fun DrawScope.earlyGardenToad(large: Boolean, motion: Float) {
         earlyEye(22f, 12f, 7f, 0xFFBA4355)
         kantoLine(KANTO_INK, 2.5f, -31f, 6f, -16f, 10f)
         kantoLine(KANTO_INK, 2.5f, 16f, 10f, 30f, 6f)
-        kantoSmile(0f, 27f, 24f)
+        kantoSmile(0f, 27f, 44f)
         kantoPolygon(EARLY_WHITE, -23f, 28f, -17f, 29f, -20f, 35f)
         kantoPolygon(EARLY_WHITE, 17f, 29f, 23f, 28f, 20f, 35f)
     } else {
@@ -145,7 +145,7 @@ private fun DrawScope.earlyGardenToad(large: Boolean, motion: Float) {
         earlyEye(-9f, 0f, 6f, 0xFFBC405C)
         kantoPolygon(0xFF368B7E, -31f, -10f, -22f, -13f, -25f, -3f)
         kantoPolygon(0xFF368B7E, -48f, 15f, -41f, 11f, -39f, 20f)
-        kantoSmile(-25f, 14f, 15f)
+        kantoSmile(-25f, 14f, 30f)
         kantoPolygon(EARLY_WHITE, -40f, 14f, -34f, 16f, -36f, 21f)
     }
 }
@@ -207,7 +207,7 @@ private fun DrawScope.earlyFireLizard(winged: Boolean, motion: Float) {
         kantoOval(skin, -5f, -29f, 39f, 24f)
         earlyEye(-11f, -33f, 5f, 0xFF428B91)
         earlyEye(13f, -33f, 5f, 0xFF428B91)
-        kantoSmile(12f, -16f, 14f)
+        kantoSmile(12f, -16f, 28f)
         kantoPolygon(EARLY_WHITE, 20f, -16f, 26f, -18f, 23f, -10f)
     } else {
         kantoPolygon(skin, -22f, -29f, -26f, -61f, -5f, -45f)
@@ -217,7 +217,7 @@ private fun DrawScope.earlyFireLizard(winged: Boolean, motion: Float) {
         earlyEye(15f, -31f, 5f)
         kantoLine(KANTO_INK, 2.5f, -16f, -38f, -5f, -34f)
         kantoLine(KANTO_INK, 2.5f, 10f, -34f, 20f, -38f)
-        kantoSmile(14f, -16f, 14f)
+        kantoSmile(14f, -16f, 28f)
         kantoPolygon(EARLY_WHITE, 23f, -16f, 29f, -18f, 25f, -10f)
     }
 }
@@ -271,7 +271,7 @@ private fun DrawScope.earlyTurtle(cannons: Boolean, motion: Float) {
     kantoOval(skin, -27f, -44f, 54f, 45f)
     earlyEye(-14f, -25f, 6f, if (cannons) 0xFF835853 else 0xFF945868)
     earlyEye(14f, -25f, 6f, if (cannons) 0xFF835853 else 0xFF945868)
-    kantoSmile(0f, -10f, 16f)
+    kantoSmile(0f, -10f, 32f)
     if (!cannons) {
         kantoPolygon(EARLY_WHITE, -16f, -10f, -10f, -8f, -13f, -3f)
         kantoPolygon(EARLY_WHITE, 10f, -8f, 16f, -10f, 13f, -3f)
@@ -414,6 +414,12 @@ private fun DrawScope.earlyWingedInsect(moth: Boolean, motion: Float) {
 
 private fun DrawScope.earlyBeedrill(motion: Float) {
     for (side in listOf(-1f, 1f)) {
+        earlyShape(0xFFDCEBF1) {
+            moveTo(side * 10f, -7f)
+            cubicTo(side * 31f, -26f, side * 67f, -19f, side * 50f, 5f + motion * 2f)
+            quadraticTo(side * 25f, 12f, side * 10f, 6f)
+            close()
+        }
         earlyShape(0xFFDCEBF1) {
             moveTo(side * 7f, -14f)
             cubicTo(side * 27f, -65f + motion * 3f, side * 74f, -59f, side * 48f, -19f)
@@ -828,7 +834,7 @@ private fun DrawScope.earlyNido(stage: Int, male: Boolean, motion: Float) {
         earlyEye(16f, -28f, 5.5f, 0xFFAC565F)
         kantoLine(KANTO_INK, 2f, -22f, -34f, -11f, -30f)
         kantoLine(KANTO_INK, 2f, 11f, -30f, 23f, -34f)
-        kantoSmile(0f, -13f, 10f)
+        kantoSmile(0f, -13f, if (male) 33f else 21f)
         return
     }
     val grown = stage == 1
@@ -856,6 +862,15 @@ private fun DrawScope.earlyNido(stage: Int, male: Boolean, motion: Float) {
         kantoPolygon(skin, -6f, -10f, 4f, -52f, 16f, -39f, 11f, -28f, 15f, -22f, 3f, -5f)
         kantoPolygon(ear, -34f, -19f, -39f, -40f, -29f, -46f, -28f, -21f)
         kantoPolygon(ear, 0f, -14f, 6f, -40f, 8f, -24f)
+    } else if (grown) {
+        earlyShape(skin) {
+            moveTo(-36f, -8f)
+            cubicTo(-59f, -25f, -61f, -47f, -46f, -43f)
+            quadraticTo(-30f, -39f, -22f, -12f); close()
+        }
+        kantoPolygon(ear, -38f, -17f, -50f, -36f, -40f, -32f, -30f, -15f)
+        kantoPolygon(skin, -7f, -14f, 7f, -42f, 21f, -33f, 8f, -8f)
+        kantoPolygon(ear, 0f, -15f, 9f, -32f, 13f, -28f, 5f, -13f)
     } else {
         earlyShape(skin) {
             moveTo(-34f, -7f)
@@ -883,7 +898,7 @@ private fun DrawScope.earlyNido(stage: Int, male: Boolean, motion: Float) {
     earlyEye(-31f, -4f, 5.5f, 0xFFB86375)
     earlyEye(-4f, -5f, 5f, 0xFFB86375)
     kantoOval(skin, -43f, 6f, 43f, 22f)
-    kantoSmile(-21f, 16f, 12f)
+    kantoSmile(-21f, 16f, 24f)
     kantoPolygon(EARLY_WHITE, -33f, 17f, -26f, 18f, -28f, 24f)
     drawCircle(Color(dark), 3f, Offset(-37f, 4f))
     drawCircle(Color(dark), 3f, Offset(0f, 6f))
@@ -1232,7 +1247,7 @@ private fun DrawScope.earlyMushroomCrab(large: Boolean, motion: Float) {
         kantoLine(orange, 8f, 14f, 8f, 17f, -3f)
         earlyEye(-17f, -1f, 8f)
         earlyEye(17f, -1f, 8f)
-        kantoSmile(0f, 20f, 11f)
+        kantoSmile(0f, 20f, 22f)
         kantoPolygon(EARLY_WHITE, -9f, 21f, -3f, 22f, -6f, 26f)
         kantoPolygon(EARLY_WHITE, 3f, 22f, 9f, 21f, 6f, 26f)
     }
@@ -1269,7 +1284,7 @@ private fun DrawScope.earlyVenonat(motion: Float) {
         drawCircle(Color(0xFFF4C6DC), 3f, Offset(x - 4f, -16f))
     }
     kantoOval(0xFFE8B2B8, -8f, 7f, 16f, 11f)
-    kantoSmile(0f, 21f, 10f)
+    kantoSmile(0f, 21f, 20f)
     kantoPolygon(EARLY_WHITE, -10f, 21f, -3f, 23f, -5f, 29f)
     kantoPolygon(EARLY_WHITE, 3f, 23f, 10f, 21f, 5f, 29f)
 }

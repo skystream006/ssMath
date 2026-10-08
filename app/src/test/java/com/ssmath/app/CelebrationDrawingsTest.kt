@@ -65,6 +65,9 @@ class CelebrationDrawingsTest {
             assertTrue("${pokemon.label} needs visible artwork",
                 frame.count { it != Color.White.toArgb() } > 1000)
             assertTrue("${pokemon.label} needs distinct artwork", fingerprints.add(frame.contentHashCode()))
+            assertFalse("${pokemon.label} must fit its collection preview", frame.indices.any {
+                (it % 320 !in 55..265 || it / 320 !in 70..208) && frame[it] != Color.White.toArgb()
+            })
         }
     }
 
