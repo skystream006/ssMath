@@ -49,8 +49,10 @@ class RewardsSettingsTest {
         compose.setContent { MathTheme { SettingsScreen(model) } }
         compose.onNodeWithText("Earn prize fragments by completing 25 or more questions with over 90% correct")
             .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Rewards system").assertIsOn()
+        compose.onNodeWithContentDescription("Show correct answers").performScrollTo().assertIsOff()
         compose.onNodeWithTag("time-limit").assertDoesNotExist()
-        compose.onNodeWithContentDescription("Rewards system").performScrollTo().assertIsOff().performClick()
+        compose.onNodeWithContentDescription("Show timer").performScrollTo().assertIsOff().performClick()
         compose.onNodeWithTag("time-limit").performScrollTo().performClick()
         compose.onNodeWithText("5 minutes").performClick()
         assertEquals(5, model.timeLimitMinutes)
@@ -77,6 +79,7 @@ class RewardsSettingsTest {
             store.claimReward(result.id)
         }
         val model = MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate)
+        model.chooseRewardsEnabled(false)
         model.openRewards()
         compose.setContent { MathAppContent(model) }
         assertFalse(model.rewardsEnabled)
@@ -104,6 +107,7 @@ class RewardsSettingsTest {
     @Test fun timeLimitOffersNoneAndFiveMinuteStepsThroughSixty() {
         val model = MathViewModel(application)
         model.chooseRewardsEnabled(true)
+        model.chooseShowTimer(true)
         compose.setContent { MathTheme { SettingsScreen(model) } }
         compose.onNodeWithTag("time-limit").performScrollTo().performClick()
         (5..60 step 5).forEach { minutes ->
@@ -131,7 +135,7 @@ class RewardsSettingsTest {
 
     @Test fun giftFollowsCelebrationAndUnopenedPrizeCanBeClaimedFromHistory() {
         val model = MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate)
-        model.chooseRewardsEnabled(true)
+        assertTrue(model.rewardsEnabled)
         model.selectOperation(Operation.ADDITION)
         model.updateQuestionCount("50")
         model.submitSetup()

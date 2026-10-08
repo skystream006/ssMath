@@ -72,16 +72,18 @@ class RewardsModelTest {
         shadowOf(Looper.getMainLooper()).idle()
     }
 
-    @Test fun rewardsDefaultOffAndSettingsPersistWithValidTimeSteps() {
+    @Test fun rewardsDefaultOnAndSettingsPersistWithValidTimeSteps() {
         val first = model()
-        assertFalse(first.rewardsEnabled)
+        assertTrue(first.rewardsEnabled)
         assertEquals(0, first.timeLimitMinutes)
         assertNull(first.activeTimeLimitMs)
-        first.chooseRewardsEnabled(true)
+        first.chooseRewardsEnabled(false)
         first.chooseTimeLimitMinutes(15)
         val second = model()
-        assertTrue(second.rewardsEnabled)
+        assertFalse(second.rewardsEnabled)
         assertEquals(15, second.timeLimitMinutes)
+        second.chooseRewardsEnabled(true)
+        assertTrue(model().rewardsEnabled)
         listOf(-5 to 0, 4 to 0, 7 to 5, 60 to 60, 100 to 60).forEach { (input, expected) ->
             second.chooseTimeLimitMinutes(input)
             assertEquals(expected, second.timeLimitMinutes)
@@ -184,6 +186,7 @@ class RewardsModelTest {
 
     @Test fun rewardsMustBeEnabledAtBothStartAndFinish() {
         val model = model()
+        model.chooseShowTimer(true)
         start(model, rewards = false, minutes = 5)
         model.chooseRewardsEnabled(true)
         assertNull(model.activeTimeLimitMs)
@@ -202,6 +205,7 @@ class RewardsModelTest {
 
     @Test fun timeoutIsCheckedBeforeParsingAndCapsDurationAtTheExactLimit() {
         val model = model()
+        model.chooseShowTimer(true)
         start(model, minutes = 5)
         now += 299_999
         assertFalse(model.checkTimeLimit())
@@ -223,6 +227,7 @@ class RewardsModelTest {
 
     @Test fun timerCoroutineFinishesPracticeWithoutAnyInput() {
         val model = model()
+        model.chooseShowTimer(true)
         start(model, minutes = 5)
         now += 400_000
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200))
@@ -234,6 +239,7 @@ class RewardsModelTest {
 
     @Test fun limitAndInputPauseInEveryOverlayAndInTheBackground() {
         val model = model()
+        model.chooseShowTimer(true)
         start(model, minutes = 5)
         now += 1_000
         val initialAnswer = model.game!!.problem.answer.toString()
@@ -266,6 +272,7 @@ class RewardsModelTest {
 
     @Test fun timeLimitIsCapturedAtStartAndCannotBeDisabledByHidingTheTimer() {
         val model = model()
+        model.chooseShowTimer(true)
         start(model, minutes = 5)
         assertEquals(300_000L, model.activeTimeLimitMs)
         model.chooseShowTimer(false)
@@ -416,6 +423,7 @@ class RewardsModelTest {
     @Test fun usingRewardsWorksWhenEarningIsDisabledAndSurvivesReload() {
         collectLollipops()
         val model = model()
+        model.chooseRewardsEnabled(false)
         val history = model.history
         assertFalse(model.rewardsEnabled)
         model.openRewards()
