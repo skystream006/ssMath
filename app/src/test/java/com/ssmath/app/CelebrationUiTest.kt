@@ -30,6 +30,14 @@ class CelebrationUiTest {
     @Test fun bulbasaurPlaysAndFinishes() = playsAndFinishes(Celebration.BULBASAUR)
     @Test fun charmanderPlaysAndFinishes() = playsAndFinishes(Celebration.CHARMANDER)
     @Test fun jigglypuffPlaysAndFinishes() = playsAndFinishes(Celebration.JIGGLYPUFF)
+    @Test fun palafinPlaysAndFinishes() = playsAndFinishes(Celebration.PALAFIN)
+    @Test fun finizenPlaysAndFinishes() = playsAndFinishes(Celebration.FINIZEN)
+    @Test fun wailmerPlaysAndFinishes() = playsAndFinishes(Celebration.WAILMER)
+    @Test fun wailordPlaysAndFinishes() = playsAndFinishes(Celebration.WAILORD)
+    @Test fun bouffalantPlaysAndFinishes() = playsAndFinishes(Celebration.BOUFFALANT)
+    @Test fun veluzaPlaysAndFinishes() = playsAndFinishes(Celebration.VELUZA)
+    @Test fun mantykePlaysAndFinishes() = playsAndFinishes(Celebration.MANTYKE)
+    @Test fun mantinePlaysAndFinishes() = playsAndFinishes(Celebration.MANTINE)
 
     private fun playsAndFinishes(celebration: Celebration) {
         var finished by mutableStateOf(false)
@@ -58,6 +66,14 @@ class CelebrationUiTest {
     @Test fun bulbasaurCanBeSkipped() = skipsAndStaysFinished(Celebration.BULBASAUR)
     @Test fun charmanderCanBeSkipped() = skipsAndStaysFinished(Celebration.CHARMANDER)
     @Test fun jigglypuffCanBeSkipped() = skipsAndStaysFinished(Celebration.JIGGLYPUFF)
+    @Test fun palafinCanBeSkipped() = skipsAndStaysFinished(Celebration.PALAFIN)
+    @Test fun finizenCanBeSkipped() = skipsAndStaysFinished(Celebration.FINIZEN)
+    @Test fun wailmerCanBeSkipped() = skipsAndStaysFinished(Celebration.WAILMER)
+    @Test fun wailordCanBeSkipped() = skipsAndStaysFinished(Celebration.WAILORD)
+    @Test fun bouffalantCanBeSkipped() = skipsAndStaysFinished(Celebration.BOUFFALANT)
+    @Test fun veluzaCanBeSkipped() = skipsAndStaysFinished(Celebration.VELUZA)
+    @Test fun mantykeCanBeSkipped() = skipsAndStaysFinished(Celebration.MANTYKE)
+    @Test fun mantineCanBeSkipped() = skipsAndStaysFinished(Celebration.MANTINE)
 
     private fun skipsAndStaysFinished(celebration: Celebration) {
         var finished by mutableStateOf(false)

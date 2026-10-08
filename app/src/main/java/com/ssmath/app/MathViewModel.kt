@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 
 enum class Screen { SETUP, READY, PLAYING, RESULTS }
 
-enum class Overlay { SETTINGS, HISTORY, REWARDS }
+enum class Overlay { SETTINGS, HISTORY, REWARDS, POKEMONS }
 
 data class Feedback(val text: String, val correct: Boolean)
 
@@ -31,7 +31,8 @@ class MathViewModel(
     private val clock: () -> Long = SystemClock::elapsedRealtime,
     private val wallClock: () -> Long = System::currentTimeMillis,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val rewardRandom: Random = Random.Default
+    private val rewardRandom: Random = Random.Default,
+    private val celebrationRandom: Random = Random.Default
 ) : AndroidViewModel(application) {
     constructor(application: Application) : this(application, ProblemGenerator())
 
@@ -66,6 +67,8 @@ class MathViewModel(
     var historyDetail by mutableStateOf<PracticeResult?>(null)
         private set
     var rewardBalances by mutableStateOf<Map<RewardType, RewardBalance>>(emptyMap())
+        private set
+    var pokemons by mutableStateOf<Set<Celebration>>(emptySet())
         private set
     var rewardResult by mutableStateOf<PracticeResult?>(null)
         private set
@@ -215,7 +218,7 @@ class MathViewModel(
         pendingResult = pending
         lastResult = result
         val answeredAllQuestions = !expired && state.attempts.size == state.questionCount
-        celebration = if (answeredAllQuestions) Celebration.entries.random() else null
+        celebration = if (answeredAllQuestions) Celebration.entries.random(celebrationRandom) else null
         earlyFinishMessage = if (expired) "Time's up! You got ${state.correct} right out of ${state.questionCount}"
             else if (answeredAllQuestions) null
             else "Nice try! You got ${state.correct} right out of ${state.questionCount}"
@@ -252,6 +255,23 @@ class MathViewModel(
     }
 
     fun dismissCelebration() { celebration = null }
+
+    fun collectPresentedCelebration(presented: Celebration) {
+        if (celebration != presented || overlay != null || presented.category != CelebrationCategory.POKEMONS ||
+            presented in pokemons) return
+        viewModelScope.launch {
+            try {
+                storeLock.withLock {
+                    applySnapshot(withContext(ioDispatcher) { store.collectPokemon(presented) })
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                DebugLog.event(DebugEvent.HISTORY_FAILURE, error = error)
+                message = "Unable to save your Pokémon. Free device storage and try again."
+            }
+        }
+    }
 
     fun dismissEarlyFinishDialog() { earlyFinishMessage = null }
 
@@ -321,13 +341,21 @@ class MathViewModel(
         viewModelScope.launch { reloadHistory() }
     }
 
+    fun openPokemons() {
+        dismissOverlayReward()
+        overlay = Overlay.POKEMONS
+        updateTimer()
+        viewModelScope.launch { reloadHistory() }
+    }
+
     fun closeOverlay() {
         dismissOverlayReward()
         if (overlay == Overlay.HISTORY && historyDetail != null) {
             historyDetail = null
             return
         }
-        overlay = if (overlay == Overlay.HISTORY || overlay == Overlay.REWARDS) Overlay.SETTINGS else null
+        overlay = if (overlay == Overlay.HISTORY || overlay == Overlay.REWARDS || overlay == Overlay.POKEMONS)
+            Overlay.SETTINGS else null
         updateTimer()
     }
 
@@ -424,6 +452,7 @@ class MathViewModel(
     private fun applySnapshot(snapshot: PracticeSnapshot) {
         history = snapshot.history
         rewardBalances = snapshot.rewards
+        pokemons = snapshot.pokemons.filter { it.category == CelebrationCategory.POKEMONS }.toSet()
         latestResultId = maxOf(latestResultId, snapshot.lastResultId, snapshot.history.maxOfOrNull { it.id } ?: 0L)
     }
 

@@ -47,29 +47,58 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.serialization.Serializable
 
-enum class Celebration(val description: String) {
-    DOLPHINS("Dolphins jumping out of the water saying Hurray!!"),
-    WHALES("Whales jumping out of the water saying Hurray!!"),
-    ANCHOVIES("Anchovies jumping out of the water saying Hurray!!"),
-    PARTY("Congratulations party with balloons and confetti"),
-    CANDY_SHOWER("A colorful shower of candy"),
-    PIKACHU("Pikachu running toward you and zapping lightning"),
-    SQUIRTLE("Squirtle shooting water from his mouth"),
-    BULBASAUR("Bulbasaur shooting leaves from his bulb"),
-    CHARMANDER("Charmander shooting fire into the air"),
-    JIGGLYPUFF("Jigglypuff rolling and jumping")
+enum class CelebrationCategory(val label: String) {
+    GENERAL("Celebrations"), POKEMONS("Pokémons")
+}
+
+@Serializable
+enum class Celebration(
+    val label: String,
+    val description: String,
+    val category: CelebrationCategory = CelebrationCategory.GENERAL
+) {
+    DOLPHINS("Dolphins", "Dolphins jumping out of the water saying Hurray!!"),
+    WHALES("Whales", "Whales jumping out of the water saying Hurray!!"),
+    ANCHOVIES("Anchovies", "Anchovies jumping out of the water saying Hurray!!"),
+    PARTY("Party", "Congratulations party with balloons and confetti"),
+    CANDY_SHOWER("Candy shower", "A colorful shower of candy"),
+    PIKACHU("Pikachu", "Pikachu running toward you and zapping lightning", CelebrationCategory.POKEMONS),
+    SQUIRTLE("Squirtle", "Squirtle shooting water from his mouth", CelebrationCategory.POKEMONS),
+    BULBASAUR("Bulbasaur", "Bulbasaur shooting leaves from his bulb", CelebrationCategory.POKEMONS),
+    CHARMANDER("Charmander", "Charmander shooting fire into the air", CelebrationCategory.POKEMONS),
+    JIGGLYPUFF("Jigglypuff", "Jigglypuff rolling and jumping", CelebrationCategory.POKEMONS),
+    PALAFIN("Palafin", "Palafin leaping through sparkling water", CelebrationCategory.POKEMONS),
+    FINIZEN("Finizen", "Finizen jumping through bubbles", CelebrationCategory.POKEMONS),
+    WAILMER("Wailmer", "Wailmer bouncing and spraying water", CelebrationCategory.POKEMONS),
+    WAILORD("Wailord", "Wailord gliding and spouting water", CelebrationCategory.POKEMONS),
+    BOUFFALANT("Bouffalant", "Bouffalant charging and leaping in celebration", CelebrationCategory.POKEMONS),
+    VELUZA("Veluza", "Veluza darting through the water", CelebrationCategory.POKEMONS),
+    MANTYKE("Mantyke", "Mantyke flapping and jumping above the waves", CelebrationCategory.POKEMONS),
+    MANTINE("Mantine", "Mantine soaring over the sea with a little fish", CelebrationCategory.POKEMONS);
+
+    companion object {
+        val pokemons: List<Celebration> = entries.filter { it.category == CelebrationCategory.POKEMONS }
+    }
 }
 
 internal const val CELEBRATION_DURATION_MS = 7_200
 
 @Composable
-internal fun CelebrationDialog(celebration: Celebration, onFinished: () -> Unit) {
+internal fun CelebrationDialog(
+    celebration: Celebration,
+    replay: Boolean = false,
+    onPresented: () -> Unit = {},
+    onFinished: () -> Unit
+) {
     val progress = remember(celebration) { Animatable(0f) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val finish by rememberUpdatedState(onFinished)
+    val presented by rememberUpdatedState(onPresented)
     LaunchedEffect(celebration, lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            presented()
             val remaining = ((1f - progress.value) * CELEBRATION_DURATION_MS).toInt().coerceAtLeast(1)
             progress.animateTo(1f, tween(remaining, easing = LinearEasing))
             finish()
@@ -77,15 +106,17 @@ internal fun CelebrationDialog(celebration: Celebration, onFinished: () -> Unit)
     }
     AlertDialog(
         onDismissRequest = onFinished,
-        title = { Text("Congratulations!") },
+        title = { Text(if (replay) celebration.label else "Congratulations!") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("You answered every question!", modifier = Modifier.padding(bottom = 16.dp))
+                if (!replay) Text("You answered every question!", modifier = Modifier.padding(bottom = 16.dp))
                 CelebrationScene(celebration, progress = { progress.value })
             }
         },
         confirmButton = {
-            TextButton(onClick = onFinished, modifier = Modifier.testTag("view-results")) { Text("View results") }
+            TextButton(onClick = onFinished, modifier = Modifier.testTag(if (replay) "close-celebration" else "view-results")) {
+                Text(if (replay) "Close" else "View results")
+            }
         }
     )
 }
@@ -98,19 +129,7 @@ internal fun CelebrationScene(celebration: Celebration, progress: () -> Float) {
             role = Role.Image
         }) {
         Canvas(Modifier.matchParentSize()) {
-            withTransform({ scale(size.width / 320f, size.height / 220f, pivot = Offset.Zero) }) {
-                val frame = progress()
-                when (celebration) {
-                    Celebration.DOLPHINS, Celebration.WHALES, Celebration.ANCHOVIES -> drawOcean(celebration, frame)
-                    Celebration.PARTY -> drawParty(frame)
-                    Celebration.CANDY_SHOWER -> drawCandyShower(frame)
-                    Celebration.PIKACHU -> drawPikachuCelebration(frame)
-                    Celebration.SQUIRTLE -> drawSquirtleCelebration(frame)
-                    Celebration.BULBASAUR -> drawBulbasaurCelebration(frame)
-                    Celebration.CHARMANDER -> drawCharmanderCelebration(frame)
-                    Celebration.JIGGLYPUFF -> drawJigglypuffCelebration(frame)
-                }
-            }
+            drawCelebrationArtwork(celebration, progress())
         }
         Column(Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
@@ -126,6 +145,29 @@ internal fun CelebrationScene(celebration: Celebration, progress: () -> Float) {
                     close()
                 }, Color.White)
             }
+        }
+    }
+}
+
+internal fun DrawScope.drawCelebrationArtwork(celebration: Celebration, progress: Float) {
+    withTransform({ scale(size.width / 320f, size.height / 220f, pivot = Offset.Zero) }) {
+        when (celebration) {
+            Celebration.DOLPHINS, Celebration.WHALES, Celebration.ANCHOVIES -> drawOcean(celebration, progress)
+            Celebration.PARTY -> drawParty(progress)
+            Celebration.CANDY_SHOWER -> drawCandyShower(progress)
+            Celebration.PIKACHU -> drawPikachuCelebration(progress)
+            Celebration.SQUIRTLE -> drawSquirtleCelebration(progress)
+            Celebration.BULBASAUR -> drawBulbasaurCelebration(progress)
+            Celebration.CHARMANDER -> drawCharmanderCelebration(progress)
+            Celebration.JIGGLYPUFF -> drawJigglypuffCelebration(progress)
+            Celebration.PALAFIN -> drawPalafinCelebration(progress)
+            Celebration.FINIZEN -> drawFinizenCelebration(progress)
+            Celebration.WAILMER -> drawWailmerCelebration(progress)
+            Celebration.WAILORD -> drawWailordCelebration(progress)
+            Celebration.BOUFFALANT -> drawBouffalantCelebration(progress)
+            Celebration.VELUZA -> drawVeluzaCelebration(progress)
+            Celebration.MANTYKE -> drawMantykeCelebration(progress)
+            Celebration.MANTINE -> drawMantineCelebration(progress)
         }
     }
 }

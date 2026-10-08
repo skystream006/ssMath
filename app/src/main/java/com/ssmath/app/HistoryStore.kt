@@ -49,7 +49,8 @@ data class PracticeSnapshot(
     val history: List<PracticeResult> = emptyList(),
     val rewards: Map<RewardType, RewardBalance> = emptyMap(),
     val claimedResultIds: Set<Long> = emptySet(),
-    val lastResultId: Long = 0
+    val lastResultId: Long = 0,
+    val pokemons: Set<Celebration> = emptySet()
 )
 
 data class SavedPractice(val result: PracticeResult, val snapshot: PracticeSnapshot)
@@ -132,6 +133,12 @@ class HistoryStore(private val file: File) {
         ))
     }
 
+    fun collectPokemon(celebration: Celebration): PracticeSnapshot {
+        val snapshot = loadSnapshot()
+        if (celebration.category != CelebrationCategory.POKEMONS || celebration in snapshot.pokemons) return snapshot
+        return save(snapshot.copy(pokemons = snapshot.pokemons + celebration))
+    }
+
     fun delete(id: Long): List<PracticeResult> {
         val snapshot = loadSnapshot()
         return save(snapshot.copy(history = snapshot.history.filter { it.id != id })).history
@@ -139,7 +146,8 @@ class HistoryStore(private val file: File) {
 
     fun clear(): List<PracticeResult> {
         val snapshot = loadSnapshot()
-        if (snapshot.rewards.isNotEmpty() || snapshot.claimedResultIds.isNotEmpty() || snapshot.lastResultId != 0L) {
+        if (snapshot.rewards.isNotEmpty() || snapshot.claimedResultIds.isNotEmpty() ||
+            snapshot.lastResultId != 0L || snapshot.pokemons.isNotEmpty()) {
             save(snapshot.copy(history = emptyList()))
         } else if (file.exists() && !file.delete()) throw IOException("Unable to clear practice history.")
         return emptyList()

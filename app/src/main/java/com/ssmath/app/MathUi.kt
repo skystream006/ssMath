@@ -109,6 +109,7 @@ internal fun MathAppContent(model: MathViewModel) {
                         Overlay.SETTINGS -> SettingsScreen(model)
                         Overlay.HISTORY -> HistoryScreen(model)
                         Overlay.REWARDS -> RewardsScreen(model)
+                        Overlay.POKEMONS -> PokemonsScreen(model)
                         null -> {
                             MainContent(model)
                             SettingsButton(model::openSettings, Modifier.align(Alignment.BottomEnd))
@@ -155,7 +156,10 @@ private fun MainContent(model: MathViewModel) {
                     Button(onClick = model::done, modifier = Modifier.widthIn(min = 160.dp).testTag("done-button")) { Text("Done") }
                 }
             }
-            model.celebration?.let { CelebrationDialog(it, onFinished = model::dismissCelebration) }
+            model.celebration?.let { celebration ->
+                CelebrationDialog(celebration, onFinished = model::dismissCelebration,
+                    onPresented = { model.collectPresentedCelebration(celebration) })
+            }
             model.earlyFinishMessage?.let { message ->
                 AlertDialog(onDismissRequest = model::dismissEarlyFinishDialog,
                     text = { Text(message) },
