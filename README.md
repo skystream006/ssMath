@@ -22,13 +22,15 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    got right, plus every answered problem with a green check (correct) or a red X
    (wrong, with the correct answer if **Show correct answers** is enabled).
    Results are saved with the date and time.
-   If all the chosen questions were answered, even with mistakes, one of eighteen randomly chosen
+   If all the chosen questions were answered, even with mistakes, one of 162 randomly chosen
    congratulations animations plays: dolphins, whales, or anchovies jumping out
    of the water, a balloon-and-confetti party, a candy shower, Pikachu running toward
    the screen and zapping lightning, Squirtle shooting water from his mouth,
    Bulbasaur shooting leaves from his bulb, Charmander shooting fire into the air,
    Jigglypuff rolling and jumping, or Palafin, Finizen, Wailmer, Wailord, Bouffalant,
-   Veluza, Mantyke, or Mantine celebrating. The thirteen Pokémon scenes belong to the
+   Veluza, Mantyke, or Mantine celebrating, plus 144 additional Pokémon dancing
+   with confetti, from Ivysaur through Mew. Each has its own offline vector artwork.
+   The 157 Pokémon scenes belong to the
    **Pokémons** category and can only appear after completing **15 or more questions**.
    The remaining five scenes belong to **Other** and can appear at any practice length;
    below 15 questions, only **Other** scenes appear. Each scene says **Hurray!!**. These animations
@@ -60,7 +62,7 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   **Pokémons** or **Other**. Pokémon are sorted by their National Pokédex number
   (Ndex) and labelled with a four-digit number and name, such as **#0025 Pikachu**.
   Other celebrations keep their names without numbers. Each section heading shows its own collected/total
-  fraction (out of 13 Pokémon or 5 Other), including zero when none are collected.
+  fraction (out of 157 Pokémon or 5 Other), including zero when none are collected.
   Tap an image to replay its animation; close it or wait for it to finish to return to your collection.
   The collection is saved on this device and is not removed when history is deleted.
 - **Practice History** – review any previously saved result, delete one, or clear all.

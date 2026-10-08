@@ -38,6 +38,36 @@ class CelebrationUiTest {
     @Test fun veluzaPlaysAndFinishes() = playsAndFinishes(Celebration.VELUZA)
     @Test fun mantykePlaysAndFinishes() = playsAndFinishes(Celebration.MANTYKE)
     @Test fun mantinePlaysAndFinishes() = playsAndFinishes(Celebration.MANTINE)
+    @Test fun ivysaurPlaysAndFinishes() = playsAndFinishes(Celebration.IVYSAUR)
+    @Test fun tentacruelGeodudePlaysAndFinishes() = playsAndFinishes(Celebration.TENTACRUEL_GEODUDE)
+    @Test fun mewPlaysAndFinishes() = playsAndFinishes(Celebration.MEW)
+
+    @Test fun everyAddedPokemonCanReplayWithItsLabelAndCloseOrFinish() {
+        var selected by mutableStateOf<Celebration?>(null)
+        var completions = 0
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            MathTheme {
+                selected?.let { pokemon ->
+                    CelebrationDialog(pokemon, replay = true) {
+                        completions++
+                        selected = null
+                    }
+                }
+            }
+        }
+        Celebration.pokemons.drop(13).forEachIndexed { index, pokemon ->
+            compose.runOnIdle { selected = pokemon }
+            compose.mainClock.advanceTimeBy(64)
+            compose.onNodeWithText(pokemon.label).assertIsDisplayed()
+            compose.onNodeWithContentDescription(pokemon.description).assertIsDisplayed()
+            compose.onNodeWithText("Hurray!!").assertIsDisplayed()
+            if (index % 2 == 0) compose.onNodeWithTag("close-celebration").performClick()
+            compose.mainClock.advanceTimeBy(CELEBRATION_DURATION_MS.toLong())
+            compose.onNodeWithTag("celebration-${pokemon.name}").assertDoesNotExist()
+            compose.runOnIdle { assertEquals(index + 1, completions) }
+        }
+    }
 
     private fun playsAndFinishes(celebration: Celebration) {
         var finished by mutableStateOf(false)

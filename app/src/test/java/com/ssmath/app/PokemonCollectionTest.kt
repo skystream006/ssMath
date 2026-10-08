@@ -48,7 +48,7 @@ class PokemonCollectionTest {
         chosen: Celebration = Celebration.PIKACHU,
         dispatcher: CoroutineDispatcher = Dispatchers.Unconfined
     ): MathViewModel {
-        val seed = (0..1_000).first { Celebration.entries.random(Random(it)) == chosen }
+        val seed = (0..10_000).first { Celebration.entries.random(Random(it)) == chosen }
         return MathViewModel(application, clock = { now }, ioDispatcher = dispatcher,
             celebrationRandom = Random(seed)).also {
             models += ViewModelStore().apply { put("model", it) }
@@ -69,12 +69,12 @@ class PokemonCollectionTest {
         shadowOf(Looper.getMainLooper()).idle()
     }
 
-    @Test fun allThirteenPokemonsHaveExactLabelsAndStableStoredNames() {
+    @Test fun originalPokemonsKeepExactLabelsAndAllStoredNamesAreStable() {
         assertEquals("Pokémons", CelebrationCategory.POKEMONS.label)
         assertEquals(listOf("Pikachu", "Squirtle", "Bulbasaur", "Charmander", "Jigglypuff",
             "Palafin", "Finizen", "Wailmer", "Wailord", "Bouffalant", "Veluza", "Mantyke", "Mantine"),
-            Celebration.pokemons.map { it.label })
-        assertEquals(18, Celebration.entries.size)
+            Celebration.pokemons.take(13).map { it.label })
+        assertEquals(162, Celebration.entries.size)
         assertEquals("Other", CelebrationCategory.OTHER.label)
         assertEquals(setOf(Celebration.DOLPHINS, Celebration.WHALES, Celebration.ANCHOVIES,
             Celebration.PARTY, Celebration.CANDY_SHOWER),
@@ -92,11 +92,11 @@ class PokemonCollectionTest {
         }
         listOf(15, 16, 25, 1000).forEach { count ->
             assertEquals(Celebration.entries.toSet(),
-                (0..200).map { Celebration.select(count, Random(it)) }.toSet())
+                (0..10_000).map { Celebration.select(count, Random(it)) }.toSet())
         }
     }
 
-    @Test fun allPokemonsHaveNationalPokedexNumbersAndPaddedCollectionLabels() {
+    @Test fun originalPokemonsKeepNationalPokedexNumbersAndPaddedCollectionLabels() {
         val expected = mapOf(
             Celebration.PIKACHU to (25 to "#0025 Pikachu"),
             Celebration.SQUIRTLE to (7 to "#0007 Squirtle"),
@@ -112,7 +112,7 @@ class PokemonCollectionTest {
             Celebration.MANTYKE to (458 to "#0458 Mantyke"),
             Celebration.MANTINE to (226 to "#0226 Mantine")
         )
-        assertEquals(Celebration.pokemons.toSet(), expected.keys)
+        assertEquals(Celebration.pokemons.take(13).toSet(), expected.keys)
         expected.forEach { (pokemon, values) ->
             assertEquals(pokemon.name, values.first, pokemon.ndex)
             assertEquals(values.second, pokemon.collectionLabel)
