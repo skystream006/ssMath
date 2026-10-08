@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -448,6 +449,126 @@ class MathAppTest {
         questionHeading.assertIsDisplayed()
         assertTrue(questionHeading.fetchSemanticsNode().boundsInRoot.bottom <=
             compose.onNodeWithTag("question-count-input").fetchSemanticsNode().boundsInRoot.top)
+    }
+
+    @Test fun divisionSetupUsesIndependentMaximumsAndSavesThemWithResults() {
+        val model = model()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("operation-DIVISION").performClick()
+        compose.onNodeWithText("What is the Maximum First number?").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("minimum-input").performScrollTo().performTextReplacement("100")
+        compose.onNodeWithText("What is the Maximum Second number?").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("maximum-input").performScrollTo().performTextReplacement("7")
+        compose.onNodeWithTag("question-count-input").performScrollTo().performTextReplacement("3")
+        compose.onNodeWithTag("submit-setup").performScrollTo().assertIsEnabled().performClick()
+        compose.onNodeWithText("Division · first up to 100 · second up to 7 · 3 questions").assertIsDisplayed()
+        assertEquals(100, model().divisionMaximumFirst)
+        assertEquals(7, model().divisionMaximumSecond)
+        compose.onNodeWithTag("start-button").performClick()
+        repeat(3) { answer(model.game!!.problem.answer) }
+        compose.onNodeWithTag("view-results").performClick()
+        compose.onNodeWithText("Division · first up to 100 · second up to 7").assertIsDisplayed()
+        compose.waitUntil(5_000) { model.history.size == 1 }
+        val result = HistoryStore(File(application.filesDir, "practice_history.json")).load().single()
+        assertEquals(100, result.maximum)
+        assertEquals(7, result.maximumSecond)
+        assertTrue(result.attempts.all { it.problem.left in 1..100 && it.problem.right in 1..7 })
+        compose.onNodeWithTag("done-button").performClick()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithTag("practice-history").performClick()
+        compose.onNodeWithText("Division · first up to 100 · second up to 7").assertIsDisplayed()
+    }
+
+    @Test fun divisionMaximumValidationAndSwitchingOperationsKeepSeparateSettings() {
+        val model = model()
+        model.selectOperation(Operation.ADDITION)
+        model.updateMinimum("4")
+        model.updateMaximum("8")
+        model.submitSetup()
+        model.backToSetup()
+        model.selectOperation(Operation.DIVISION)
+        compose.setContent { MathAppContent(model) }
+        listOf("", "0", "-1", "1.5", "abc", "10001", "999999").forEach { invalid ->
+            listOf("minimum-input", "maximum-input").forEach { tag ->
+                compose.onNodeWithTag(tag).performScrollTo().performTextReplacement(invalid)
+                compose.onNodeWithTag("submit-setup").assertIsNotEnabled()
+                compose.runOnIdle {
+                    model.submitSetup()
+                    model.start()
+                    assertEquals(Screen.SETUP, model.screen)
+                    assertNull(model.game)
+                }
+                compose.onNodeWithTag(tag).performScrollTo().performTextReplacement("10")
+            }
+        }
+        compose.onNodeWithTag("minimum-input").performScrollTo().performTextReplacement("1")
+        compose.onNodeWithTag("maximum-input").performScrollTo().performTextReplacement("10000")
+        compose.onNodeWithTag("submit-setup").performScrollTo().assertIsEnabled().performClick()
+        compose.runOnIdle {
+            assertEquals(1, model().divisionMaximumFirst)
+            assertEquals(10000, model().divisionMaximumSecond)
+            model.backToSetup()
+            model.selectOperation(Operation.ADDITION)
+        }
+        compose.onNodeWithText("What is the minimum number?").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("minimum-input").assertTextContains("4")
+        compose.onNodeWithTag("maximum-input").performScrollTo().assertTextContains("8")
+        assertEquals(4, model().minimum)
+        assertEquals(8, model().maximum)
+    }
+
+    @Test fun gameProgressCountsCorrectAndWrongAnswersAndResetsForNewPractice() {
+        val model = model()
+        model.selectOperation(Operation.ADDITION)
+        model.updateQuestionCount("3")
+        model.submitSetup()
+        model.start()
+        compose.setContent { MathAppContent(model) }
+        val progress = compose.onNodeWithTag("game-progress")
+        progress.assertIsDisplayed().assertRangeInfoEquals(ProgressBarRangeInfo(0f, 0f..1f, 2))
+        compose.onNodeWithTag("progress-rocket").assertIsDisplayed()
+        answer(model.game!!.problem.answer)
+        progress.assertRangeInfoEquals(ProgressBarRangeInfo(1f / 3, 0f..1f, 2))
+        answer(model.game!!.problem.answer + 1)
+        progress.assertRangeInfoEquals(ProgressBarRangeInfo(2f / 3, 0f..1f, 2))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "2 of 3 questions answered"))
+        compose.runOnIdle { model.openSettings() }
+        progress.assertDoesNotExist()
+        compose.runOnIdle { model.closeOverlay() }
+        progress.assertRangeInfoEquals(ProgressBarRangeInfo(2f / 3, 0f..1f, 2))
+        answer(model.game!!.problem.answer)
+        progress.assertDoesNotExist()
+        compose.onNodeWithTag("view-results").performClick()
+        compose.onNodeWithTag("done-button").performClick()
+        compose.onNodeWithTag("submit-setup").performScrollTo().performClick()
+        compose.onNodeWithTag("start-button").performClick()
+        progress.assertRangeInfoEquals(ProgressBarRangeInfo(0f, 0f..1f, 2))
+    }
+
+    @Test fun rocketJumpsForwardAndLandsAtTheNextProgressPoint() {
+        val completed = mutableIntStateOf(0)
+        compose.setContent { MathTheme { GameProgress(completed.intValue, 4) } }
+        val rocket = compose.onNodeWithTag("progress-rocket")
+        val start = rocket.fetchSemanticsNode().boundsInRoot
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle { completed.intValue = 1 }
+        compose.mainClock.advanceTimeBy(250)
+        val jumping = rocket.fetchSemanticsNode().boundsInRoot
+        assertTrue(jumping.left > start.left)
+        assertTrue(jumping.top < start.top)
+        compose.mainClock.advanceTimeBy(600)
+        val landed = rocket.fetchSemanticsNode().boundsInRoot
+        assertTrue(landed.left > jumping.left)
+        assertEquals(start.top, landed.top, 1f)
+        compose.runOnIdle { completed.intValue = 4 }
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithTag("game-progress").assertRangeInfoEquals(ProgressBarRangeInfo(1f, 0f..1f, 3))
+        val end = rocket.fetchSemanticsNode().boundsInRoot
+        val track = compose.onNodeWithTag("game-progress").fetchSemanticsNode().boundsInRoot
+        assertTrue(end.left > landed.left)
+        assertTrue(end.right <= track.right)
+        assertEquals(start.top, end.top, 1f)
+        compose.mainClock.autoAdvance = true
     }
 
     @Test fun minimumIsValidatedAndRemembered() {

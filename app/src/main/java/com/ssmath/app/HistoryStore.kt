@@ -30,8 +30,12 @@ data class PracticeResult(
     val questionCount: Int = attempts.size,
     val timedOut: Boolean = false,
     val prizeType: RewardType? = null,
-    val prize: PrizeAward? = null
+    val prize: PrizeAward? = null,
+    val maximumSecond: Int? = null
 ) {
+    val numberDescription: String get() =
+        if (operation == Operation.DIVISION && maximumSecond != null) "first up to $maximum · second up to $maximumSecond"
+        else "numbers $minimum to $maximum"
     val correct: Int get() = attempts.count { it.correct }
     val wrong: Int get() = attempts.count { !it.correct }
     val percentCorrect: Int get() = if (attempts.isEmpty()) 0 else (correct.toLong() * 100 / attempts.size).toInt()
@@ -144,16 +148,27 @@ class HistoryStore(private val file: File) {
 
     fun delete(id: Long): List<PracticeResult> {
         val snapshot = loadSnapshot()
-        return save(snapshot.copy(history = snapshot.history.filter { it.id != id })).history
+        val result = snapshot.history.find { it.id == id } ?: return snapshot.history
+        return save(withoutResults(snapshot, listOf(result))).history
     }
 
     fun clear(): List<PracticeResult> {
         val snapshot = loadSnapshot()
         if (snapshot.rewards.isNotEmpty() || snapshot.claimedResultIds.isNotEmpty() ||
             snapshot.lastResultId != 0L || snapshot.pokemons.isNotEmpty()) {
-            save(snapshot.copy(history = emptyList()))
+            save(withoutResults(snapshot, snapshot.history))
         } else if (file.exists() && !file.delete()) throw IOException("Unable to clear practice history.")
         return emptyList()
+    }
+
+    private fun withoutResults(snapshot: PracticeSnapshot, removed: List<PracticeResult>): PracticeSnapshot {
+        val ids = removed.map { it.id }.toSet()
+        val fragments = removed.mapNotNull { it.prize?.type }.groupingBy { it }.eachCount()
+        // Keep claimed IDs to prevent a stale save from restoring a deleted prize.
+        return snapshot.copy(
+            history = snapshot.history.filterNot { it.id in ids },
+            rewards = snapshot.rewards.mapValues { (type, balance) -> balance.removeFragments(fragments[type] ?: 0) }
+        )
     }
 
     private fun save(snapshot: PracticeSnapshot): PracticeSnapshot {

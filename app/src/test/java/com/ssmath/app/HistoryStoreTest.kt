@@ -50,6 +50,20 @@ class HistoryStoreTest {
         assertEquals(1, result.correct)
     }
 
+    @Test fun divisionLimitsRoundTripWithoutReinterpretingLegacyResults() {
+        val legacy = result(1).copy(operation = Operation.DIVISION, minimum = 3, maximum = 12)
+        val current = legacy.copy(id = 2, finishedAt = 2, minimum = 1, maximum = 100, maximumSecond = 7)
+        store.add(legacy)
+        store.add(current)
+        assertEquals(listOf(current, legacy), HistoryStore(file).load())
+        assertEquals("first up to 100 · second up to 7", store.load().first().numberDescription)
+        assertEquals("numbers 3 to 12", store.load().last().numberDescription)
+        file.writeText("""[{"id":3,"finishedAt":3,"operation":"DIVISION","minimum":3,"maximum":12,
+            "durationMs":1000,"attempts":[]}]""")
+        assertNull(store.load().single().maximumSecond)
+        assertEquals("numbers 3 to 12", store.load().single().numberDescription)
+    }
+
     @Test fun deletesAndClearsResults() {
         store.add(result(1_000))
         store.add(result(2_000))
@@ -103,7 +117,7 @@ class HistoryStoreTest {
         store.clear()
         val restored = HistoryStore(file).loadSnapshot()
         assertEquals(expected, restored.pokemons)
-        assertEquals(RewardBalance(fragments = 1), restored.rewards[RewardType.LOLLIPOP])
+        assertEquals(RewardBalance(), restored.rewards[RewardType.LOLLIPOP])
         assertTrue(restored.history.isEmpty())
     }
 
@@ -220,10 +234,9 @@ class HistoryStoreTest {
             before.history.forEach { store.claimReward(it.id) }
             assertEquals(expected, store.loadSnapshot())
         }
-        val remaining = store.loadSnapshot().rewards
         store.delete(store.load().first().id)
         store.clear()
-        assertEquals(remaining, HistoryStore(file).loadSnapshot().rewards)
+        assertTrue(HistoryStore(file).loadSnapshot().rewards.values.all { it == RewardBalance() })
     }
 
     @Test fun unavailableRewardsNeverConsumeFragmentsOrCreateNegativeBalances() {
@@ -255,13 +268,13 @@ class HistoryStoreTest {
         assertEquals(used, HistoryStore(file).loadSnapshot())
     }
 
-    @Test fun clearingDeletingAndTrimmingHistoryDoNotDeleteOrDuplicateInventory() {
+    @Test fun deletionRemovesRewardsButRetentionTrimmingPreservesThemWithoutDuplicatingClaims() {
         store.add(eligible(1))
         store.claimReward(1)
         store.delete(1)
         store.add(eligible(1))
         assertTrue(store.load().isEmpty())
-        assertEquals(RewardBalance(0, 1), store.claimReward(1).rewards[RewardType.LOLLIPOP])
+        assertEquals(RewardBalance(), store.claimReward(1).rewards[RewardType.LOLLIPOP])
         store.add(eligible(2, RewardType.VIDEO_GAME))
         store.claimReward(2)
         repeat(MAX_HISTORY_RESULTS) { store.add(result(it + 3L)) }
@@ -274,6 +287,69 @@ class HistoryStoreTest {
         assertTrue(store.load().isEmpty())
         assertEquals(rewards, HistoryStore(file).loadSnapshot().rewards)
         assertEquals(rewards, store.claimReward(2).rewards)
+    }
+
+    @Test fun deletingAClaimedResultRemovesOnlyItsFragmentIncludingFromWholeRewards() {
+        RewardType.entries.forEachIndexed { index, type ->
+            repeat(3) {
+                val id = index * 3 + it + 1L
+                store.add(eligible(id, type))
+                store.claimReward(id)
+            }
+        }
+        val before = store.loadSnapshot()
+        val deleted = before.history.first()
+        val type = deleted.prize!!.type
+        store.delete(deleted.id)
+        val after = HistoryStore(file).loadSnapshot()
+        assertEquals(before.history.filterNot { it.id == deleted.id }, after.history)
+        assertEquals(before.rewards + (type to RewardBalance(0, 2)), after.rewards)
+        assertEquals(before.claimedResultIds, after.claimedResultIds)
+        store.delete(deleted.id)
+        store.claimReward(deleted.id)
+        assertEquals(after, store.loadSnapshot())
+    }
+
+    @Test fun deletingUnclaimedOrUnrewardedResultsDoesNotDeductInventory() {
+        store.add(eligible(1))
+        store.claimReward(1)
+        store.add(eligible(2))
+        store.add(result(3))
+        val rewards = store.loadSnapshot().rewards
+        store.delete(2)
+        store.delete(3)
+        store.delete(999)
+        assertEquals(rewards, store.loadSnapshot().rewards)
+    }
+
+    @Test fun deletingSpentRewardsNeverCreatesDebtOrRestoresOldBalances() {
+        repeat(3) {
+            store.add(eligible(it + 1L))
+            store.claimReward(it + 1L)
+        }
+        store.useReward(RewardType.LOLLIPOP)
+        store.delete(1)
+        assertEquals(RewardBalance(), store.loadSnapshot().rewards[RewardType.LOLLIPOP])
+        store.add(eligible(4))
+        store.claimReward(4)
+        assertEquals(RewardBalance(0, 1), store.loadSnapshot().rewards[RewardType.LOLLIPOP])
+        store.clear()
+        assertEquals(RewardBalance(), HistoryStore(file).loadSnapshot().rewards[RewardType.LOLLIPOP])
+    }
+
+    @Test fun failedDeletionAndClearKeepHistoryAndRewardsTogetherAndAllowRetry() {
+        store.add(eligible(1))
+        store.claimReward(1)
+        val before = file.readText()
+        val blocked = File(directory, "${file.name}.tmp").apply { mkdir() }
+        assertThrows(IOException::class.java) { store.delete(1) }
+        assertEquals(before, file.readText())
+        assertThrows(IOException::class.java) { store.clear() }
+        assertEquals(before, file.readText())
+        assertTrue(blocked.delete())
+        store.clear()
+        assertTrue(store.load().isEmpty())
+        assertEquals(RewardBalance(), HistoryStore(file).loadSnapshot().rewards[RewardType.LOLLIPOP])
     }
 
     @Test fun staleResultSaveCannotOverwriteAnAlreadyClaimedPrize() {

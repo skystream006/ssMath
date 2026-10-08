@@ -50,6 +50,10 @@ class MathViewModel(
         private set
     var maximumText by mutableStateOf(settings.getInt("maximum", 10).toString())
         private set
+    var divisionMaximumFirstText by mutableStateOf(settings.getInt("division_maximum_first", settings.getInt("maximum", 10)).toString())
+        private set
+    var divisionMaximumSecondText by mutableStateOf(settings.getInt("division_maximum_second", settings.getInt("maximum", 10)).toString())
+        private set
     var questionCountText by mutableStateOf(settings.getInt("question_count", DEFAULT_QUESTION_COUNT).toString())
         private set
     var game by mutableStateOf<GameState?>(null)
@@ -121,8 +125,12 @@ class MathViewModel(
 
     val maximum: Int? get() = parseMaximum(maximumText)
     val minimum: Int? get() = parseMaximum(minimumText)?.takeIf { it <= (maximum ?: MAX_MAXIMUM) }
+    val divisionMaximumFirst: Int? get() = parseMaximum(divisionMaximumFirstText)
+    val divisionMaximumSecond: Int? get() = parseMaximum(divisionMaximumSecondText)
     val questionCount: Int? get() = parseQuestionCount(questionCountText)
-    val canSubmitSetup: Boolean get() = selectedOperation != null && minimum != null && maximum != null && questionCount != null
+    val canSubmitSetup: Boolean get() = selectedOperation != null && questionCount != null &&
+        if (selectedOperation == Operation.DIVISION) divisionMaximumFirst != null && divisionMaximumSecond != null
+        else minimum != null && maximum != null
     val feedback: Feedback?
         get() = game?.attempts?.lastOrNull()?.let { attempt ->
             when {
@@ -142,15 +150,24 @@ class MathViewModel(
 
     fun updateMaximum(text: String) { maximumText = text.filter { it in '0'..'9' }.take(6) }
 
+    fun updateDivisionMaximumFirst(text: String) { divisionMaximumFirstText = text.take(6) }
+
+    fun updateDivisionMaximumSecond(text: String) { divisionMaximumSecondText = text.take(6) }
+
     fun updateQuestionCount(text: String) { questionCountText = text.take(6) }
 
     fun submitSetup() {
+        if (!canSubmitSetup) return
         val operation = selectedOperation ?: return
-        val minimum = minimum ?: return
-        val maximum = maximum ?: return
         val questionCount = questionCount ?: return
-        settings.edit().putString("operation", operation.name).putInt("maximum", maximum)
-            .putInt("minimum", minimum).putInt("question_count", questionCount).apply()
+        val edit = settings.edit().putString("operation", operation.name).putInt("question_count", questionCount)
+        if (operation == Operation.DIVISION) {
+            edit.putInt("division_maximum_first", requireNotNull(divisionMaximumFirst))
+                .putInt("division_maximum_second", requireNotNull(divisionMaximumSecond))
+        } else {
+            edit.putInt("maximum", requireNotNull(maximum)).putInt("minimum", requireNotNull(minimum))
+        }
+        edit.apply()
         screen = Screen.READY
     }
 
@@ -169,11 +186,14 @@ class MathViewModel(
     }
 
     fun start() {
+        if (!canSubmitSetup) return
         val operation = selectedOperation ?: return
-        val minimum = minimum ?: return
-        val maximum = maximum ?: return
+        val division = operation == Operation.DIVISION
+        val minimum = if (division) MIN_MAXIMUM else minimum ?: return
+        val maximum = (if (division) divisionMaximumFirst else maximum) ?: return
+        val maximumSecond = (if (division) divisionMaximumSecond else maximum) ?: return
         val questionCount = questionCount ?: return
-        game = GameState.start(operation, maximum, generator, questionCount, minimum)
+        game = GameState.start(operation, maximum, generator, questionCount, minimum, maximumSecond)
         answerText = ""
         celebration = null
         earlyFinishMessage = null
@@ -211,7 +231,8 @@ class MathViewModel(
         val finishedAt = wallClock()
         latestResultId = maxOf(Math.addExact(latestResultId, 1), finishedAt)
         val result = PracticeResult(latestResultId, finishedAt, state.operation, state.maximum, duration, state.attempts,
-            minimum = state.minimum, questionCount = state.questionCount, timedOut = expired,
+            minimum = state.minimum, maximumSecond = state.maximumSecond.takeIf { state.operation == Operation.DIVISION },
+            questionCount = state.questionCount, timedOut = expired,
             prizeType = selectPrize(state.questionCount, state.correct, state.attempts.size,
                 rewardsEnabledAtStart, rewardsEnabled, expired, rewardRandom))
         val pending = PendingResult(result)
@@ -463,13 +484,12 @@ class MathViewModel(
 
     fun deleteResult(id: Long) {
         historyDetail = null
-        val request = rewardRequestVersion
         viewModelScope.launch {
             try {
                 storeLock.withLock {
                     withContext(ioDispatcher) { store.delete(id) }
                     applySnapshot(withContext(ioDispatcher) { store.loadSnapshot() })
-                    if (rewardRequestVersion == request && rewardResult?.id == id) dismissReward()
+                    removeDeletedResultReward(id)
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -488,6 +508,7 @@ class MathViewModel(
                 storeLock.withLock {
                     withContext(ioDispatcher) { store.clear() }
                     applySnapshot(withContext(ioDispatcher) { store.loadSnapshot() })
+                    lastResult?.takeIf { pendingResult?.saved != false }?.let { removeDeletedResultReward(it.id) }
                     if (rewardRequestVersion == request) dismissReward()
                 }
             } catch (error: CancellationException) {
@@ -497,6 +518,14 @@ class MathViewModel(
                 message = "Unable to clear practice history."
             }
         }
+    }
+
+    private fun removeDeletedResultReward(id: Long) {
+        if (lastResult?.id == id) lastResult = lastResult?.copy(prizeType = null, prize = null)
+        pendingResult?.takeIf { it.saved && it.result.id == id }?.let {
+            it.result = it.result.copy(prizeType = null, prize = null)
+        }
+        if (rewardResult?.id == id) dismissReward()
     }
 
     private suspend fun reloadHistory() {

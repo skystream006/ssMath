@@ -396,18 +396,32 @@ class RewardsModelTest {
         assertEquals(1, restored.rewardBalances.values.sumOf { it.totalFragments })
     }
 
-    @Test fun inventorySurvivesHistoryDeletionAndClearingThroughTheModel() {
+    @Test fun deletingAndClearingResultsRemovesTheirRewardsThroughTheModel() {
         val model = model()
         start(model)
         finish(model)
         model.dismissCelebration()
         model.claimReward()
-        val rewards = model.rewardBalances
+        val deleted = model.lastResult!!
+        assertEquals(1, model.rewardBalances.values.sumOf { it.totalFragments })
         model.deleteResult(model.lastResult!!.id)
         assertTrue(model.history.isEmpty())
-        assertEquals(rewards, model.rewardBalances)
+        assertEquals(0, model.rewardBalances.values.sumOf { it.totalFragments })
+        assertNull(model.lastResult!!.prize)
+        assertNull(model.lastResult!!.prizeType)
+        model.showRewardForResult(deleted)
+        assertNull(model.rewardResult)
+        assertEquals(model.rewardBalances, model().rewardBalances)
+        model.done()
+        start(model)
+        finish(model)
+        model.dismissCelebration()
+        model.claimReward()
+        assertEquals(1, model.rewardBalances.values.sumOf { it.totalFragments })
         model.clearHistory()
-        assertEquals(rewards, model().rewardBalances)
+        assertEquals(0, model().rewardBalances.values.sumOf { it.totalFragments })
+        assertNull(model.lastResult!!.prize)
+        assertNull(model.rewardResult)
     }
 
     @Test fun unreadableInventoryReportsAnErrorAndCannotBeCleared() {
@@ -434,7 +448,7 @@ class RewardsModelTest {
         assertEquals(history, model.history)
         assertEquals(model.rewardBalances, model().rewardBalances)
         model.clearHistory()
-        assertEquals(RewardBalance(1, 2), model().rewardBalances[RewardType.LOLLIPOP])
+        assertEquals(RewardBalance(), model().rewardBalances[RewardType.LOLLIPOP])
     }
 
     @Test fun useRequiresTheRewardsPageAndAnAvailableWholeReward() {
@@ -466,7 +480,7 @@ class RewardsModelTest {
         assertFalse(model.usingReward)
         assertEquals(Overlay.SETTINGS, model.overlay)
         assertTrue(model.history.isEmpty())
-        assertEquals(RewardBalance(1, 2), model.rewardBalances[RewardType.LOLLIPOP])
+        assertEquals(RewardBalance(), model.rewardBalances[RewardType.LOLLIPOP])
         assertEquals(model.rewardBalances, model().rewardBalances)
     }
 

@@ -3,8 +3,11 @@
 package com.ssmath.app
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,8 +16,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -27,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.AlertDialog
@@ -35,6 +41,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -59,18 +66,27 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
+import kotlin.math.PI
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 internal val CorrectGreen = Color(0xFF2E9E4F)
 internal val WrongRed = Color(0xFFD32F2F)
@@ -194,6 +210,7 @@ private fun DialogCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun SetupDialog(model: MathViewModel) {
+    val division = model.selectedOperation == Operation.DIVISION
     DialogCard {
         Text("What would you like to practice?", style = MaterialTheme.typography.titleLarge)
         Operation.entries.chunked(2).forEach { row ->
@@ -215,18 +232,25 @@ private fun SetupDialog(model: MathViewModel) {
                 }
             }
         }
-        Text("What is the minimum number?", style = MaterialTheme.typography.titleLarge)
-        OutlinedTextField(model.minimumText, model::updateMinimum, singleLine = true,
-            label = { Text("Minimum number") },
-            supportingText = { Text("Whole number from $MIN_MAXIMUM to the maximum number") },
-            isError = model.minimumText.isNotEmpty() && model.minimum == null,
+        Text(if (division) "What is the Maximum First number?" else "What is the minimum number?",
+            style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(if (division) model.divisionMaximumFirstText else model.minimumText,
+            if (division) model::updateDivisionMaximumFirst else model::updateMinimum, singleLine = true,
+            label = { Text(if (division) "Maximum First number" else "Minimum number") },
+            supportingText = { Text(if (division) "Whole number from $MIN_MAXIMUM to ${"%,d".format(MAX_MAXIMUM)}"
+                else "Whole number from $MIN_MAXIMUM to the maximum number") },
+            isError = if (division) model.divisionMaximumFirstText.isNotEmpty() && model.divisionMaximumFirst == null
+                else model.minimumText.isNotEmpty() && model.minimum == null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth().testTag("minimum-input"))
-        Text("What is the maximum number?", style = MaterialTheme.typography.titleLarge)
-        OutlinedTextField(model.maximumText, model::updateMaximum, singleLine = true,
-            label = { Text("Maximum number") },
+        Text(if (division) "What is the Maximum Second number?" else "What is the maximum number?",
+            style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(if (division) model.divisionMaximumSecondText else model.maximumText,
+            if (division) model::updateDivisionMaximumSecond else model::updateMaximum, singleLine = true,
+            label = { Text(if (division) "Maximum Second number" else "Maximum number") },
             supportingText = { Text("Whole number from $MIN_MAXIMUM to ${"%,d".format(MAX_MAXIMUM)}") },
-            isError = model.maximumText.isNotEmpty() && model.maximum == null,
+            isError = if (division) model.divisionMaximumSecondText.isNotEmpty() && model.divisionMaximumSecond == null
+                else model.maximumText.isNotEmpty() && model.maximum == null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth().testTag("maximum-input"))
         Text("How many questions would you like?", style = MaterialTheme.typography.titleLarge)
@@ -244,10 +268,13 @@ private fun SetupDialog(model: MathViewModel) {
 
 @Composable
 private fun ReadyDialog(model: MathViewModel) {
+    val numbers = if (model.selectedOperation == Operation.DIVISION)
+        "first up to ${model.divisionMaximumFirst} · second up to ${model.divisionMaximumSecond}"
+        else "numbers ${model.minimum} to ${model.maximum}"
     DialogCard {
         Text("Press Start when Ready", style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Text("${model.selectedOperation?.label} · numbers ${model.minimum} to ${model.maximum} · ${model.questionCount} questions",
+        Text("${model.selectedOperation?.label} · $numbers · ${model.questionCount} questions",
             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
         if (model.rewardsEnabled && model.showTimer && model.timeLimitMinutes > 0) {
@@ -277,6 +304,7 @@ private fun PlayingScreen(model: MathViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Question ${game.attempts.size + 1} of ${game.questionCount}",
                style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("question-progress"))
+            GameProgress(game.attempts.size, game.questionCount)
             Text("${game.problem.text} = ?", style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.testTag("problem"))
             OutlinedTextField(model.answerText, model::updateAnswer, singleLine = true,
@@ -294,6 +322,30 @@ private fun PlayingScreen(model: MathViewModel) {
         }
         Text("Wrong: ${game.wrong}", style = MaterialTheme.typography.titleMedium, color = WrongRed,
             modifier = Modifier.align(Alignment.BottomStart).padding(20.dp).testTag("wrong-tally"))
+    }
+}
+
+@Composable
+internal fun GameProgress(completed: Int, total: Int, modifier: Modifier = Modifier) {
+    val position = remember(total) { Animatable(completed.toFloat()) }
+    LaunchedEffect(completed, total) {
+        position.animateTo(completed.toFloat(), animationSpec = tween(500))
+    }
+    BoxWithConstraints(modifier.fillMaxWidth().height(64.dp).testTag("game-progress").semantics {
+        contentDescription = "Practice progress"
+        stateDescription = "$completed of $total questions answered"
+        progressBarRangeInfo = ProgressBarRangeInfo(completed.toFloat() / total, 0f..1f, total - 1)
+    }) {
+        val travel = (maxWidth - 32.dp).coerceAtLeast(0.dp)
+        LinearProgressIndicator(progress = { position.value / total },
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp).height(8.dp).clearAndSetSemantics {},
+            drawStopIndicator = {})
+        Icon(Icons.Rounded.RocketLaunch, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.offset {
+                val hop = sin(PI * (position.value % 1f)).toFloat()
+                IntOffset((travel.toPx() * position.value / total).roundToInt(), (24.dp.toPx() - 20.dp.toPx() * hop).roundToInt())
+            }.size(32.dp).testTag("progress-rocket"))
     }
 }
 
@@ -328,7 +380,7 @@ internal fun ResultsContent(result: PracticeResult, title: String?, showCorrectA
                     title?.let { Text(it, style = MaterialTheme.typography.headlineMedium) }
                     Text("You got ${result.correct} right!", style = MaterialTheme.typography.titleLarge,
                         color = CorrectGreen, modifier = Modifier.testTag("result-correct"))
-                    Text("${result.operation.label} · numbers ${result.minimum} to ${result.maximum}",
+                    Text("${result.operation.label} · ${result.numberDescription}",
                         style = MaterialTheme.typography.bodyMedium)
                     Text("Wrong: ${result.wrong} · Time: ${formatDuration(result.durationMs)}",
                         style = MaterialTheme.typography.bodyMedium)
