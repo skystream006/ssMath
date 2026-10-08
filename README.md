@@ -15,9 +15,9 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    1 to 10,000, for the dividend and divisor respectively; either limit may be larger.
    Your choices are remembered for next time, with division limits saved separately.
 2. **Press Start when Ready** – press **Start** to begin. The timer starts now.
-3. **Practice** – every problem uses two random numbers between the minimum
-   and maximum, inclusive. Subtraction never goes below zero and division always has a
-   whole-number answer. Division uses a first number from 1 to its first maximum
+3. **Practice** – addition, subtraction and multiplication use two random numbers
+   between the minimum and maximum, inclusive. Subtraction never goes below zero.
+   Division always has a whole-number answer, using a first number from 1 to its first maximum
    and a second number from 1 to its second maximum, choosing only exactly divisible pairs.
    A correct answer earns a point; a wrong answer is added to
    the **Wrong** tally in the bottom-left corner. Either way, a new problem of the

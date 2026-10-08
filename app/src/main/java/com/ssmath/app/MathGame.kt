@@ -65,9 +65,9 @@ fun parseAnswer(text: String): Int? {
 
 class ProblemGenerator(private val random: Random = Random.Default) {
     /**
-     * Creates a random problem whose two numbers are each between [minimum] and [maximum].
-     * Subtraction never goes below zero. Division has a whole-number answer and may
-     * use a separate [maximumSecond] for the divisor.
+     * Addition, subtraction and multiplication use numbers between [minimum] and [maximum].
+     * Subtraction never goes below zero. Division has a whole-number answer, with the
+     * dividend bounded by [maximum] and the divisor by [maximumSecond].
      */
     fun next(operation: Operation, maximum: Int, previous: Problem? = null, minimum: Int = MIN_MAXIMUM,
         maximumSecond: Int = maximum): Problem {

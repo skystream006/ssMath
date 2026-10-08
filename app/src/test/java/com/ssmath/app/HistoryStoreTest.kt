@@ -287,6 +287,10 @@ class HistoryStoreTest {
         assertTrue(store.load().isEmpty())
         assertEquals(rewards, HistoryStore(file).loadSnapshot().rewards)
         assertEquals(rewards, store.claimReward(2).rewards)
+        store.add(eligible(MAX_HISTORY_RESULTS + 3L, RewardType.VIDEO_GAME))
+        store.claimReward(MAX_HISTORY_RESULTS + 3L)
+        store.clear()
+        assertEquals(rewards, HistoryStore(file).loadSnapshot().rewards)
     }
 
     @Test fun deletingAClaimedResultRemovesOnlyItsFragmentIncludingFromWholeRewards() {

@@ -466,7 +466,7 @@ class MathAppTest {
         assertEquals(7, model().divisionMaximumSecond)
         compose.onNodeWithTag("start-button").performClick()
         repeat(3) { answer(model.game!!.problem.answer) }
-        compose.onNodeWithTag("view-results").performClick()
+        compose.runOnIdle { model.dismissCelebration() }
         compose.onNodeWithText("Division · first up to 100 · second up to 7").assertIsDisplayed()
         compose.waitUntil(5_000) { model.history.size == 1 }
         val result = HistoryStore(File(application.filesDir, "practice_history.json")).load().single()
@@ -538,7 +538,7 @@ class MathAppTest {
         progress.assertRangeInfoEquals(ProgressBarRangeInfo(2f / 3, 0f..1f, 2))
         answer(model.game!!.problem.answer)
         progress.assertDoesNotExist()
-        compose.onNodeWithTag("view-results").performClick()
+        compose.runOnIdle { model.dismissCelebration() }
         compose.onNodeWithTag("done-button").performClick()
         compose.onNodeWithTag("submit-setup").performScrollTo().performClick()
         compose.onNodeWithTag("start-button").performClick()
@@ -546,21 +546,26 @@ class MathAppTest {
     }
 
     @Test fun rocketJumpsForwardAndLandsAtTheNextProgressPoint() {
+        compose.mainClock.autoAdvance = false
         val completed = mutableIntStateOf(0)
         compose.setContent { MathTheme { GameProgress(completed.intValue, 4) } }
+        compose.mainClock.advanceTimeByFrame()
         val rocket = compose.onNodeWithTag("progress-rocket")
         val start = rocket.fetchSemanticsNode().boundsInRoot
-        compose.mainClock.autoAdvance = false
         compose.runOnIdle { completed.intValue = 1 }
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
         compose.mainClock.advanceTimeBy(250)
         val jumping = rocket.fetchSemanticsNode().boundsInRoot
-        assertTrue(jumping.left > start.left)
-        assertTrue(jumping.top < start.top)
+        assertTrue("Rocket should move forward: $start -> $jumping", jumping.left > start.left)
+        assertTrue("Rocket should jump up: $start -> $jumping", jumping.top < start.top)
         compose.mainClock.advanceTimeBy(600)
         val landed = rocket.fetchSemanticsNode().boundsInRoot
         assertTrue(landed.left > jumping.left)
         assertEquals(start.top, landed.top, 1f)
         compose.runOnIdle { completed.intValue = 4 }
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
         compose.mainClock.advanceTimeBy(600)
         compose.onNodeWithTag("game-progress").assertRangeInfoEquals(ProgressBarRangeInfo(1f, 0f..1f, 3))
         val end = rocket.fetchSemanticsNode().boundsInRoot

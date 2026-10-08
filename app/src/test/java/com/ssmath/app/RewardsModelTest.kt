@@ -434,6 +434,31 @@ class RewardsModelTest {
         assertEquals(before, file.readText())
     }
 
+    @Test fun deletionAndClearSerializeWithPendingClaimsInEitherOrder() {
+        listOf(false, true).forEach { clear ->
+            listOf(false, true).forEach { claimFirst ->
+                val dispatcher = QueuedDispatcher()
+                val model = model(dispatcher)
+                dispatcher.drain()
+                start(model)
+                finish(model)
+                dispatcher.drain()
+                model.dismissCelebration()
+                val id = model.lastResult!!.id
+                if (claimFirst) model.claimReward()
+                if (clear) model.clearHistory() else model.deleteResult(id)
+                if (!claimFirst) model.claimReward()
+                dispatcher.drain()
+                assertTrue(model.history.isEmpty())
+                assertEquals(0, model.rewardBalances.values.sumOf { it.totalFragments })
+                assertEquals(model.rewardBalances, HistoryStore(file).loadSnapshot().rewards)
+                assertNull(model.rewardResult)
+                assertNull(model.lastResult!!.prizeType)
+                assertFalse(model.claimingReward)
+            }
+        }
+    }
+
     @Test fun usingRewardsWorksWhenEarningIsDisabledAndSurvivesReload() {
         collectLollipops()
         val model = model()
