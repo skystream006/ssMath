@@ -64,6 +64,51 @@ class PokemonSettingsTest {
         assertEquals(Overlay.SETTINGS, model.overlay)
     }
 
+    @Test
+    @Config(qualifiers = "w360dp-h2400dp")
+    fun collectionShowsNdexLabelsInNumericOrderBeforeUnnumberedOtherCelebrations() {
+        val store = HistoryStore(file)
+        store.collectPokemons(Celebration.entries.reversed())
+        val before = store.loadSnapshot()
+        val model = model()
+        model.openPokemons()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("pokemon-count").assertTextEquals("18/18")
+        val expected = listOf(
+            Celebration.BULBASAUR to "#0001 Bulbasaur",
+            Celebration.CHARMANDER to "#0004 Charmander",
+            Celebration.SQUIRTLE to "#0007 Squirtle",
+            Celebration.PIKACHU to "#0025 Pikachu",
+            Celebration.JIGGLYPUFF to "#0039 Jigglypuff",
+            Celebration.MANTINE to "#0226 Mantine",
+            Celebration.WAILMER to "#0320 Wailmer",
+            Celebration.WAILORD to "#0321 Wailord",
+            Celebration.MANTYKE to "#0458 Mantyke",
+            Celebration.BOUFFALANT to "#0626 Bouffalant",
+            Celebration.FINIZEN to "#0963 Finizen",
+            Celebration.PALAFIN to "#0964 Palafin",
+            Celebration.VELUZA to "#0976 Veluza",
+            Celebration.DOLPHINS to "Dolphins",
+            Celebration.WHALES to "Whales",
+            Celebration.ANCHOVIES to "Anchovies",
+            Celebration.PARTY to "Party",
+            Celebration.CANDY_SHOWER to "Candy shower"
+        )
+        val bounds = expected.map { (celebration, label) ->
+            compose.onNodeWithTag("pokemon-${celebration.name}").assert(hasText(label)).assertIsDisplayed()
+                .fetchSemanticsNode().boundsInRoot
+        }
+        bounds.zipWithNext().forEach { (first, second) ->
+            assertTrue(first.top < second.top || (first.top == second.top && first.right <= second.left))
+        }
+        val pokemons = compose.onNodeWithText("Pokémons").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val other = compose.onNodeWithText("Other").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertTrue(pokemons.bottom <= bounds.first().top)
+        assertTrue(bounds[12].bottom <= other.top)
+        assertTrue(other.bottom <= bounds[13].top)
+        assertEquals(before, store.loadSnapshot())
+    }
+
     @Test fun collectedImageReplaysAndClosesWithoutChangingPracticeOrInventory() {
         val store = HistoryStore(file)
         repeat(2) { store.collectPokemon(Celebration.PALAFIN) }
@@ -77,7 +122,7 @@ class PokemonSettingsTest {
         compose.onNodeWithTag("pokemon-count").assertTextEquals("1/18")
         compose.onAllNodesWithTag("pokemon-PALAFIN").assertCountEquals(1)
         compose.onNodeWithTag("pokemon-PIKACHU").assertDoesNotExist()
-        compose.onNodeWithTag("pokemon-PALAFIN").assert(hasText("Palafin")).performClick()
+        compose.onNodeWithTag("pokemon-PALAFIN").assert(hasText("#0964 Palafin")).performClick()
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("celebration-PALAFIN").assertIsDisplayed()
@@ -137,7 +182,7 @@ class PokemonSettingsTest {
         compose.onNodeWithTag("my-pokemons").performClick()
         compose.onNodeWithTag("pokemon-count").assertTextEquals("1/18")
         compose.onNodeWithText(celebration.category.label).assertIsDisplayed()
-        compose.onNodeWithTag("pokemon-${celebration.name}").assert(hasText(celebration.label)).assertIsDisplayed()
+        compose.onNodeWithTag("pokemon-${celebration.name}").assert(hasText(celebration.collectionLabel)).assertIsDisplayed()
         assertEquals(setOf(celebration), HistoryStore(file).loadSnapshot().pokemons)
     }
 
@@ -212,7 +257,7 @@ class PokemonSettingsTest {
         }
         Celebration.entries.forEach { pokemon ->
             compose.onNodeWithTag("pokemon-gallery").performScrollToKey(pokemon.name)
-            assertTextFits(pokemon.label)
+            assertTextFits(pokemon.collectionLabel)
         }
     }
 

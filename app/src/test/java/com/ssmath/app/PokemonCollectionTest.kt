@@ -85,6 +85,28 @@ class PokemonCollectionTest {
         }
     }
 
+    @Test fun allPokemonsHaveTheirNationalPokedexNumbers() {
+        assertEquals(mapOf(
+            Celebration.PIKACHU to 25,
+            Celebration.SQUIRTLE to 7,
+            Celebration.BULBASAUR to 1,
+            Celebration.CHARMANDER to 4,
+            Celebration.JIGGLYPUFF to 39,
+            Celebration.PALAFIN to 964,
+            Celebration.FINIZEN to 963,
+            Celebration.WAILMER to 320,
+            Celebration.WAILORD to 321,
+            Celebration.BOUFFALANT to 626,
+            Celebration.VELUZA to 976,
+            Celebration.MANTYKE to 458,
+            Celebration.MANTINE to 226
+        ), Celebration.pokemons.associateWith { it.ndex })
+        Celebration.entries.filter { it.category == CelebrationCategory.OTHER }.forEach {
+            assertNull(it.ndex)
+            assertEquals(it.label, it.collectionLabel)
+        }
+    }
+
     @Test fun pokemonSelectionStartsAtFifteenQuestions() {
         (1..14).forEach { count ->
             val selected = (0..200).map { Celebration.select(count, Random(it)) }.toSet()
