@@ -1,6 +1,7 @@
 package com.ssmath.app
 
 import kotlin.random.Random
+import kotlinx.serialization.json.Json
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -9,13 +10,45 @@ class RewardsTest {
         atStart: Boolean = true, atFinish: Boolean = true, timedOut: Boolean = false, seed: Int = 1) =
         selectPrize(count, correct, answered, atStart, atFinish, timedOut, Random(seed))
 
+    @Test fun questionCountsMapToNamedTiersAtTheBoundaries() {
+        listOf(Int.MIN_VALUE, 0, 1, 24).forEach { assertNull(rewardTierForQuestionCount(it)) }
+        (25..49).forEach { assertEquals(RewardTier.TIER_1, rewardTierForQuestionCount(it)) }
+        listOf(50, 51, 100, 1000, Int.MAX_VALUE).forEach {
+            assertEquals(RewardTier.TIER_2, rewardTierForQuestionCount(it))
+        }
+        assertEquals("Tier 1", RewardTier.TIER_1.label)
+        assertEquals("25–49 questions", RewardTier.TIER_1.questionCountLabel)
+        assertEquals("Tier 2", RewardTier.TIER_2.label)
+        assertEquals("50 or more questions", RewardTier.TIER_2.questionCountLabel)
+    }
+
+    @Test fun rewardTypesBelongToTheirOriginalQuestionCountCategory() {
+        assertEquals(
+            setOf(RewardType.LOLLIPOP, RewardType.ICE_CREAM, RewardType.GUMMI_BEAR, RewardType.RAMEN),
+            RewardType.entries.filter { it.tier == RewardTier.TIER_1 }.toSet()
+        )
+        assertEquals(listOf(RewardType.VIDEO_GAME), RewardType.entries.filter { it.tier == RewardTier.TIER_2 })
+    }
+
+    @Test fun tierMetadataDoesNotChangeStoredRewardNames() {
+        RewardType.entries.forEach { type ->
+            val stored = "\"${type.name}\""
+            assertEquals(stored, Json.encodeToString(RewardType.serializer(), type))
+            assertEquals(type, Json.decodeFromString(RewardType.serializer(), stored))
+        }
+    }
+
     @Test fun countBoundariesSelectTheRightCategory() {
         listOf(1, 24).forEach { assertNull(prize(it)) }
         listOf(25, 26, 49).forEach { count ->
             val selected = (1..100).map { prize(count, seed = it) }.toSet()
             assertEquals(RewardType.entries.filter { it != RewardType.VIDEO_GAME }.toSet(), selected)
+            assertTrue(selected.all { it?.tier == RewardTier.TIER_1 })
         }
-        listOf(50, 51, 100, 1000).forEach { assertEquals(RewardType.VIDEO_GAME, prize(it)) }
+        listOf(50, 51, 100, 1000).forEach {
+            assertEquals(RewardType.VIDEO_GAME, prize(it))
+            assertEquals(RewardTier.TIER_2, prize(it)?.tier)
+        }
     }
 
     @Test fun accuracyMustBeStrictlyOverNinetyPercentWithoutRounding() {

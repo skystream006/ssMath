@@ -44,17 +44,19 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
 - **App updates** – at the top, check GitHub for a newer release using the button
   beside the installed version, then download and install it.
 - **My Rewards** – directly below App updates, view your collected prizes and
-  one-third fragments in a four-column grid, even when the rewards system is disabled.
+  one-third fragments in a four-column grid grouped by **Tier 1** and **Tier 2**,
+  even when the rewards system is disabled.
   Tap **Use rewards** in the upper-right corner to see whole reward pictures and
-  available counts. Tap a reward and confirm **Yes** to use one; **No** cancels.
+  available counts grouped by tier. Tap a reward and confirm **Yes** to use one; **No** cancels.
   Only whole rewards can be used. Remaining counts are saved on this device;
   fragments and practice history are unchanged.
 - **Practice History** – review any previously saved result, delete one, or clear all.
 - **Rewards system** – on by default. Earn
   prizes for completing **25 or more questions** with **more than 90% correct**.
   After the celebration, tap the hopping gift box to open it and release confetti.
-  Sessions of 25–49 questions earn a random Lollipop, Ice Cream Cone, Gummi Bear,
-  or Ramen Fragment; sessions of 50 or more earn a Video Game Fragment.
+  **Tier 1** rewards are for sessions of **25–49 questions**: a random Lollipop,
+  Ice Cream Cone, Gummi Bear, or Ramen Fragment. **Tier 2** rewards are for sessions
+  of **50 or more questions**: a Video Game Fragment.
   Fewer than 25 questions and exactly 90% correct do not qualify.
   Every 3 fragments of the same type automatically become 1 whole prize, with the
   fragment counter returning to 0. Prizes and their cumulative totals are saved

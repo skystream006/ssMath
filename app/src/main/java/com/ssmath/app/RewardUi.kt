@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridItemScope
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
@@ -43,6 +45,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -235,7 +238,7 @@ internal fun RewardInventory(balances: Map<RewardType, RewardBalance>, modifier:
                 Text("Collect three matching fragments to complete a reward. Your collection stays on this device.")
             }
         }
-        items(RewardType.entries, key = { it.name }) { type ->
+        rewardTierItems { type ->
             val balance = balances[type] ?: RewardBalance()
             Surface(
                 shape = RoundedCornerShape(16.dp),
@@ -292,7 +295,7 @@ internal fun UseRewardsDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(RewardType.entries, key = { it.name }) { type ->
+                        rewardTierItems { type ->
                             val whole = balances[type]?.whole ?: 0
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
@@ -339,6 +342,21 @@ internal fun UseRewardsDialog(
             }
         }
     )
+}
+
+private fun LazyGridScope.rewardTierItems(content: @Composable LazyGridItemScope.(RewardType) -> Unit) {
+    RewardTier.entries.forEach { tier ->
+        item(key = tier.name, span = { GridItemSpan(maxLineSpan) }) {
+            Column(
+                Modifier.fillMaxWidth().semantics(mergeDescendants = true) { heading() },
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(tier.label, style = MaterialTheme.typography.titleMedium)
+                Text(tier.questionCountLabel, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        items(RewardType.entries.filter { it.tier == tier }, key = { it.name }, itemContent = content)
+    }
 }
 
 @Composable
