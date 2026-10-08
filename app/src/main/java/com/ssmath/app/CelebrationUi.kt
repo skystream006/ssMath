@@ -47,17 +47,18 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.random.Random
 import kotlinx.serialization.Serializable
 
 enum class CelebrationCategory(val label: String) {
-    GENERAL("Celebrations"), POKEMONS("Pokémons")
+    POKEMONS("Pokémons"), OTHER("Other")
 }
 
 @Serializable
 enum class Celebration(
     val label: String,
     val description: String,
-    val category: CelebrationCategory = CelebrationCategory.GENERAL
+    val category: CelebrationCategory = CelebrationCategory.OTHER
 ) {
     DOLPHINS("Dolphins", "Dolphins jumping out of the water saying Hurray!!"),
     WHALES("Whales", "Whales jumping out of the water saying Hurray!!"),
@@ -80,6 +81,9 @@ enum class Celebration(
 
     companion object {
         val pokemons: List<Celebration> = entries.filter { it.category == CelebrationCategory.POKEMONS }
+
+        fun select(questionCount: Int, random: Random = Random.Default): Celebration =
+            entries.filter { questionCount >= 15 || it.category != CelebrationCategory.POKEMONS }.random(random)
     }
 }
 

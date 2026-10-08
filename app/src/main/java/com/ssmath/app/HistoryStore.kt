@@ -133,10 +133,13 @@ class HistoryStore(private val file: File) {
         ))
     }
 
-    fun collectPokemon(celebration: Celebration): PracticeSnapshot {
+    fun collectPokemon(celebration: Celebration): PracticeSnapshot = collectPokemons(listOf(celebration))
+
+    fun collectPokemons(celebrations: Collection<Celebration>): PracticeSnapshot {
         val snapshot = loadSnapshot()
-        if (celebration.category != CelebrationCategory.POKEMONS || celebration in snapshot.pokemons) return snapshot
-        return save(snapshot.copy(pokemons = snapshot.pokemons + celebration))
+        val collected = snapshot.pokemons + celebrations
+        if (collected == snapshot.pokemons) return snapshot
+        return save(snapshot.copy(pokemons = collected))
     }
 
     fun delete(id: Long): List<PracticeResult> {

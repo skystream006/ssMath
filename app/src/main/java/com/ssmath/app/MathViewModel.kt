@@ -218,7 +218,7 @@ class MathViewModel(
         pendingResult = pending
         lastResult = result
         val answeredAllQuestions = !expired && state.attempts.size == state.questionCount
-        celebration = if (answeredAllQuestions) Celebration.entries.random(celebrationRandom) else null
+        celebration = if (answeredAllQuestions) Celebration.select(state.questionCount, celebrationRandom) else null
         earlyFinishMessage = if (expired) "Time's up! You got ${state.correct} right out of ${state.questionCount}"
             else if (answeredAllQuestions) null
             else "Nice try! You got ${state.correct} right out of ${state.questionCount}"
@@ -257,18 +257,23 @@ class MathViewModel(
     fun dismissCelebration() { celebration = null }
 
     fun collectPresentedCelebration(presented: Celebration) {
-        if (celebration != presented || overlay != null || presented.category != CelebrationCategory.POKEMONS ||
-            presented in pokemons) return
+        if (celebration != presented || overlay != null || presented in pokemons) return
+        collectCelebrations(listOf(presented))
+    }
+
+    fun collectAllCelebrations() { collectCelebrations(Celebration.entries) }
+
+    private fun collectCelebrations(celebrations: Collection<Celebration>) {
         viewModelScope.launch {
             try {
                 storeLock.withLock {
-                    applySnapshot(withContext(ioDispatcher) { store.collectPokemon(presented) })
+                    applySnapshot(withContext(ioDispatcher) { store.collectPokemons(celebrations) })
                 }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
                 DebugLog.event(DebugEvent.HISTORY_FAILURE, error = error)
-                message = "Unable to save your Pokémon. Free device storage and try again."
+                message = "Unable to save your celebrations. Free device storage and try again."
             }
         }
     }
@@ -452,7 +457,7 @@ class MathViewModel(
     private fun applySnapshot(snapshot: PracticeSnapshot) {
         history = snapshot.history
         rewardBalances = snapshot.rewards
-        pokemons = snapshot.pokemons.filter { it.category == CelebrationCategory.POKEMONS }.toSet()
+        pokemons = snapshot.pokemons
         latestResultId = maxOf(latestResultId, snapshot.lastResultId, snapshot.history.maxOfOrNull { it.id } ?: 0L)
     }
 

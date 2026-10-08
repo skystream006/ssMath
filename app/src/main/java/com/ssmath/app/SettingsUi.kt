@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
@@ -79,11 +80,11 @@ fun SettingsScreen(model: MathViewModel) {
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 modifier = Modifier.clickable(onClick = model::openRewards).testTag("my-rewards"))
             ListItem(headlineContent = { Text("My Pokémons") },
-                supportingContent = { Text("Your collected Pokémon celebrations") },
+                supportingContent = { Text("Your collected Pokémon and other celebrations") },
                 leadingContent = { Icon(Icons.Rounded.Collections, null) },
                 trailingContent = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("${model.pokemons.size}/${Celebration.pokemons.size}")
+                        Text("${model.pokemons.size}/${Celebration.entries.size}")
                         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null)
                     }
                 },
@@ -164,7 +165,7 @@ fun SettingsScreen(model: MathViewModel) {
             }
             SkinSetting(model.skinsEnabled, model.skin, model::chooseSkin, model::chooseSkins)
             HorizontalDivider()
-            DebugLogSettings()
+            DebugLogSettings(onUnlockCelebrations = model::collectAllCelebrations)
             Text("ssMath ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(bottom = 20.dp))
         }
@@ -214,7 +215,7 @@ fun RewardsScreen(model: MathViewModel) {
 @Composable
 fun PokemonsScreen(model: MathViewModel) {
     var replay by rememberSaveable { mutableStateOf<Celebration?>(null) }
-    val collected = Celebration.pokemons.filter { it in model.pokemons }
+    val collected = Celebration.entries.filter { it in model.pokemons }
     val minimumCellWidth = maxOf(112.dp, with(LocalDensity.current) {
         MaterialTheme.typography.labelLarge.fontSize.toDp() * 8
     })
@@ -228,16 +229,16 @@ fun PokemonsScreen(model: MathViewModel) {
             }
             Column(Modifier.weight(1f).padding(start = 4.dp)) {
                 Text("My Pokémons", Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleLarge)
-                Text("${collected.size}/${Celebration.pokemons.size}",
+                Text("${collected.size}/${Celebration.entries.size}",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.fillMaxWidth().testTag("pokemon-count").semantics {
-                        contentDescription = "${collected.size} of ${Celebration.pokemons.size} Pokémons collected"
+                        contentDescription = "${collected.size} of ${Celebration.entries.size} celebrations collected"
                     })
             }
         }
         if (collected.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("Finish practices to discover Pokémon celebrations and collect them here.",
+                Text("Finish practices to discover celebrations and collect them here. Pokémon can appear after 15 or more questions.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
@@ -248,24 +249,32 @@ fun PokemonsScreen(model: MathViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(collected, key = { it.name }) { pokemon ->
-                    Column(
-                        Modifier.clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .clickable(role = Role.Button, onClickLabel = "Replay ${pokemon.label}") { replay = pokemon }
-                            .padding(8.dp).testTag("pokemon-${pokemon.name}"),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Canvas(Modifier.fillMaxWidth().aspectRatio(320f / 220f)
-                            .clip(MaterialTheme.shapes.small).semantics {
-                                contentDescription = "${pokemon.label} celebration"
-                                role = Role.Image
-                            }) {
-                            drawCelebrationArtwork(pokemon, 0.6f)
+                CelebrationCategory.entries.forEach { category ->
+                    val categoryCelebrations = collected.filter { it.category == category }
+                    if (categoryCelebrations.isNotEmpty()) {
+                        item(key = "category-${category.name}", span = { GridItemSpan(maxLineSpan) }) {
+                            Text(category.label, style = MaterialTheme.typography.titleMedium)
                         }
-                        Text(pokemon.label, Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.labelLarge)
+                        items(categoryCelebrations, key = { it.name }) { pokemon ->
+                            Column(
+                                Modifier.clip(MaterialTheme.shapes.medium)
+                                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                                    .clickable(role = Role.Button, onClickLabel = "Replay ${pokemon.label}") { replay = pokemon }
+                                    .padding(8.dp).testTag("pokemon-${pokemon.name}"),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Canvas(Modifier.fillMaxWidth().aspectRatio(320f / 220f)
+                                    .clip(MaterialTheme.shapes.small).semantics {
+                                        contentDescription = "${pokemon.label} celebration"
+                                        role = Role.Image
+                                    }) {
+                                    drawCelebrationArtwork(pokemon, 0.6f)
+                                }
+                                Text(pokemon.label, Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
                     }
                 }
             }
