@@ -40,8 +40,8 @@ class PokemonSettingsTest {
         file.delete()
     }
 
-    private fun model(): MathViewModel {
-        val seed = (0..1_000).first { Celebration.entries.random(Random(it)) == Celebration.PIKACHU }
+    private fun model(chosen: Celebration = Celebration.PIKACHU, questionCount: Int = 15): MathViewModel {
+        val seed = (0..1_000).first { Celebration.select(questionCount, Random(it)) == chosen }
         return MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate,
             celebrationRandom = Random(seed)).also { models.put("model", it) }
     }
@@ -58,7 +58,7 @@ class PokemonSettingsTest {
         compose.onNodeWithTag("my-pokemons").performClick()
         assertEquals(Overlay.POKEMONS, model.overlay)
         compose.onNodeWithText("My Pokémons").assertIsDisplayed()
-        compose.onNodeWithTag("pokemon-count").assertTextEquals("0/13")
+        compose.onNodeWithTag("pokemon-count").assertTextEquals("0/18")
         compose.onNodeWithText("Finish practices", substring = true).assertIsDisplayed()
         compose.onNodeWithContentDescription("Back").performClick()
         assertEquals(Overlay.SETTINGS, model.overlay)
@@ -74,7 +74,7 @@ class PokemonSettingsTest {
         compose.mainClock.autoAdvance = false
         compose.setContent { MathAppContent(model) }
         compose.mainClock.advanceTimeBy(64)
-        compose.onNodeWithTag("pokemon-count").assertTextEquals("1/13")
+        compose.onNodeWithTag("pokemon-count").assertTextEquals("1/18")
         compose.onAllNodesWithTag("pokemon-PALAFIN").assertCountEquals(1)
         compose.onNodeWithTag("pokemon-PIKACHU").assertDoesNotExist()
         compose.onNodeWithTag("pokemon-PALAFIN").assert(hasText("Palafin")).performClick()
@@ -92,7 +92,7 @@ class PokemonSettingsTest {
         compose.onNodeWithTag("celebration-PALAFIN").assertIsDisplayed()
         compose.mainClock.advanceTimeBy(CELEBRATION_DURATION_MS.toLong())
         compose.onNodeWithTag("celebration-PALAFIN").assertDoesNotExist()
-        compose.onNodeWithTag("pokemon-count").assertTextEquals("1/13")
+        compose.onNodeWithTag("pokemon-count").assertTextEquals("1/18")
         assertEquals(Overlay.POKEMONS, model.overlay)
         assertEquals(Screen.SETUP, model.screen)
         assertNull(model.celebration)
@@ -100,25 +100,33 @@ class PokemonSettingsTest {
         assertEquals(before, store.loadSnapshot())
     }
 
-    @Test fun presentingAPokemonAddsItBeforeSkippingTheAnimation() {
-        val model = model()
+    @Test fun presentingAPokemonAddsItBeforeSkippingTheAnimation() =
+        presentationCollects(Celebration.PIKACHU, questionCount = 15)
+
+    @Test fun presentingAnOtherCelebrationAfterAShortPracticeCollectsIt() =
+        presentationCollects(Celebration.PARTY, questionCount = 1)
+
+    private fun presentationCollects(celebration: Celebration, questionCount: Int) {
+        val model = model(celebration, questionCount)
         model.chooseRewardsEnabled(false)
         model.selectOperation(Operation.ADDITION)
-        model.updateQuestionCount("1")
+        model.updateQuestionCount(questionCount.toString())
         model.submitSetup()
         model.start()
         compose.mainClock.autoAdvance = false
         compose.setContent { MathAppContent(model) }
         compose.runOnIdle {
-            model.updateAnswer(model.game!!.problem.answer.toString())
-            model.submitAnswer()
+            repeat(questionCount) {
+                model.updateAnswer(model.game!!.problem.answer.toString())
+                model.submitAnswer()
+            }
         }
         compose.mainClock.advanceTimeBy(64)
-        compose.onNodeWithTag("celebration-PIKACHU").assertIsDisplayed()
-        assertEquals(setOf(Celebration.PIKACHU), model.pokemons)
+        compose.onNodeWithTag("celebration-${celebration.name}").assertIsDisplayed()
+        assertEquals(setOf(celebration), model.pokemons)
         compose.onNodeWithTag("view-results").performClick()
         compose.mainClock.advanceTimeBy(64)
-        compose.onNodeWithTag("celebration-PIKACHU").assertDoesNotExist()
+        compose.onNodeWithTag("celebration-${celebration.name}").assertDoesNotExist()
         assertNull(model.celebration)
         assertEquals(Screen.RESULTS, model.screen)
         compose.mainClock.autoAdvance = true
@@ -127,24 +135,80 @@ class PokemonSettingsTest {
             model.openSettings()
         }
         compose.onNodeWithTag("my-pokemons").performClick()
-        compose.onNodeWithTag("pokemon-count").assertTextEquals("1/13")
-        compose.onNodeWithTag("pokemon-PIKACHU").assert(hasText("Pikachu")).assertIsDisplayed()
-        assertEquals(setOf(Celebration.PIKACHU), HistoryStore(file).loadSnapshot().pokemons)
+        compose.onNodeWithTag("pokemon-count").assertTextEquals("1/18")
+        compose.onNodeWithText(celebration.category.label).assertIsDisplayed()
+        compose.onNodeWithTag("pokemon-${celebration.name}").assert(hasText(celebration.label)).assertIsDisplayed()
+        assertEquals(setOf(celebration), HistoryStore(file).loadSnapshot().pokemons)
+    }
+
+    @Test fun otherCelebrationsHaveTheirOwnCategoryAndCanReplayWithoutChangingInventory() {
+        val store = HistoryStore(file)
+        store.collectPokemon(Celebration.PIKACHU)
+        store.collectPokemon(Celebration.PARTY)
+        val before = store.loadSnapshot()
+        val model = model()
+        model.openPokemons()
+        compose.mainClock.autoAdvance = false
+        compose.setContent { MathAppContent(model) }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithTag("pokemon-count").assertTextEquals("2/18")
+        compose.onNodeWithText("Pokémons").assertIsDisplayed()
+        compose.onNodeWithText("Other").assertIsDisplayed()
+        compose.onNodeWithTag("pokemon-PARTY").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithTag("celebration-PARTY").assertIsDisplayed()
+        compose.onNodeWithText("You answered every question!").assertDoesNotExist()
+        compose.onNodeWithTag("close-celebration").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithTag("celebration-PARTY").assertDoesNotExist()
+        assertEquals(before, store.loadSnapshot())
+        assertEquals(Screen.SETUP, model.screen)
+        assertNull(model.celebration)
+        assertNull(model.rewardResult)
+    }
+
+    @Test fun sevenDescriptionTapsUnlockAllAnimationsWithoutEnablingLoggingOrDuplicatingEntries() {
+        val store = HistoryStore(file)
+        store.collectPokemon(Celebration.SQUIRTLE)
+        val before = store.loadSnapshot()
+        val model = model()
+        model.chooseRewardsEnabled(false)
+        model.openSettings()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithText("Debug logging").performScrollTo().performClick()
+        val description = compose.onNodeWithTag("debug-logging-description").performScrollTo()
+        repeat(6) { description.performClick() }
+        assertEquals(before.pokemons, model.pokemons)
+        assertEquals(before, store.loadSnapshot())
+        description.performClick()
+        val expected = before.copy(pokemons = Celebration.entries.toSet())
+        assertEquals(expected.pokemons, model.pokemons)
+        assertEquals(expected, store.loadSnapshot())
+        repeat(7) { description.performClick() }
+        assertEquals(expected, store.loadSnapshot())
+        assertFalse(DebugLog.enabled.value)
+        compose.onNodeWithContentDescription("Debug logging").performScrollTo().assertIsOff()
+        compose.onNodeWithTag("my-pokemons").performScrollTo().performClick()
+        compose.onNodeWithTag("pokemon-count").assertTextEquals("18/18")
     }
 
     @Test
     @Config(qualifiers = "w320dp-h800dp")
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun allCollectedNamesAreReadableAndScrollableWithLargeText() {
-        Celebration.pokemons.forEach { HistoryStore(file).collectPokemon(it) }
+        Celebration.entries.forEach { HistoryStore(file).collectPokemon(it) }
         val model = model()
         model.chooseTextSize(200)
         model.openPokemons()
         compose.setContent { MathAppContent(model) }
-        compose.onNodeWithTag("pokemon-count").assertTextEquals("13/13").assertIsDisplayed()
+        compose.onNodeWithTag("pokemon-count").assertTextEquals("18/18").assertIsDisplayed()
         assertTextFits("My Pokémons")
-        assertTextFits("13/13")
-        Celebration.pokemons.forEach { pokemon ->
+        assertTextFits("18/18")
+        CelebrationCategory.entries.forEach { category ->
+            compose.onNodeWithTag("pokemon-gallery").performScrollToKey("category-${category.name}")
+            assertTextFits(category.label)
+        }
+        Celebration.entries.forEach { pokemon ->
             compose.onNodeWithTag("pokemon-gallery").performScrollToKey(pokemon.name)
             assertTextFits(pokemon.label)
         }

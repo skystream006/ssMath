@@ -29,7 +29,9 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    Bulbasaur shooting leaves from his bulb, Charmander shooting fire into the air,
    Jigglypuff rolling and jumping, or Palafin, Finizen, Wailmer, Wailord, Bouffalant,
    Veluza, Mantyke, or Mantine celebrating. The thirteen Pokémon scenes belong to the
-   **Pokémons** category. Each scene says **Hurray!!**. These animations
+   **Pokémons** category and can only appear after completing **15 or more questions**.
+   The remaining five scenes belong to **Other** and can appear at any practice length;
+   below 15 questions, only **Other** scenes appear. Each scene says **Hurray!!**. These animations
    are drawn in the app and work offline. Press **View results** to
    skip the animation, or wait for it to finish.
    The wrong-answer limit is 5 for up to 50 questions; above 50 it is 10% of the
@@ -52,10 +54,11 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   available counts grouped by tier. Tap a reward and confirm **Yes** to use one; **No** cancels.
   Only whole rewards can be used. Remaining counts are saved on this device;
   fragments and practice history are unchanged.
-- **My Pokémons** – directly below My Rewards, collect a still image of each Pokémon
+- **My Pokémons** – directly below My Rewards, collect a still image of each
   celebration you see after completing a practice, even when rewards are disabled.
-  Each Pokémon is collected only once and labelled with its name. The header shows
-  your collected count out of the 13 available Pokémons. Tap an image to replay its
+  Each celebration is collected only once and labelled with its name, grouped under
+  **Pokémons** or **Other**. The header shows your collected count out of all 18
+  animations (13 Pokémon and 5 Other). Tap an image to replay its
   animation; close it or wait for it to finish to return to your collection.
   The collection is saved on this device and is not removed when history is deleted.
 - **Practice History** – review any previously saved result, delete one, or clear all.
@@ -183,3 +186,7 @@ removes your practice history.
 Only event names, status numbers and exception class names are recorded — never
 answers, practice results or other personal content. Logs are stored privately on
 the device and can be viewed, shared or cleared from Settings.
+
+Tap the description beginning **Off by default** below **Enable debug logging**
+seven times to add all celebration animations to **My Pokémons**, without duplicating
+ones already collected. This works even while debug logging and rewards are disabled.
