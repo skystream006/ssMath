@@ -161,13 +161,23 @@ class RewardsModelTest {
 
     @Test fun countAndAccuracyBoundariesAreAppliedToCompletedPractices() {
         val model = model()
-        listOf(Triple(25, 0, false), Triple(26, 2, true), Triple(49, 4, true),
-            Triple(50, 4, true), Triple(50, 5, false), Triple(100, 10, false)).forEach { (count, wrong, eligible) ->
+        listOf(Triple(24, 0, false), Triple(25, 0, true), Triple(25, 2, true), Triple(25, 3, false),
+            Triple(26, 2, true), Triple(49, 4, true), Triple(50, 0, true), Triple(50, 4, true),
+            Triple(50, 5, false), Triple(51, 4, true), Triple(100, 10, false)).forEach { (count, wrong, eligible) ->
             start(model, count)
             finish(model, count, wrong)
             assertEquals(count, model.lastResult!!.questionCount)
             assertEquals(eligible, model.lastResult!!.prizeType != null)
-            if (eligible && count >= 50) assertEquals(RewardType.VIDEO_GAME, model.lastResult!!.prizeType)
+            if (eligible) {
+                val type = model.lastResult!!.prizeType!!
+                if (count >= 50) assertEquals(RewardType.VIDEO_GAME, type)
+                else assertNotEquals(RewardType.VIDEO_GAME, type)
+                model.dismissCelebration()
+                model.claimReward()
+                assertEquals(type, model.lastResult!!.prize!!.type)
+                assertEquals(model.lastResult, HistoryStore(file).load().first())
+                assertEquals(model.rewardBalances, HistoryStore(file).loadSnapshot().rewards)
+            }
             model.done()
         }
     }

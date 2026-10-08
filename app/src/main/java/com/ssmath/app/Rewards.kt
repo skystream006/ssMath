@@ -31,7 +31,7 @@ data class RewardBalance(val whole: Int = 0, val fragments: Int = 0) {
 data class PrizeAward(val type: RewardType, val balance: RewardBalance)
 
 internal fun qualifiesForReward(questionCount: Int, correct: Int, answered: Int, timedOut: Boolean): Boolean =
-    !timedOut && questionCount > 25 && answered == questionCount && correct.toLong() * 100 > questionCount.toLong() * 90
+    !timedOut && questionCount >= 25 && answered == questionCount && correct.toLong() * 100 > questionCount.toLong() * 90
 
 fun selectPrize(
     questionCount: Int,

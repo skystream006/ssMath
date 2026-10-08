@@ -10,8 +10,8 @@ class RewardsTest {
         selectPrize(count, correct, answered, atStart, atFinish, timedOut, Random(seed))
 
     @Test fun countBoundariesSelectTheRightCategory() {
-        assertNull(prize(25))
-        listOf(26, 49).forEach { count ->
+        listOf(1, 24).forEach { assertNull(prize(it)) }
+        listOf(25, 26, 49).forEach { count ->
             val selected = (1..100).map { prize(count, seed = it) }.toSet()
             assertEquals(RewardType.entries.filter { it != RewardType.VIDEO_GAME }.toSet(), selected)
         }
@@ -23,19 +23,24 @@ class RewardsTest {
         assertNull(prize(50, 45))
         assertNull(prize(100, 90))
         assertNotNull(prize(100, 91))
+        assertNotNull(prize(25, 23))
+        assertNull(prize(25, 22))
         assertNotNull(prize(26, 24))
         assertNull(prize(26, 23))
         assertNotNull(prize(49, 45))
         assertNull(prize(49, 44))
+        assertNotNull(prize(50, 46))
     }
 
     @Test fun rewardsRequireBothSettingsChecksEveryQuestionAndNoTimeout() {
-        assertNull(prize(26, atStart = false))
-        assertNull(prize(26, atFinish = false))
-        assertNull(prize(26, atStart = false, atFinish = false))
-        assertNull(prize(26, correct = 25, answered = 25))
-        assertNull(prize(26, correct = 27, answered = 27))
-        assertNull(prize(26, timedOut = true))
+        listOf(25, 26, 50).forEach { count ->
+            assertNull(prize(count, atStart = false))
+            assertNull(prize(count, atFinish = false))
+            assertNull(prize(count, atStart = false, atFinish = false))
+            assertNull(prize(count, correct = count - 1, answered = count - 1))
+            assertNull(prize(count, correct = count + 1, answered = count + 1))
+            assertNull(prize(count, timedOut = true))
+        }
     }
 
     @Test fun everyThirdFragmentBecomesAWholeRewardWithZeroRemainder() {
