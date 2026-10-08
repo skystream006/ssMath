@@ -227,55 +227,56 @@ fun PokemonsScreen(model: MathViewModel) {
             IconButton(onClick = model::closeOverlay) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
             }
-            Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text("My Pokémons", Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleLarge)
-                Text("${collected.size}/${Celebration.entries.size}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.fillMaxWidth().testTag("pokemon-count").semantics {
-                        contentDescription = "${collected.size} of ${Celebration.entries.size} celebrations collected"
-                    })
-            }
+            Text("My Pokémons", Modifier.weight(1f).padding(start = 4.dp),
+                style = MaterialTheme.typography.titleLarge)
         }
-        if (collected.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("Finish practices to discover celebrations and collect them here. Pokémon can appear after 15 or more questions.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minimumCellWidth),
-                modifier = Modifier.fillMaxSize().testTag("pokemon-gallery"),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                CelebrationCategory.entries.forEach { category ->
-                    val categoryCelebrations = collected.filter { it.category == category }
-                    if (categoryCelebrations.isNotEmpty()) {
-                        item(key = "category-${category.name}", span = { GridItemSpan(maxLineSpan) }) {
-                            Text(category.label, style = MaterialTheme.typography.titleMedium)
-                        }
-                        items(categoryCelebrations, key = { it.name }) { pokemon ->
-                            Column(
-                                Modifier.clip(MaterialTheme.shapes.medium)
-                                    .background(MaterialTheme.colorScheme.surfaceContainer)
-                                    .clickable(role = Role.Button, onClickLabel = "Replay ${pokemon.label}") { replay = pokemon }
-                                    .padding(8.dp).testTag("pokemon-${pokemon.name}"),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Canvas(Modifier.fillMaxWidth().aspectRatio(320f / 220f)
-                                    .clip(MaterialTheme.shapes.small).semantics {
-                                        contentDescription = "${pokemon.label} celebration"
-                                        role = Role.Image
-                                    }) {
-                                    drawCelebrationArtwork(pokemon, 0.6f)
-                                }
-                                Text(pokemon.label, Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.labelLarge)
-                            }
-                        }
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minimumCellWidth),
+            modifier = Modifier.fillMaxSize().testTag("pokemon-gallery"),
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            CelebrationCategory.entries.forEach { category ->
+                val categoryCelebrations = collected.filter { it.category == category }
+                val categoryTotal = Celebration.entries.count { it.category == category }
+                item(key = "category-${category.name}", span = { GridItemSpan(maxLineSpan) }) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(category.label, Modifier.weight(1f, fill = false),
+                            style = MaterialTheme.typography.titleMedium)
+                        Text("${categoryCelebrations.size}/$categoryTotal",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.testTag("pokemon-count-${category.name}").semantics {
+                                contentDescription = "${categoryCelebrations.size} of $categoryTotal collected in ${category.label}"
+                            })
                     }
+                }
+                items(categoryCelebrations, key = { it.name }) { pokemon ->
+                    Column(
+                        Modifier.clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .clickable(role = Role.Button, onClickLabel = "Replay ${pokemon.label}") { replay = pokemon }
+                            .padding(8.dp).testTag("pokemon-${pokemon.name}"),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Canvas(Modifier.fillMaxWidth().aspectRatio(320f / 220f)
+                            .clip(MaterialTheme.shapes.small).semantics {
+                                contentDescription = "${pokemon.label} celebration"
+                                role = Role.Image
+                            }) {
+                            drawCelebrationArtwork(pokemon, 0.6f)
+                        }
+                        Text(pokemon.label, Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+            if (collected.isEmpty()) {
+                item(key = "empty-collection", span = { GridItemSpan(maxLineSpan) }) {
+                    Text("Finish practices to discover celebrations and collect them here. Pokémon can appear after 15 or more questions.",
+                        Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
