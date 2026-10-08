@@ -78,14 +78,19 @@ class PokemonSettingsTest {
         compose.onAllNodesWithTag("pokemon-PALAFIN").assertCountEquals(1)
         compose.onNodeWithTag("pokemon-PIKACHU").assertDoesNotExist()
         compose.onNodeWithTag("pokemon-PALAFIN").assert(hasText("Palafin")).performClick()
+        compose.waitForIdle()
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("celebration-PALAFIN").assertIsDisplayed()
         compose.onNodeWithText("You answered every question!").assertDoesNotExist()
         compose.onNodeWithTag("close-celebration").performClick()
+        compose.waitForIdle()
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("celebration-PALAFIN").assertDoesNotExist()
         compose.onNodeWithTag("pokemon-PALAFIN").performClick()
-        compose.mainClock.advanceTimeBy(CELEBRATION_DURATION_MS + 128L)
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithTag("celebration-PALAFIN").assertIsDisplayed()
+        compose.mainClock.advanceTimeBy(CELEBRATION_DURATION_MS.toLong())
         compose.onNodeWithTag("celebration-PALAFIN").assertDoesNotExist()
         compose.onNodeWithTag("pokemon-count").assertTextEquals("1/13")
         assertEquals(Overlay.POKEMONS, model.overlay)
@@ -113,13 +118,15 @@ class PokemonSettingsTest {
         assertEquals(setOf(Celebration.PIKACHU), model.pokemons)
         compose.onNodeWithTag("view-results").performClick()
         compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithTag("celebration-PIKACHU").assertDoesNotExist()
+        assertNull(model.celebration)
+        assertEquals(Screen.RESULTS, model.screen)
+        compose.mainClock.autoAdvance = true
         compose.runOnIdle {
             model.done()
             model.openSettings()
         }
-        compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("my-pokemons").performClick()
-        compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("pokemon-count").assertTextEquals("1/13")
         compose.onNodeWithTag("pokemon-PIKACHU").assert(hasText("Pikachu")).assertIsDisplayed()
         assertEquals(setOf(Celebration.PIKACHU), HistoryStore(file).loadSnapshot().pokemons)
@@ -134,15 +141,21 @@ class PokemonSettingsTest {
         model.chooseTextSize(200)
         model.openPokemons()
         compose.setContent { MathAppContent(model) }
-        compose.onNodeWithTag("pokemon-count").assertTextEquals("13/13")
+        compose.onNodeWithTag("pokemon-count").assertTextEquals("13/13").assertIsDisplayed()
+        assertTextFits("My Pokémons")
+        assertTextFits("13/13")
         Celebration.pokemons.forEach { pokemon ->
             compose.onNodeWithTag("pokemon-gallery").performScrollToKey(pokemon.name)
-            compose.onNodeWithText(pokemon.label).assertIsDisplayed()
-                .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { action ->
-                    val layouts = mutableListOf<TextLayoutResult>()
-                    action(layouts)
-                    assertFalse("${pokemon.label} overflows", layouts.single().hasVisualOverflow)
-                }
+            assertTextFits(pokemon.label)
         }
+    }
+
+    private fun assertTextFits(text: String) {
+        compose.onNodeWithText(text, useUnmergedTree = true).assertIsDisplayed()
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { action ->
+                val layouts = mutableListOf<TextLayoutResult>()
+                action(layouts)
+                assertFalse("$text overflows", layouts.single().hasVisualOverflow)
+            }
     }
 }

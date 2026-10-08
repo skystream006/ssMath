@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -214,12 +215,26 @@ fun RewardsScreen(model: MathViewModel) {
 fun PokemonsScreen(model: MathViewModel) {
     var replay by rememberSaveable { mutableStateOf<Celebration?>(null) }
     val collected = Celebration.pokemons.filter { it in model.pokemons }
-    ScreenScaffold("My Pokémons", model::closeOverlay, actions = {
-        Text("${collected.size}/${Celebration.pokemons.size}",
-            modifier = Modifier.padding(horizontal = 12.dp).testTag("pokemon-count").semantics {
-                contentDescription = "${collected.size} of ${Celebration.pokemons.size} Pokémons collected"
-            })
-    }) {
+    val minimumCellWidth = maxOf(112.dp, with(LocalDensity.current) {
+        MaterialTheme.typography.labelLarge.fontSize.toDp() * 8
+    })
+    BackHandler(onBack = model::closeOverlay)
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
+            .padding(start = 4.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = model::closeOverlay) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+            }
+            Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                Text("My Pokémons", Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleLarge)
+                Text("${collected.size}/${Celebration.pokemons.size}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth().testTag("pokemon-count").semantics {
+                        contentDescription = "${collected.size} of ${Celebration.pokemons.size} Pokémons collected"
+                    })
+            }
+        }
         if (collected.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Text("Finish practices to discover Pokémon celebrations and collect them here.",
@@ -227,7 +242,7 @@ fun PokemonsScreen(model: MathViewModel) {
             }
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(112.dp),
+                columns = GridCells.Adaptive(minimumCellWidth),
                 modifier = Modifier.fillMaxSize().testTag("pokemon-gallery"),
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -249,7 +264,7 @@ fun PokemonsScreen(model: MathViewModel) {
                             }) {
                             drawCelebrationArtwork(pokemon, 0.6f)
                         }
-                        Text(pokemon.label, textAlign = TextAlign.Center,
+                        Text(pokemon.label, Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.labelLarge)
                     }
                 }
