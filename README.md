@@ -21,10 +21,13 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    5 wrong answers, whichever comes first, the practice stops and shows how many you
    got right, plus every answered problem with a green check (correct) or a red X
    (wrong, with the correct answer). Results are saved with the date and time.
-   If all the chosen questions were answered, even with mistakes, one of four randomly chosen
+   If all the chosen questions were answered, even with mistakes, one of ten randomly chosen
    congratulations animations plays: dolphins, whales, or anchovies jumping out
-   of the water saying **Hurray!!**, or a balloon-and-confetti party. These
-   animations are drawn in the app and work offline. Press **View results** to
+   of the water, a balloon-and-confetti party, a candy shower, Pikachu running toward
+   the screen and zapping lightning, Squirtle shooting water from his mouth,
+   Bulbasaur shooting leaves from his bulb, Charmander shooting fire into the air,
+   or Jigglypuff rolling and jumping. Each scene says **Hurray!!**. These animations
+   are drawn in the app and work offline. Press **View results** to
    skip the animation, or wait for it to finish.
    If 5 wrong answers end practice before the last question, a dialog says
    **Nice try! You got {XX} right out of {TOTAL}**, using the chosen number of
