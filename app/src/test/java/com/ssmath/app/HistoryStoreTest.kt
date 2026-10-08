@@ -1,14 +1,15 @@
 package com.ssmath.app
 
 import java.io.File
-import java.nio.file.Files
+import java.io.IOException
 import java.time.ZoneOffset
+import java.util.UUID
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
 
 class HistoryStoreTest {
-    private val directory: File = Files.createTempDirectory("history").toFile()
+    private val directory: File = File("build/test-data/history-${UUID.randomUUID()}").apply { mkdirs() }
     private val file = File(directory, "practice_history.json")
     private val store = HistoryStore(file)
 
@@ -75,5 +76,151 @@ class HistoryStoreTest {
     @Test fun formatsDateAndTime() {
         val text = formatFinishedAt(0, ZoneOffset.UTC)
         assertTrue(text, text.contains("1970"))
+    }
+
+    private fun eligible(id: Long, type: RewardType = RewardType.LOLLIPOP) = PracticeResult(
+        id, id, Operation.ADDITION, 10, 1_000,
+        List(if (type == RewardType.VIDEO_GAME) 50 else 26) { Attempt(Problem(1, 1, Operation.ADDITION), 2) },
+        prizeType = type
+    )
+
+    @Test fun pendingPrizeAndAllResultMetadataSurviveReload() {
+        val result = eligible(1).copy(questionCount = 26, minimum = 1)
+        store.add(result)
+        assertEquals(result, HistoryStore(file).load().single())
+        assertTrue(store.loadSnapshot().rewards.isEmpty())
+        assertNull(store.load().single().prize)
+        assertEquals(100, store.load().single().percentCorrect)
+    }
+
+    @Test fun claimsAreAtomicIdempotentAndConvertEveryThreeFragments() {
+        repeat(3) { index ->
+            val id = index + 1L
+            store.add(eligible(id))
+            val claimed = store.claimReward(id)
+            val expected = RewardBalance((index + 1) / 3, (index + 1) % 3)
+            assertEquals(expected, claimed.rewards[RewardType.LOLLIPOP])
+            assertEquals(PrizeAward(RewardType.LOLLIPOP, expected), claimed.history.first().prize)
+            assertEquals(claimed, HistoryStore(file).loadSnapshot())
+            val bytes = file.readText()
+            repeat(3) { assertEquals(claimed, HistoryStore(file).claimReward(id)) }
+            assertEquals(bytes, file.readText())
+        }
+        assertEquals(RewardBalance(1, 0), store.loadSnapshot().rewards[RewardType.LOLLIPOP])
+    }
+
+    @Test fun failedClaimDoesNotChangeEitherHistoryOrInventoryAndCanBeRetried() {
+        store.add(eligible(1))
+        val before = file.readText()
+        val blocked = File(directory, "${file.name}.tmp").apply { mkdir() }
+        assertThrows(IOException::class.java) { store.claimReward(1) }
+        assertEquals(before, file.readText())
+        assertNull(store.load().single().prize)
+        assertTrue(store.loadSnapshot().rewards.isEmpty())
+        assertTrue(blocked.delete())
+        assertEquals(RewardBalance(0, 1), store.claimReward(1).rewards[RewardType.LOLLIPOP])
+        assertEquals(RewardBalance(0, 1), HistoryStore(file).claimReward(1).rewards[RewardType.LOLLIPOP])
+    }
+
+    @Test fun clearingDeletingAndTrimmingHistoryDoNotDeleteOrDuplicateInventory() {
+        store.add(eligible(1))
+        store.claimReward(1)
+        store.delete(1)
+        store.add(eligible(1))
+        assertTrue(store.load().isEmpty())
+        assertEquals(RewardBalance(0, 1), store.claimReward(1).rewards[RewardType.LOLLIPOP])
+        store.add(eligible(2, RewardType.VIDEO_GAME))
+        store.claimReward(2)
+        repeat(MAX_HISTORY_RESULTS) { store.add(result(it + 3L)) }
+        assertFalse(store.load().any { it.id == 2L })
+        store.add(eligible(2, RewardType.VIDEO_GAME))
+        assertEquals(RewardBalance(0, 1), store.claimReward(2).rewards[RewardType.VIDEO_GAME])
+        val rewards = store.loadSnapshot().rewards
+        store.clear()
+        assertTrue(file.exists())
+        assertTrue(store.load().isEmpty())
+        assertEquals(rewards, HistoryStore(file).loadSnapshot().rewards)
+        assertEquals(rewards, store.claimReward(2).rewards)
+    }
+
+    @Test fun staleResultSaveCannotOverwriteAnAlreadyClaimedPrize() {
+        val pending = eligible(1)
+        store.add(pending)
+        val claimed = store.claimReward(1)
+        store.add(pending)
+        assertEquals(claimed.history, store.load())
+        assertEquals(claimed.rewards, store.claimReward(1).rewards)
+    }
+
+    @Test fun legacyArrayMigratesOnTheNextWriteWithoutRetroactivePrizes() {
+        file.writeText("""[{"id":1000,"finishedAt":1000,"operation":"ADDITION","maximum":10,
+            "durationMs":1000,"attempts":[{"problem":{"left":2,"right":3,"operation":"ADDITION"},"given":5}]}]""")
+        val legacy = store.load().single()
+        assertEquals(legacy.attempts.size, legacy.questionCount)
+        assertFalse(legacy.timedOut)
+        assertNull(legacy.prizeType)
+        assertNull(legacy.prize)
+        store.add(eligible(1001))
+        assertTrue(file.readText().startsWith("{"))
+        assertEquals(legacy, store.load().last())
+        assertTrue(store.loadSnapshot().rewards.isEmpty())
+    }
+
+    @Test fun malformedSnapshotsCannotSilentlyEraseRewards() {
+        listOf(
+            """{"history":[],"rewards":{"LOLLIPOP":{"whole":1,"fragments":3}}}""",
+            """{"history":[],"rewards":{"FUTURE_REWARD":{"whole":1,"fragments":0}}}""",
+            """{"history":[],"rewards":""",
+            """{"history":[]}""",
+            """{"history":"bad","rewards":{"LOLLIPOP":{"whole":1,"fragments":0}}}"""
+        ).forEach { text ->
+            file.writeText(text)
+            assertThrows(IOException::class.java) { store.loadSnapshot() }
+            assertThrows(IOException::class.java) { store.add(result(2)) }
+            assertThrows(IOException::class.java) { store.claimReward(1) }
+            assertThrows(IOException::class.java) { store.delete(1) }
+            assertThrows(IOException::class.java) { store.clear() }
+            assertEquals(text, file.readText())
+        }
+    }
+
+    @Test fun resultIdsRemainUniqueAcrossReloadClockRollbackAndClearedRewardHistory() {
+        val first = store.addNewResult(eligible(1000)).result
+        val second = store.addNewResult(eligible(1000)).result
+        val third = HistoryStore(file).addNewResult(eligible(500)).result
+        assertEquals(listOf(1000L, 1001L, 1002L), listOf(first.id, second.id, third.id))
+        store.claimReward(third.id)
+        store.clear()
+        assertEquals(1003L, HistoryStore(file).addNewResult(eligible(400)).result.id)
+    }
+
+    @Test fun clearingUnclaimedHistoryKeepsAllocatedIdsUniqueAfterReload() {
+        val first = store.addNewResult(eligible(1000).copy(prizeType = null)).result
+        store.clear()
+        assertTrue(store.load().isEmpty())
+        assertTrue(store.loadSnapshot().rewards.isEmpty())
+        val next = HistoryStore(file).addNewResult(eligible(500).copy(prizeType = null)).result
+        assertTrue(next.id > first.id)
+    }
+
+    @Test fun nonEligibleAndTimedOutResultsCannotBeClaimed() {
+        val candidates = listOf(
+            eligible(1).copy(prizeType = null),
+            eligible(2).copy(timedOut = true),
+            eligible(3).copy(questionCount = 30),
+            eligible(4).copy(attempts = eligible(4).attempts.take(25)),
+            eligible(5).copy(attempts = List(30) {
+                Attempt(Problem(1, 1, Operation.ADDITION), if (it < 27) 2 else 3)
+            })
+        )
+        candidates.forEach { store.add(it); assertTrue(store.claimReward(it.id).rewards.isEmpty()) }
+        assertTrue(store.load().all { it.prize == null })
+    }
+
+    @Test fun timedOutResultMetadataAndZeroPercentRoundTrip() {
+        val result = eligible(1).copy(attempts = emptyList(), questionCount = 26, timedOut = true, prizeType = null)
+        store.add(result)
+        assertEquals(result, store.load().single())
+        assertEquals(0, store.load().single().percentCorrect)
     }
 }

@@ -120,7 +120,8 @@ data class GameState(
 
     val correct: Int get() = attempts.count { it.correct }
     val wrong: Int get() = attempts.count { !it.correct }
-    val finished: Boolean get() = attempts.size >= questionCount || wrong >= MAX_WRONG_ANSWERS
+    val maxWrongAnswers: Int get() = if (questionCount > 50) (questionCount + 9) / 10 else MAX_WRONG_ANSWERS
+    val finished: Boolean get() = attempts.size >= questionCount || wrong >= maxWrongAnswers
     val perfect: Boolean get() = attempts.size == questionCount && wrong == 0
 
     /** Records an answer and moves on to a new problem of the same type until the game ends. */

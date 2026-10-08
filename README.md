@@ -18,7 +18,7 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    the **Wrong** tally in the bottom-left corner. Either way, a new problem of the
    same type follows, with your question progress shown above it.
 4. **Results** – after the chosen number of questions (correct or wrong), or
-   5 wrong answers, whichever comes first, the practice stops and shows how many you
+   the wrong-answer limit (or an optional time limit), whichever comes first, the practice stops and shows how many you
    got right, plus every answered problem with a green check (correct) or a red X
    (wrong, with the correct answer). Results are saved with the date and time.
    If all the chosen questions were answered, even with mistakes, one of ten randomly chosen
@@ -29,7 +29,10 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    or Jigglypuff rolling and jumping. Each scene says **Hurray!!**. These animations
    are drawn in the app and work offline. Press **View results** to
    skip the animation, or wait for it to finish.
-   If 5 wrong answers end practice before the last question, a dialog says
+   The wrong-answer limit is 5 for up to 50 questions; above 50 it is 10% of the
+   chosen total, rounded up to a whole answer (51 questions allows 6 wrong;
+   100 questions ends at 10 wrong).
+   If the wrong-answer limit ends practice before the last question, a dialog says
    **Nice try! You got {XX} right out of {TOTAL}**, using the chosen number of
    questions as the total. Press **View results** to dismiss it.
    Press **Done** to return to the setup dialog.
@@ -39,9 +42,27 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
 
 - **App updates** – at the top, check GitHub for a newer release using the button
   beside the installed version, then download and install it.
+- **My Rewards** – directly below App updates, view your collected prizes and
+  one-third fragments, even when the rewards system is disabled.
 - **Practice History** – review any previously saved result, delete one, or clear all.
+- **Rewards system** – off by default. Enable it before starting practice to earn
+  prizes for completing **more than 25 questions** with **more than 90% correct**.
+  After the celebration, tap the hopping gift box to open it and release confetti.
+  Sessions of 26–49 questions earn a random Lollipop, Ice Cream Cone, Gummi Bear,
+  or Ramen Fragment; sessions of 50 or more earn a Video Game Fragment.
+  Exactly 25 questions and exactly 90% correct do not qualify.
+  Every 3 fragments of the same type automatically become 1 whole prize, with the
+  fragment counter returning to 0. Prizes and their cumulative totals are saved
+  with the result; deleting history does not remove collected rewards.
+  A gift dismissed before opening can still be claimed from its history entry.
+  All reward illustrations and animations are drawn in the app and work offline.
 - **Show timer** – show or hide the timer while practicing. The timer pauses while
-  Settings or Practice History is open, or the app is in the background.
+  Settings, Practice History, or My Rewards is open, or the app is in the background.
+  When both Rewards system and Show timer are enabled, **Time limit** offers
+  **None** or **5–60 minutes** in 5-minute increments. The selection applies to the
+  next practice. A timed practice shows time remaining and ends when time runs out,
+  saving the partial result without a prize. Changing settings during practice does
+  not remove its active time limit.
 - **Show correct answers** – on by default. Turn off to hide correct answers after
   mistakes during practice, in Results, and in Practice History. Wrong answers are
   still marked and counted, and saved attempts are unchanged. This choice is remembered.

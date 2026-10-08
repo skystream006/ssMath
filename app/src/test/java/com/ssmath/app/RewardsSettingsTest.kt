@@ -1,0 +1,139 @@
+package com.ssmath.app
+
+import android.app.Application
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.test.core.app.ApplicationProvider
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class, qualifiers = "w360dp-h800dp")
+class RewardsSettingsTest {
+    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    private val application get() = ApplicationProvider.getApplicationContext<Application>()
+
+    @Before fun setup() {
+        application.getSharedPreferences("settings", 0).edit().clear().commit()
+        File(application.filesDir, "practice_history.json").delete()
+        DebugLog.initialize(application)
+    }
+
+    @Test fun myRewardsIsBelowUpdatesAndReturnsToSettings() {
+        val model = MathViewModel(application)
+        model.openSettings()
+        compose.setContent { MathAppContent(model) }
+        val updates = compose.onNodeWithText("App updates").fetchSemanticsNode().boundsInRoot
+        val rewards = compose.onNodeWithTag("my-rewards").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val history = compose.onNodeWithTag("practice-history").fetchSemanticsNode().boundsInRoot
+        assertTrue(updates.bottom <= rewards.top)
+        assertTrue(rewards.bottom <= history.top)
+        compose.onNodeWithTag("my-rewards").performClick()
+        assertEquals(Overlay.REWARDS, model.overlay)
+        compose.onNodeWithText("My Rewards").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").performClick()
+        assertEquals(Overlay.SETTINGS, model.overlay)
+        compose.onNodeWithText("Settings").assertIsDisplayed()
+    }
+
+    @Test fun timeLimitRequiresBothSwitchesAndRemembersSelection() {
+        val model = MathViewModel(application)
+        compose.setContent { MathTheme { SettingsScreen(model) } }
+        compose.onNodeWithTag("time-limit").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Rewards system").performScrollTo().assertIsOff().performClick()
+        compose.onNodeWithTag("time-limit").performScrollTo().performClick()
+        compose.onNodeWithText("5 minutes").performClick()
+        assertEquals(5, model.timeLimitMinutes)
+        compose.onNodeWithContentDescription("Show timer").performScrollTo().performClick()
+        compose.onNodeWithTag("time-limit").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Show timer").performClick()
+        compose.onNodeWithTag("time-limit").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Rewards system").performScrollTo().performClick()
+        compose.onNodeWithTag("time-limit").assertDoesNotExist()
+        val restored = MathViewModel(application)
+        assertFalse(restored.rewardsEnabled)
+        assertTrue(restored.showTimer)
+        assertEquals(5, restored.timeLimitMinutes)
+    }
+
+    @Test fun timeLimitOffersNoneAndFiveMinuteStepsThroughSixty() {
+        val model = MathViewModel(application)
+        model.chooseRewardsEnabled(true)
+        compose.setContent { MathTheme { SettingsScreen(model) } }
+        compose.onNodeWithTag("time-limit").performScrollTo().performClick()
+        (5..60 step 5).forEach { minutes ->
+            compose.onNodeWithText("$minutes minutes").performScrollTo().assertIsDisplayed()
+        }
+        compose.onNodeWithText("60 minutes").performClick()
+        assertEquals(60, model.timeLimitMinutes)
+        compose.onNodeWithTag("time-limit").performClick()
+        compose.onNodeWithText("None").performScrollTo().performClick()
+        assertEquals(0, model.timeLimitMinutes)
+    }
+
+    @Test fun resultShowsAwardAndItsHistoricalBalance() {
+        val result = PracticeResult(1, 1, Operation.ADDITION, 10, 1_000,
+            List(50) { Attempt(Problem(1, 1, Operation.ADDITION), 2) },
+            prizeType = RewardType.VIDEO_GAME,
+            prize = PrizeAward(RewardType.VIDEO_GAME, RewardBalance(whole = 1, fragments = 0)))
+        compose.setContent {
+            MathTheme { ResultsContent(result, "Results", showCorrectAnswers = true) {} }
+        }
+        compose.onNodeWithText("Prize: Video Game Fragment").assertIsDisplayed()
+        compose.onNodeWithText("Total collected: 3 fragments").assertIsDisplayed()
+        compose.onNodeWithText("1 Video Games · 0/3 fragments").assertIsDisplayed()
+    }
+
+    @Test fun giftFollowsCelebrationAndUnopenedPrizeCanBeClaimedFromHistory() {
+        val model = MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate)
+        model.chooseRewardsEnabled(true)
+        model.selectOperation(Operation.ADDITION)
+        model.updateQuestionCount("50")
+        model.submitSetup()
+        model.start()
+        compose.mainClock.autoAdvance = false
+        compose.setContent { MathAppContent(model) }
+        compose.runOnIdle {
+            repeat(50) {
+                model.updateAnswer(model.game!!.problem.answer.toString())
+                model.submitAnswer()
+            }
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("You answered every question!").assertIsDisplayed()
+        compose.onNodeWithTag("gift-box").assertDoesNotExist()
+        compose.onNodeWithTag("view-results").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("Congratulations! You've answered 100% correct! Tap to get a prize!").assertIsDisplayed()
+        compose.onNodeWithTag("gift-box").assertIsDisplayed()
+        compose.runOnIdle {
+            model.dismissReward()
+            model.done()
+            model.openSettings()
+            model.openHistory()
+            model.showHistoryDetail(model.history.single())
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("Open gift box").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithTag("gift-box").performClick()
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.runOnIdle {
+            assertEquals(RewardBalance(fragments = 1), model.rewardBalances[RewardType.VIDEO_GAME])
+            assertNotNull(model.history.single().prize)
+            model.dismissReward()
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("Prize: Video Game Fragment").assertIsDisplayed()
+        compose.onNodeWithText("Total collected: 1 fragments").assertIsDisplayed()
+        compose.onNodeWithText("Open gift box").assertDoesNotExist()
+    }
+}
