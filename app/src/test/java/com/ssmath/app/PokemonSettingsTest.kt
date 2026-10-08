@@ -246,7 +246,11 @@ class PokemonSettingsTest {
             .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { action ->
                 val layouts = mutableListOf<TextLayoutResult>()
                 action(layouts)
-                assertFalse("$text overflows", layouts.single().hasVisualOverflow)
+                val layout = layouts.single()
+                assertFalse("$text overflows horizontally: ${layout.size.width} < ${layout.multiParagraph.width}",
+                    layout.didOverflowWidth)
+                assertFalse("$text overflows vertically: ${layout.size.height} < ${layout.multiParagraph.height}",
+                    layout.didOverflowHeight)
             }
     }
 }

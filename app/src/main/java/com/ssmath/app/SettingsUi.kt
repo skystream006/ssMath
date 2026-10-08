@@ -243,11 +243,11 @@ fun PokemonsScreen(model: MathViewModel) {
                 item(key = "category-${category.name}", span = { GridItemSpan(maxLineSpan) }) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically) {
-                        Text(category.label, Modifier.weight(1f, fill = false),
+                        Text(category.label, Modifier.weight(1f, fill = false).width(IntrinsicSize.Max),
                             style = MaterialTheme.typography.titleMedium)
                         Text("${categoryCelebrations.size}/$categoryTotal",
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.testTag("pokemon-count-${category.name}").semantics {
+                            modifier = Modifier.width(IntrinsicSize.Max).testTag("pokemon-count-${category.name}").semantics {
                                 contentDescription = "${categoryCelebrations.size} of $categoryTotal collected in ${category.label}"
                             })
                     }
