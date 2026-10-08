@@ -107,8 +107,9 @@ internal fun RewardGiftDialog(
         }
     }
 
-    LaunchedEffect(result.id, claiming, error) {
-        if (!claiming && error != null) requested = false
+    LaunchedEffect(result.id, requested, claiming, error) {
+        // A retry can fail before a frame observes claiming=true or a changed error.
+        if (requested && !claiming && error != null) requested = false
     }
     LaunchedEffect(result.id, lifecycle, prize != null, claiming, requested) {
         hop.snapTo(0f)
@@ -141,7 +142,7 @@ internal fun RewardGiftDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (prize == null) {
-                    Text("Congratulations! You've answered ${result.percentCorrect}% correct! Tap to get a prize!")
+                    Text("Congratulations! You've answered ${result.percentCorrectText}% correct! Tap to get a prize!")
                 }
                 val interaction = if (prize == null) {
                     Modifier.clickable(enabled = canOpen, role = Role.Button, onClick = requestOpen)

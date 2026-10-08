@@ -4,6 +4,7 @@ import java.io.File
 import java.io.IOException
 import java.time.ZoneOffset
 import java.util.UUID
+import java.util.Locale
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
@@ -203,6 +204,21 @@ class HistoryStoreTest {
         assertTrue(next.id > first.id)
     }
 
+    @Test fun newResultSurvivesFullHistoryTrimmingAfterClockRollbackAndRemainsClaimable() {
+        repeat(MAX_HISTORY_RESULTS) { store.add(result(1_000_000L + it)) }
+        val saved = store.addNewResult(eligible(1))
+        assertEquals(MAX_HISTORY_RESULTS, saved.snapshot.history.size)
+        assertEquals(saved.result, saved.snapshot.history.last())
+        assertEquals(1L, saved.result.finishedAt)
+        assertTrue(saved.result.id > 1_000_000L + MAX_HISTORY_RESULTS - 1)
+        assertEquals(saved.snapshot.history.map { it.finishedAt }.sortedDescending(),
+            saved.snapshot.history.map { it.finishedAt })
+        assertTrue(HistoryStore(file).load().any { it.id == saved.result.id })
+        val claimed = HistoryStore(file).claimReward(saved.result.id)
+        assertNotNull(claimed.history.single { it.id == saved.result.id }.prize)
+        assertEquals(RewardBalance(fragments = 1), claimed.rewards[RewardType.LOLLIPOP])
+    }
+
     @Test fun nonEligibleAndTimedOutResultsCannotBeClaimed() {
         val candidates = listOf(
             eligible(1).copy(prizeType = null),
@@ -222,5 +238,25 @@ class HistoryStoreTest {
         store.add(result)
         assertEquals(result, store.load().single())
         assertEquals(0, store.load().single().percentCorrect)
+    }
+
+    @Test fun percentageTextKeepsWholeNumbersAndUpToTwoLocaleIndependentDecimalsOtherwise() {
+        val previous = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.FRANCE)
+            fun percentage(correct: Int, count: Int) = eligible(1).copy(
+                attempts = List(count) { Attempt(Problem(1, 1, Operation.ADDITION), if (it < correct) 2 else 3) },
+                questionCount = count
+            ).percentCorrectText
+            assertEquals("100", percentage(26, 26))
+            assertEquals("90", percentage(27, 30))
+            assertEquals("90.1", percentage(901, 1000))
+            assertEquals("90.01", percentage(892, 991))
+            assertEquals("96.15", percentage(25, 26))
+            assertEquals("0", percentage(0, 26))
+            assertEquals("0", percentage(0, 0))
+        } finally {
+            Locale.setDefault(previous)
+        }
     }
 }

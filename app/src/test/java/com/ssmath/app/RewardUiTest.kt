@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -56,6 +57,8 @@ class RewardUiTest {
             compose.onNodeWithContentDescription(rewardImageDescription(type, true)).assertIsDisplayed()
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Image))
         }
+        compose.onNodeWithContentDescription("Ice Cream Cone").assertExists()
+        compose.onNodeWithContentDescription("One third of an ice cream cone").assertExists()
         compose.onNodeWithContentDescription("One third of a video game controller").assertExists()
     }
 
@@ -65,7 +68,7 @@ class RewardUiTest {
             MathTheme { RewardGiftDialog(result(), false, null, { opens++ }, {}) }
         }
         compose.mainClock.advanceTimeBy(64)
-        compose.onNodeWithText("Congratulations! You've answered 96% correct! Tap to get a prize!")
+        compose.onNodeWithText("Congratulations! You've answered 96.67% correct! Tap to get a prize!")
             .assertIsDisplayed()
         val gift = compose.onNodeWithTag("gift-box")
         gift.assertContentDescriptionEquals("Open gift box")
@@ -79,6 +82,12 @@ class RewardUiTest {
         compose.onNodeWithTag("awarded-fragment").assertDoesNotExist()
         compose.runOnIdle { assertEquals(1, opens) }
     }
+
+    @Test fun anEligibleFractionalScoreIsNotTruncatedToNinetyPercent() =
+        assertScoreText(901, 1_000, "90.1")
+
+    @Test fun anEligibleScoreJustAboveNinetyKeepsTwoDecimalPlaces() =
+        assertScoreText(892, 991, "90.01")
 
     @Test fun claimingDisablesTheBoxWithoutPrematurelyRevealingAnAward() {
         var opens = 0
@@ -149,6 +158,41 @@ class RewardUiTest {
         compose.runOnIdle { assertTrue(dismissed) }
     }
 
+    @Test fun repeatedImmediateFailuresWithTheSameMessageRemainRetryable() {
+        var claiming by mutableStateOf(false)
+        var error by mutableStateOf<String?>(null)
+        var opens = 0
+        val failure = "Couldn't save your prize. Please try again."
+        compose.setContent {
+            MathTheme {
+                RewardGiftDialog(result(), claiming, error, {
+                    opens++
+                    claiming = true
+                    error = null
+                    claiming = false
+                    error = failure
+                }, {})
+            }
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithTag("gift-box").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        val retry = compose.onNodeWithText("Retry").assertIsEnabled()
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        compose.runOnIdle {
+            retry()
+            retry()
+            assertEquals("Rapid callbacks must not duplicate the second attempt", 2, opens)
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText(failure).assertIsDisplayed()
+        compose.onNodeWithText("Retry").assertIsEnabled().performClick()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("Retry").assertIsEnabled()
+        compose.onNodeWithTag("awarded-fragment").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(3, opens) }
+    }
+
     @Test fun anUnclaimedGiftCanBeDismissedWithoutRequestingAPrize() {
         var opens = 0
         var dismissed by mutableStateOf(false)
@@ -210,6 +254,27 @@ class RewardUiTest {
         }
     }
 
+    @Test
+    @Config(qualifiers = "w320dp-h480dp")
+    fun giftRemainsReachableOnASmallScreenAtDoubleTextSize() {
+        var opens = 0
+        var dismissed = false
+        compose.setContent {
+            MathTheme {
+                CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, 2f)) {
+                    RewardGiftDialog(result(), false, null, { opens++ }, { dismissed = true })
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithTag("gift-box").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithText("Not now").assertIsDisplayed().performClick()
+        compose.runOnIdle {
+            assertEquals(1, opens)
+            assertTrue(dismissed)
+        }
+    }
+
     @Test fun emptyInventoryStillShowsEveryRewardWithZeroCounts() {
         compose.setContent { MathTheme { RewardInventory(emptyMap()) } }
         compose.mainClock.advanceTimeBy(64)
@@ -221,6 +286,20 @@ class RewardUiTest {
             compose.onNodeWithTag("inventory-fragments-${type.name}").onChildren()
                 .filterToOne(hasText("Fragments: 0/3")).assertIsDisplayed()
         }
+    }
+
+    private fun assertScoreText(correct: Int, count: Int, expected: String) {
+        val fractional = result().copy(
+            attempts = List(count) { Attempt(Problem(1, 1, Operation.ADDITION), if (it < correct) 2 else 3) },
+            questionCount = count,
+            prizeType = RewardType.VIDEO_GAME
+        )
+        compose.setContent {
+            MathTheme { RewardGiftDialog(fractional, false, null, {}, {}) }
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("Congratulations! You've answered $expected% correct! Tap to get a prize!")
+            .assertIsDisplayed()
     }
 
     private fun result() = PracticeResult(

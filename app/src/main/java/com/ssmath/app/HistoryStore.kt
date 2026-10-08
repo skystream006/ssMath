@@ -8,6 +8,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Locale
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -34,6 +35,13 @@ data class PracticeResult(
     val correct: Int get() = attempts.count { it.correct }
     val wrong: Int get() = attempts.count { !it.correct }
     val percentCorrect: Int get() = if (attempts.isEmpty()) 0 else (correct.toLong() * 100 / attempts.size).toInt()
+    val percentCorrectText: String
+        get() {
+            if (attempts.isEmpty()) return "0"
+            val numerator = correct.toLong() * 100
+            return if (numerator % attempts.size == 0L) (numerator / attempts.size).toString()
+            else String.format(Locale.ROOT, "%.2f", numerator.toDouble() / attempts.size).trimEnd('0').trimEnd('.')
+        }
 }
 
 @Serializable
@@ -92,10 +100,12 @@ class HistoryStore(private val file: File) {
         return SavedPractice(savedResult, save(withResult(snapshot, savedResult).copy(lastResultId = savedResult.id)))
     }
 
+    // Retention follows monotonic IDs so a clock rollback cannot evict the result just saved.
     private fun withResult(snapshot: PracticeSnapshot, result: PracticeResult) = snapshot.copy(
         history = (listOf(result) + snapshot.history.filter { it.id != result.id })
-            .sortedWith(compareByDescending<PracticeResult> { it.finishedAt }.thenByDescending { it.id })
+            .sortedByDescending { it.id }
             .take(MAX_HISTORY_RESULTS)
+            .sortedWith(compareByDescending<PracticeResult> { it.finishedAt }.thenByDescending { it.id })
     )
 
     fun claimReward(id: Long): PracticeSnapshot {

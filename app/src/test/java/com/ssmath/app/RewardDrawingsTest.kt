@@ -35,6 +35,10 @@ class RewardDrawingsTest {
                 fragmentArea.toFloat() / wholeArea in 0.10f..0.46f)
             assertTrue("$type whole has varied colors", whole.toSet().size > 20)
             assertTrue("$type fragment has varied colors", fragment.toSet().size > 20)
+            assertTrue("$type fracture must not leave a stroke above the artwork",
+                fragment.take(16 * 200).all { it ushr 24 == 0 })
+            assertTrue("$type fracture must not leave a stroke below the artwork",
+                fragment.takeLast(16 * 200).all { it ushr 24 == 0 })
             signatures += whole.contentHashCode()
             signatures += fragment.contentHashCode()
         }
