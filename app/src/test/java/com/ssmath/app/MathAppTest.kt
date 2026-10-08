@@ -85,11 +85,23 @@ class MathAppTest {
         repeat(MAX_WRONG_ANSWERS - 1) { wrong ->
             answer(model.game!!.problem.answer + 1)
             compose.onNodeWithTag("wrong-tally").assertTextEquals("Wrong: ${wrong + 1}")
+            assertNull(model.earlyFinishMessage)
         }
         answer(model.game!!.problem.answer + 1)
 
         assertNull(model.celebration)
         compose.onNodeWithText("Congratulations!").assertDoesNotExist()
+        compose.onNode(isDialog()).assertIsDisplayed()
+        compose.onNodeWithText("Nice try! You got 1 right out of 10").assertIsDisplayed()
+        compose.waitUntil(5_000) { model.history.size == 1 }
+        compose.runOnIdle {
+            model.updateAnswer("0")
+            model.submitAnswer()
+        }
+        assertEquals(MAX_WRONG_ANSWERS + 1, model.lastResult!!.attempts.size)
+        compose.onNodeWithTag("view-results").performClick()
+        compose.onNode(isDialog()).assertDoesNotExist()
+        assertNull(model.earlyFinishMessage)
         compose.onNodeWithTag("result-correct").assertTextEquals("You got 1 right!")
         assertEquals(1, compose.onAllNodesWithContentDescription("Correct").fetchSemanticsNodes().size)
         assertEquals(MAX_WRONG_ANSWERS, compose.onAllNodesWithContentDescription("Wrong").fetchSemanticsNodes().size)
@@ -365,7 +377,16 @@ class MathAppTest {
         compose.onNodeWithTag("start-button").performClick()
         val problem = model.game!!.problem
         val given = problem.answer + 1
-        answer(given)
+        compose.onNodeWithTag("answer-input").performTextReplacement(given.toString())
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithTag("submit-answer").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("Congratulations!").assertIsDisplayed()
+        compose.onNodeWithText("You answered every question!").assertIsDisplayed()
+        assertNotNull(model.celebration)
+        assertNull(model.earlyFinishMessage)
+        compose.onNodeWithTag("view-results").performClick()
+        compose.mainClock.autoAdvance = true
 
         compose.onNodeWithTag("result-correct").assertTextEquals("You got 0 right!")
         compose.onNodeWithContentDescription("Wrong").assertIsDisplayed()
@@ -489,6 +510,7 @@ class MathAppTest {
         compose.onNodeWithText("Congratulations!").assertIsDisplayed()
         compose.onNodeWithText("Hurray!!").assertIsDisplayed()
         compose.onNodeWithContentDescription(celebration.description).assertIsDisplayed()
+        assertNull(model.earlyFinishMessage)
         assertEquals(Screen.RESULTS, model.screen)
         assertEquals(2, model.lastResult!!.correct)
         assertEquals(0, model.lastResult!!.wrong)
@@ -514,7 +536,7 @@ class MathAppTest {
         assertEquals(0, model.game!!.attempts.size)
     }
 
-    @Test fun reachingQuestionCountWithMistakesShowsResultsWithoutCelebrating() {
+    @Test fun reachingQuestionCountWithMistakesCelebratesAndShowsResults() {
         val model = model()
         model.selectOperation(Operation.DIVISION)
         model.updateQuestionCount("2")
@@ -523,7 +545,18 @@ class MathAppTest {
         compose.onNodeWithTag("start-button").performClick()
         answer(model.game!!.problem.answer + 1)
         compose.onNodeWithTag("question-progress").assertTextEquals("Question 2 of 2")
-        answer(model.game!!.problem.answer)
+        assertNull(model.celebration)
+        compose.onNodeWithTag("answer-input").performTextReplacement(model.game!!.problem.answer.toString())
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithTag("submit-answer").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        assertNotNull(model.celebration)
+        assertNull(model.earlyFinishMessage)
+        compose.onNodeWithText("Congratulations!").assertIsDisplayed()
+        compose.onNodeWithText("You answered every question!").assertIsDisplayed()
+        compose.onNodeWithText("You answered every question correctly!").assertDoesNotExist()
+        compose.onNodeWithTag("view-results").performClick()
+        compose.mainClock.autoAdvance = true
         compose.onNodeWithTag("result-correct").assertTextEquals("You got 1 right!")
         compose.onNodeWithText("Congratulations!").assertDoesNotExist()
         assertNull(model.celebration)
@@ -531,6 +564,62 @@ class MathAppTest {
         assertEquals(1, model.lastResult!!.wrong)
         compose.waitUntil(5_000) { model.history.size == 1 }
         assertEquals(model.lastResult, HistoryStore(File(application.filesDir, "practice_history.json")).load().single())
+    }
+
+    @Test fun fifthWrongAnswerOnTheLastQuestionCelebratesInsteadOfStoppingEarly() {
+        val model = model()
+        model.selectOperation(Operation.ADDITION)
+        model.updateQuestionCount("6")
+        model.submitSetup()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("start-button").performClick()
+        answer(model.game!!.problem.answer)
+        repeat(MAX_WRONG_ANSWERS - 1) { answer(model.game!!.problem.answer + 1) }
+        compose.onNodeWithTag("question-progress").assertTextEquals("Question 6 of 6")
+        assertNull(model.celebration)
+        assertNull(model.earlyFinishMessage)
+        compose.onNodeWithTag("answer-input").performTextReplacement((model.game!!.problem.answer + 1).toString())
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithTag("submit-answer").performClick()
+        compose.mainClock.advanceTimeBy(64)
+
+        assertNotNull(model.celebration)
+        assertNull(model.earlyFinishMessage)
+        compose.onNodeWithText("Congratulations!").assertIsDisplayed()
+        compose.onNodeWithText("Nice try!", substring = true).assertDoesNotExist()
+        assertEquals(6, model.lastResult!!.attempts.size)
+        assertEquals(MAX_WRONG_ANSWERS, model.lastResult!!.wrong)
+        compose.waitUntil(5_000) { model.history.size == 1 }
+        assertEquals(model.lastResult, HistoryStore(File(application.filesDir, "practice_history.json")).load().single())
+        compose.onNodeWithTag("view-results").performClick()
+        compose.mainClock.autoAdvance = true
+        compose.onNodeWithTag("result-correct").assertTextEquals("You got 1 right!")
+    }
+
+    @Test fun fifthWrongAnswerBeforeTheLastQuestionShowsZeroScoreAndDoesNotReplay() {
+        val model = model()
+        model.selectOperation(Operation.ADDITION)
+        model.updateQuestionCount("6")
+        model.submitSetup()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("start-button").performClick()
+        repeat(MAX_WRONG_ANSWERS) { answer(model.game!!.problem.answer + 1) }
+
+        assertNull(model.celebration)
+        assertEquals(5, model.lastResult!!.attempts.size)
+        compose.onNode(isDialog()).assertIsDisplayed()
+        compose.onNodeWithText("Nice try! You got 0 right out of 6").assertIsDisplayed()
+        compose.onNodeWithTag("view-results").performClick()
+        compose.onNodeWithTag("result-correct").assertTextEquals("You got 0 right!")
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNode(isDialog()).assertDoesNotExist()
+        compose.onNodeWithTag("done-button").performClick()
+        assertNull(model.earlyFinishMessage)
+        compose.onNodeWithTag("submit-setup").performScrollTo().performClick()
+        compose.onNodeWithTag("start-button").performClick()
+        compose.onNodeWithTag("question-progress").assertTextEquals("Question 1 of 6")
+        compose.onNode(isDialog()).assertDoesNotExist()
     }
 
     private fun textLayout(text: String): TextLayoutResult {
