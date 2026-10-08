@@ -277,7 +277,11 @@ class RewardUiTest {
                 compose.onNodeWithText(text, useUnmergedTree = true)
                     .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
                 assertTrue(layouts.isNotEmpty())
-                assertFalse("$text overflows", layouts.single().hasVisualOverflow)
+                val layout = layouts.single()
+                assertFalse("$text overflows horizontally: ${layout.size}, paragraph width ${layout.multiParagraph.width}",
+                    layout.didOverflowWidth)
+                assertFalse("$text overflows vertically: ${layout.size}, paragraph height ${layout.multiParagraph.height}",
+                    layout.didOverflowHeight)
             }
         }
         RewardType.entries.forEach { type ->

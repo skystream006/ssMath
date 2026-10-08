@@ -351,8 +351,8 @@ private fun LazyGridScope.rewardTierItems(content: @Composable LazyGridItemScope
                 Modifier.fillMaxWidth().semantics(mergeDescendants = true) { heading() },
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(tier.label, style = MaterialTheme.typography.titleMedium)
-                Text(tier.questionCountLabel, style = MaterialTheme.typography.bodySmall)
+                Text(tier.label, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleMedium)
+                Text(tier.questionCountLabel, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall)
             }
         }
         items(RewardType.entries.filter { it.tier == tier }, key = { it.name }, itemContent = content)
