@@ -1,0 +1,267 @@
+package com.ssmath.app
+
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+
+internal const val REWARD_OPEN_DURATION_MS = 1_600
+
+internal fun rewardImageDescription(type: RewardType, fragment: Boolean): String {
+    if (!fragment) return type.label
+    return when (type) {
+        RewardType.LOLLIPOP -> "One third of a lollipop"
+        RewardType.ICE_CREAM -> "One third of an ice cream cone"
+        RewardType.GUMMI_BEAR -> "One third of a gummi bear"
+        RewardType.RAMEN -> "One third of a square of dried ramen"
+        RewardType.VIDEO_GAME -> "One third of a video game controller"
+    }
+}
+
+@Composable
+internal fun RewardImage(type: RewardType, fragment: Boolean, modifier: Modifier = Modifier) {
+    Box(modifier.size(144.dp).semantics(mergeDescendants = true) {
+        contentDescription = rewardImageDescription(type, fragment)
+        role = Role.Image
+    }) {
+        Canvas(Modifier.matchParentSize()) { drawRewardArtwork(type, fragment) }
+        if (fragment) {
+            Surface(
+                modifier = Modifier.align(Alignment.BottomEnd),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF51417B),
+                contentColor = Color.White
+            ) {
+                Text("1/3", style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+            }
+        }
+    }
+}
+
+@Composable
+internal fun RewardGiftDialog(
+    result: PracticeResult,
+    claiming: Boolean,
+    error: String?,
+    onOpen: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val prize = result.prize
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val hop = remember(result.id) { Animatable(0f) }
+    val opening = remember(result.id) { Animatable(if (prize == null) 0f else 1f) }
+    var requested by remember(result.id) { mutableStateOf(false) }
+    val canOpen = prize == null && !claiming && !requested
+    val requestOpen = {
+        if (canOpen && !requested) {
+            requested = true
+            onOpen()
+        }
+    }
+
+    LaunchedEffect(result.id, requested, claiming, error) {
+        // A retry can fail before a frame observes claiming=true or a changed error.
+        if (requested && !claiming && error != null) requested = false
+    }
+    LaunchedEffect(result.id, lifecycle, prize != null, claiming, requested) {
+        hop.snapTo(0f)
+        if (prize == null && !claiming && !requested) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (isActive) {
+                    hop.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+                    hop.animateTo(0f, tween(360, easing = FastOutSlowInEasing))
+                    delay(420)
+                }
+            }
+        }
+    }
+    LaunchedEffect(result.id, lifecycle, prize != null) {
+        if (prize != null && opening.value < 1f) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                val remaining = ((1f - opening.value) * REWARD_OPEN_DURATION_MS).toInt().coerceAtLeast(1)
+                opening.animateTo(1f, tween(remaining, easing = LinearEasing))
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (prize == null) "You earned a gift!" else "A fragment for you!") },
+        text = {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()).testTag("reward-gift-content"),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (prize == null) {
+                    Text("Congratulations! You've answered ${result.percentCorrectText}% correct! Tap to get a prize!")
+                }
+                val interaction = if (prize == null) {
+                    Modifier.clickable(enabled = canOpen, role = Role.Button, onClick = requestOpen)
+                        .semantics {
+                            contentDescription = "Open gift box"
+                            stateDescription = if (claiming || requested) "Saving prize" else "Ready to open"
+                        }
+                } else {
+                    Modifier.semantics {
+                        contentDescription = "Opened gift box"
+                        role = Role.Image
+                    }
+                }
+                Box(
+                    Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(24.dp))
+                        .testTag("gift-box").then(interaction),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(Modifier.matchParentSize()) {
+                        drawRewardGift(opening.value, hop.value)
+                    }
+                    if (prize != null && opening.value >= 0.5f) {
+                        RewardImage(prize.type, fragment = true,
+                            modifier = Modifier.size(160.dp).testTag("awarded-fragment"))
+                    }
+                }
+                if (prize != null) {
+                    Column(
+                        Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(prize.type.fragmentLabel, style = MaterialTheme.typography.titleLarge,
+                            textAlign = TextAlign.Center)
+                        Text("Added 1 fragment to your collection.", textAlign = TextAlign.Center)
+                        Text("Whole: ${prize.balance.whole} · Fragments: ${prize.balance.fragments}/3",
+                            textAlign = TextAlign.Center, modifier = Modifier.testTag("awarded-balance"))
+                        Text("3 fragments = 1 reward", style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center)
+                    }
+                } else if (claiming || requested) {
+                    Text("Saving your prize…", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                }
+                if (error != null && prize == null) {
+                    Text(error, color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                }
+            }
+        },
+        confirmButton = {
+            if (prize == null && error != null) {
+                TextButton(onClick = requestOpen, enabled = canOpen) { Text("Retry") }
+            } else {
+                TextButton(onClick = onDismiss, modifier = Modifier.testTag("view-results")) {
+                    Text(if (prize == null) "Not now" else "View results")
+                }
+            }
+        },
+        dismissButton = {
+            if (prize == null && error != null) {
+                TextButton(onClick = onDismiss) { Text("Not now") }
+            }
+        }
+    )
+}
+
+@Composable
+internal fun RewardInventory(balances: Map<RewardType, RewardBalance>, modifier: Modifier = Modifier) {
+    LazyColumn(
+        modifier.fillMaxWidth().testTag("reward-inventory"),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("3 fragments = 1 reward", style = MaterialTheme.typography.titleMedium)
+                Text("Collect three matching fragments to complete a reward. Your collection stays on this device.")
+            }
+        }
+        items(RewardType.entries, key = { it.name }) { type ->
+            val balance = balances[type] ?: RewardBalance()
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth().testTag("reward-card-${type.name}")
+            ) {
+                Column(
+                    Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(type.pluralLabel, style = MaterialTheme.typography.titleLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        RewardInventoryPart(type, false, "Whole: ${balance.whole}",
+                            Modifier.weight(1f).testTag("inventory-whole-${type.name}"))
+                        RewardInventoryPart(type, true, "Fragments: ${balance.fragments}/3",
+                            Modifier.weight(1f).testTag("inventory-fragments-${type.name}"))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RewardInventoryPart(type: RewardType, fragment: Boolean, count: String, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = when (type) {
+                RewardType.LOLLIPOP -> Color(0xFFFFE4EE)
+                RewardType.ICE_CREAM -> Color(0xFFFFEBDC)
+                RewardType.GUMMI_BEAR -> Color(0xFFDDF5EA)
+                RewardType.RAMEN -> Color(0xFFFFF1D2)
+                RewardType.VIDEO_GAME -> Color(0xFFEAE5FF)
+            }
+        ) {
+            RewardImage(type, fragment, Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp))
+        }
+        Text(count, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
+    }
+}

@@ -204,4 +204,19 @@ class MathGameTest {
         assertEquals("01:05", formatDuration(65_999))
         assertEquals("1:00:01", formatDuration(3_601_000))
     }
+
+    @Test fun largerGamesRoundTheirWrongAnswerLimitUpToTenPercent() {
+        mapOf(25 to 5, 26 to 5, 49 to 5, 50 to 5, 51 to 6, 59 to 6, 60 to 6, 100 to 10).forEach { (count, limit) ->
+            var game = GameState.start(Operation.ADDITION, 10, generator, count)
+            assertEquals(limit, game.maxWrongAnswers)
+            repeat(limit - 1) {
+                game = game.answer(game.problem.answer + 1, generator)
+                assertFalse(game.finished)
+            }
+            game = game.answer(game.problem.answer + 1, generator)
+            assertTrue(game.finished)
+            assertEquals(limit, game.wrong)
+            assertThrows(IllegalStateException::class.java) { game.answer(0, generator) }
+        }
+    }
 }

@@ -108,10 +108,15 @@ internal fun MathAppContent(model: MathViewModel) {
                     when (model.overlay) {
                         Overlay.SETTINGS -> SettingsScreen(model)
                         Overlay.HISTORY -> HistoryScreen(model)
+                        Overlay.REWARDS -> RewardsScreen(model)
                         null -> {
                             MainContent(model)
                             SettingsButton(model::openSettings, Modifier.align(Alignment.BottomEnd))
                         }
+                    }
+                    model.rewardResult?.let { result ->
+                        if (model.rewardDialogVisible) RewardGiftDialog(result, model.claimingReward, model.rewardError,
+                            onOpen = model::claimReward, onDismiss = model::dismissReward)
                     }
                 }
             }
@@ -143,7 +148,12 @@ private fun MainContent(model: MathViewModel) {
         Screen.PLAYING -> PlayingScreen(model)
         Screen.RESULTS -> model.lastResult?.let { result ->
             ResultsContent(result, title = "Results", showCorrectAnswers = model.showCorrectAnswers) {
-                Button(onClick = model::done, modifier = Modifier.widthIn(min = 160.dp).testTag("done-button")) { Text("Done") }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (result.prizeType != null && result.prize == null && model.celebration == null) {
+                        Button(onClick = { model.showRewardForResult(result) }) { Text("Open gift box") }
+                    }
+                    Button(onClick = model::done, modifier = Modifier.widthIn(min = 160.dp).testTag("done-button")) { Text("Done") }
+                }
             }
             model.celebration?.let { CelebrationDialog(it, onFinished = model::dismissCelebration) }
             model.earlyFinishMessage?.let { message ->
@@ -160,7 +170,8 @@ private fun MainContent(model: MathViewModel) {
         AlertDialog(onDismissRequest = { confirmQuit = false },
             title = { Text("Quit this practice?") },
             text = { Text("Results are only saved after answering all ${model.game?.questionCount} questions or " +
-                "reaching $MAX_WRONG_ANSWERS wrong answers.") },
+                "reaching ${model.game?.maxWrongAnswers} wrong answers" +
+                if (model.activeTimeLimitMs != null) ", or when time runs out." else ".") },
             confirmButton = { TextButton(onClick = { confirmQuit = false; model.backToSetup() }) { Text("Quit") } },
             dismissButton = { TextButton(onClick = { confirmQuit = false }) { Text("Keep practicing") } })
     }
@@ -235,6 +246,10 @@ private fun ReadyDialog(model: MathViewModel) {
         Text("${model.selectedOperation?.label} · numbers ${model.minimum} to ${model.maximum} · ${model.questionCount} questions",
             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
+        if (model.rewardsEnabled && model.showTimer && model.timeLimitMinutes > 0) {
+            Text("Time limit: ${model.timeLimitMinutes} minutes", modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center)
+        }
         Button(onClick = model::start, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("start-button")) {
             Text("Start", style = MaterialTheme.typography.titleMedium)
         }
@@ -251,7 +266,7 @@ private fun PlayingScreen(model: MathViewModel) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Points: ${game.correct}", style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f).testTag("points"))
-            if (model.showTimer) TimerText(model)
+            if (model.showTimer || model.activeTimeLimitMs != null) TimerText(model)
         }
         Column(Modifier.align(Alignment.Center).widthIn(max = 440.dp).fillMaxWidth()
             .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 64.dp),
@@ -290,7 +305,9 @@ private fun TimerText(model: MathViewModel) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Rounded.Timer, contentDescription = null, modifier = Modifier.size(20.dp))
         Spacer(Modifier.size(4.dp))
-        Text(formatDuration(elapsed), style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("timer"))
+        val limit = model.activeTimeLimitMs
+        Text(if (limit == null) formatDuration(elapsed) else "Left: ${formatDuration(limit - elapsed)}",
+            style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("timer"))
     }
 }
 
@@ -311,6 +328,18 @@ internal fun ResultsContent(result: PracticeResult, title: String?, showCorrectA
                         style = MaterialTheme.typography.bodyMedium)
                     Text("Wrong: ${result.wrong} · Time: ${formatDuration(result.durationMs)}",
                         style = MaterialTheme.typography.bodyMedium)
+                    if (result.timedOut) Text("Time's up!", color = WrongRed)
+                    result.prize?.let { prize ->
+                        RewardImage(prize.type, fragment = true, modifier = Modifier.size(88.dp))
+                        Text("Prize: ${prize.type.fragmentLabel}", style = MaterialTheme.typography.titleMedium)
+                        Text("Total collected: ${prize.balance.totalFragments} fragments",
+                            style = MaterialTheme.typography.bodyMedium)
+                        Text("${prize.balance.whole} ${prize.type.pluralLabel} · ${prize.balance.fragments}/3 fragments",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (result.prizeType != null && result.prize == null) {
+                        Text("Your prize is waiting!", style = MaterialTheme.typography.titleMedium)
+                    }
                     Text(formatFinishedAt(result.finishedAt), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

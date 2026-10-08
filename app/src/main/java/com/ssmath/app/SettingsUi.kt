@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -63,6 +64,12 @@ fun SettingsScreen(model: MathViewModel) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             UpdateSettings()
+            ListItem(headlineContent = { Text("My Rewards") },
+                supportingContent = { Text("Your prizes and fragments") },
+                leadingContent = { Icon(Icons.Rounded.CardGiftcard, null) },
+                trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable(onClick = model::openRewards).testTag("my-rewards"))
             HorizontalDivider()
             ListItem(headlineContent = { Text("Practice History") },
                 supportingContent = { Text("Review your previous results") },
@@ -72,12 +79,24 @@ fun SettingsScreen(model: MathViewModel) {
                 modifier = Modifier.clickable(onClick = model::openHistory).testTag("practice-history"))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
+                    Text("Rewards system")
+                    Text("Earn prize fragments by completing more than 25 questions with over 90% correct",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(model.rewardsEnabled, model::chooseRewardsEnabled,
+                    modifier = Modifier.semantics { contentDescription = "Rewards system" })
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
                     Text("Show timer")
                     Text("Display the elapsed time while practicing", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(model.showTimer, model::chooseShowTimer,
                     modifier = Modifier.semantics { contentDescription = "Show timer" })
+            }
+            if (model.rewardsEnabled && model.showTimer) {
+                TimeLimitSetting(model.timeLimitMinutes, model::chooseTimeLimitMinutes)
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -134,6 +153,37 @@ fun SettingsScreen(model: MathViewModel) {
 }
 
 @Composable
+private fun TimeLimitSetting(minutes: Int, onChange: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Time limit", style = MaterialTheme.typography.titleSmall)
+        Box {
+            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.testTag("time-limit")) {
+                Text(if (minutes == 0) "None" else "$minutes minutes")
+                Icon(Icons.Rounded.ExpandMore, null)
+            }
+            DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
+                (0..60 step 5).forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(if (option == 0) "None" else "$option minutes") },
+                        onClick = { onChange(option); expanded = false },
+                        modifier = Modifier.semantics { selected = minutes == option })
+                }
+            }
+        }
+        Text("Applies to the next practice. Time pauses in settings and in the background.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun RewardsScreen(model: MathViewModel) {
+    ScreenScaffold("My Rewards", model::closeOverlay) {
+        RewardInventory(model.rewardBalances)
+    }
+}
+
+@Composable
 fun HistoryScreen(model: MathViewModel) {
     var confirmClear by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
@@ -143,7 +193,12 @@ fun HistoryScreen(model: MathViewModel) {
             IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") }
         }) {
             ResultsContent(detail, title = null, showCorrectAnswers = model.showCorrectAnswers) {
-                OutlinedButton(onClick = model::closeOverlay, modifier = Modifier.widthIn(min = 160.dp)) { Text("Back") }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (detail.prizeType != null && detail.prize == null) {
+                        Button(onClick = { model.showRewardForResult(detail) }) { Text("Open gift box") }
+                    }
+                    OutlinedButton(onClick = model::closeOverlay, modifier = Modifier.widthIn(min = 160.dp)) { Text("Back") }
+                }
             }
         }
     } else {
@@ -163,7 +218,11 @@ fun HistoryScreen(model: MathViewModel) {
                         ListItem(
                             headlineContent = { Text("${result.operation.label} · ${result.minimum} to ${result.maximum}") },
                             supportingContent = {
-                                Text("${formatFinishedAt(result.finishedAt)}\n${result.correct} right · ${result.wrong} wrong · ${formatDuration(result.durationMs)}")
+                                Column {
+                                    Text("${formatFinishedAt(result.finishedAt)}\n${result.correct} right · ${result.wrong} wrong · ${formatDuration(result.durationMs)}")
+                                    result.prize?.let { Text("Prize: ${it.type.fragmentLabel}") }
+                                    if (result.prizeType != null && result.prize == null) Text("Prize waiting — open this result to claim")
+                                }
                             },
                             leadingContent = {
                                 Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),

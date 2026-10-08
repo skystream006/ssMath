@@ -8,7 +8,12 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import java.io.File
+import kotlin.random.Random
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -16,7 +21,7 @@ import kotlinx.coroutines.withContext
 
 enum class Screen { SETUP, READY, PLAYING, RESULTS }
 
-enum class Overlay { SETTINGS, HISTORY }
+enum class Overlay { SETTINGS, HISTORY, REWARDS }
 
 data class Feedback(val text: String, val correct: Boolean)
 
@@ -24,7 +29,9 @@ class MathViewModel(
     application: Application,
     private val generator: ProblemGenerator = ProblemGenerator(),
     private val clock: () -> Long = SystemClock::elapsedRealtime,
-    private val wallClock: () -> Long = System::currentTimeMillis
+    private val wallClock: () -> Long = System::currentTimeMillis,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val rewardRandom: Random = Random.Default
 ) : AndroidViewModel(application) {
     constructor(application: Application) : this(application, ProblemGenerator())
 
@@ -58,10 +65,26 @@ class MathViewModel(
         private set
     var historyDetail by mutableStateOf<PracticeResult?>(null)
         private set
+    var rewardBalances by mutableStateOf<Map<RewardType, RewardBalance>>(emptyMap())
+        private set
+    var rewardResult by mutableStateOf<PracticeResult?>(null)
+        private set
+    private var rewardDialogOverlay by mutableStateOf<Overlay?>(null)
+    val rewardDialogVisible: Boolean get() = rewardResult != null && celebration == null && overlay == rewardDialogOverlay
+    var claimingReward by mutableStateOf(false)
+        private set
+    var rewardError by mutableStateOf<String?>(null)
+        private set
     var message by mutableStateOf<String?>(null)
         private set
 
     var showTimer by mutableStateOf(settings.getBoolean("show_timer", true))
+        private set
+    var rewardsEnabled by mutableStateOf(settings.getBoolean("rewards_enabled", false))
+        private set
+    var timeLimitMinutes by mutableStateOf(normalizeTimeLimit(settings.getInt("time_limit_minutes", 0)))
+        private set
+    var activeTimeLimitMs by mutableStateOf<Long?>(null)
         private set
     var showCorrectAnswers by mutableStateOf(settings.getBoolean("show_correct_answers", true))
         private set
@@ -82,6 +105,12 @@ class MathViewModel(
     private var elapsedBefore = 0L
     private var runningSince: Long? = null
     private var foreground = true
+    private var timeoutJob: Job? = null
+    private var rewardsEnabledAtStart = false
+    private var latestResultId = 0L
+    private var rewardRequestVersion = 0L
+    private class PendingResult(var result: PracticeResult, var saved: Boolean = false)
+    private var pendingResult: PendingResult? = null
 
     val maximum: Int? get() = parseMaximum(maximumText)
     val minimum: Int? get() = parseMaximum(minimumText)?.takeIf { it <= (maximum ?: MAX_MAXIMUM) }
@@ -124,6 +153,10 @@ class MathViewModel(
         answerText = ""
         celebration = null
         earlyFinishMessage = null
+        lastResult = null
+        pendingResult = null
+        dismissReward()
+        activeTimeLimitMs = null
         resetTimer()
         screen = Screen.SETUP
     }
@@ -137,17 +170,25 @@ class MathViewModel(
         answerText = ""
         celebration = null
         earlyFinishMessage = null
+        lastResult = null
+        pendingResult = null
+        dismissReward()
+        rewardsEnabledAtStart = rewardsEnabled
+        activeTimeLimitMs = if (rewardsEnabled && showTimer && timeLimitMinutes > 0) timeLimitMinutes * 60_000L else null
         resetTimer()
         screen = Screen.PLAYING
         updateTimer()
         DebugLog.event(DebugEvent.GAME_STARTED)
     }
 
-    fun updateAnswer(text: String) { answerText = text.filter { it in '0'..'9' }.take(9) }
+    fun updateAnswer(text: String) {
+        if (screen == Screen.PLAYING && overlay == null && foreground) answerText = text.filter { it in '0'..'9' }.take(9)
+    }
 
     fun submitAnswer() {
         val current = game ?: return
-        if (screen != Screen.PLAYING || current.finished) return
+        if (screen != Screen.PLAYING || overlay != null || !foreground || current.finished) return
+        if (checkTimeLimit()) return
         val value = parseAnswer(answerText) ?: return
         val next = current.answer(value, generator)
         game = next
@@ -155,26 +196,40 @@ class MathViewModel(
         if (next.finished) finish(next)
     }
 
-    private fun finish(state: GameState) {
-        val duration = elapsedMs()
+    private fun finish(state: GameState, timedOut: Boolean = false) {
+        val elapsed = elapsedMs()
+        val expired = timedOut || activeTimeLimitMs?.let { elapsed >= it } == true
+        val duration = if (expired) activeTimeLimitMs ?: elapsed else elapsed
         resetTimer()
         val finishedAt = wallClock()
-        val result = PracticeResult(finishedAt, finishedAt, state.operation, state.maximum, duration, state.attempts,
-            minimum = state.minimum)
+        latestResultId = maxOf(Math.addExact(latestResultId, 1), finishedAt)
+        val result = PracticeResult(latestResultId, finishedAt, state.operation, state.maximum, duration, state.attempts,
+            minimum = state.minimum, questionCount = state.questionCount, timedOut = expired,
+            prizeType = selectPrize(state.questionCount, state.correct, state.attempts.size,
+                rewardsEnabledAtStart, rewardsEnabled, expired, rewardRandom))
+        val pending = PendingResult(result)
+        pendingResult = pending
         lastResult = result
-        val answeredAllQuestions = state.attempts.size >= state.questionCount
+        val answeredAllQuestions = !expired && state.attempts.size == state.questionCount
         celebration = if (answeredAllQuestions) Celebration.entries.random() else null
-        earlyFinishMessage = if (answeredAllQuestions) null
+        earlyFinishMessage = if (expired) "Time's up! You got ${state.correct} right out of ${state.questionCount}"
+            else if (answeredAllQuestions) null
             else "Nice try! You got ${state.correct} right out of ${state.questionCount}"
         screen = Screen.RESULTS
+        rewardResult = result.takeIf { it.prizeType != null }
         DebugLog.event(DebugEvent.GAME_FINISHED)
         viewModelScope.launch {
             try {
-                history = storeLock.withLock { withContext(Dispatchers.IO) { store.add(result) } }
+                storeLock.withLock { persistResult(pending) }
                 DebugLog.event(DebugEvent.HISTORY_SAVED)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 DebugLog.event(DebugEvent.HISTORY_FAILURE, error = error)
-                message = "Unable to save these results. Free device storage and try again."
+                if (pendingResult === pending) {
+                    message = "Unable to save these results. Free device storage and try again."
+                    if (rewardResult === pending.result) rewardError = "Unable to save your prize. Free device storage and try again."
+                }
             }
         }
     }
@@ -185,6 +240,10 @@ class MathViewModel(
         answerText = ""
         celebration = null
         earlyFinishMessage = null
+        pendingResult = null
+        dismissReward()
+        resetTimer()
+        activeTimeLimitMs = null
         screen = Screen.SETUP
     }
 
@@ -192,11 +251,21 @@ class MathViewModel(
 
     fun dismissEarlyFinishDialog() { earlyFinishMessage = null }
 
-    fun elapsedMs(): Long = elapsedBefore + (runningSince?.let { clock() - it } ?: 0L)
+    fun elapsedMs(): Long = elapsedBefore + (runningSince?.let { (clock() - it).coerceAtLeast(0) } ?: 0L)
+
+    fun checkTimeLimit(): Boolean {
+        val limit = activeTimeLimitMs ?: return false
+        val current = game ?: return false
+        if (screen != Screen.PLAYING || overlay != null || !foreground || elapsedMs() < limit) return false
+        finish(current, timedOut = true)
+        return true
+    }
 
     private fun resetTimer() {
         elapsedBefore = 0
         runningSince = null
+        timeoutJob?.cancel()
+        timeoutJob = null
     }
 
     /** The timer only runs while a game is visible: it pauses in settings, history, or the background. */
@@ -205,8 +274,19 @@ class MathViewModel(
         val since = runningSince
         if (shouldRun && since == null) runningSince = clock()
         else if (!shouldRun && since != null) {
-            elapsedBefore += clock() - since
+            elapsedBefore += (clock() - since).coerceAtLeast(0)
             runningSince = null
+        }
+        if (!shouldRun) {
+            timeoutJob?.cancel()
+            timeoutJob = null
+        } else if (activeTimeLimitMs != null && timeoutJob == null) {
+            timeoutJob = viewModelScope.launch {
+                while (screen == Screen.PLAYING && overlay == null && foreground) {
+                    if (checkTimeLimit()) break
+                    delay(200)
+                }
+            }
         }
     }
 
@@ -216,33 +296,124 @@ class MathViewModel(
     }
 
     fun openSettings() {
+        dismissOverlayReward()
         overlay = Overlay.SETTINGS
         updateTimer()
     }
 
     fun openHistory() {
+        dismissOverlayReward()
         historyDetail = null
         overlay = Overlay.HISTORY
         updateTimer()
         viewModelScope.launch { reloadHistory() }
     }
 
+    fun openRewards() {
+        dismissOverlayReward()
+        overlay = Overlay.REWARDS
+        updateTimer()
+        viewModelScope.launch { reloadHistory() }
+    }
+
     fun closeOverlay() {
+        dismissOverlayReward()
         if (overlay == Overlay.HISTORY && historyDetail != null) {
             historyDetail = null
             return
         }
-        overlay = if (overlay == Overlay.HISTORY) Overlay.SETTINGS else null
+        overlay = if (overlay == Overlay.HISTORY || overlay == Overlay.REWARDS) Overlay.SETTINGS else null
         updateTimer()
     }
 
     fun showHistoryDetail(result: PracticeResult?) { historyDetail = result }
 
-    fun deleteResult(id: Long) {
-        historyDetail = null
+    fun showRewardForResult(result: PracticeResult) {
+        val current = history.find { it.id == result.id } ?: lastResult?.takeIf { it.id == result.id } ?: return
+        if (current.prizeType == null) return
+        rewardRequestVersion++
+        rewardError = null
+        rewardDialogOverlay = overlay
+        rewardResult = current
+    }
+
+    fun dismissReward() {
+        rewardRequestVersion++
+        rewardResult = null
+        rewardDialogOverlay = null
+        rewardError = null
+    }
+
+    private fun dismissOverlayReward() {
+        if (rewardDialogOverlay != null) dismissReward()
+    }
+
+    fun claimReward() {
+        val target = rewardResult ?: return
+        if (claimingReward || !rewardDialogVisible || target.prizeType == null || target.prize != null) return
+        val pending = pendingResult?.takeIf { it.result === target }
+        val request = rewardRequestVersion
+        claimingReward = true
+        rewardError = null
         viewModelScope.launch {
             try {
-                history = storeLock.withLock { withContext(Dispatchers.IO) { store.delete(id) } }
+                storeLock.withLock {
+                    if (pending != null && !pending.saved) persistResult(pending)
+                    val id = pending?.result?.id ?: target.id
+                    val snapshot = withContext(ioDispatcher) { store.claimReward(id) }
+                    applySnapshot(snapshot)
+                    val claimed = snapshot.history.find { it.id == id }
+                    if (claimed?.prize != null) {
+                        if ((pending != null && pendingResult === pending && lastResult != null) ||
+                            (pending == null && lastResult?.id == id && pendingResult?.saved != false)) lastResult = claimed
+                        if (historyDetail?.id == id) historyDetail = claimed
+                        if (pendingResult?.saved == true && pendingResult?.result?.id == id) pendingResult?.result = claimed
+                        if (rewardRequestVersion == request) rewardResult = claimed
+                    } else if (rewardRequestVersion == request) {
+                        rewardError = "This prize is no longer available in practice history."
+                    }
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                DebugLog.event(DebugEvent.HISTORY_FAILURE, error = error)
+                if (rewardRequestVersion == request) rewardError = "Unable to save your prize. Free device storage and try again."
+            } finally {
+                claimingReward = false
+            }
+        }
+    }
+
+    private suspend fun persistResult(pending: PendingResult) {
+        if (pending.saved) return
+        val saved = withContext(ioDispatcher) { store.addNewResult(pending.result) }
+        val previous = pending.result
+        pending.result = saved.result
+        pending.saved = true
+        latestResultId = maxOf(latestResultId, saved.result.id)
+        applySnapshot(saved.snapshot)
+        if (lastResult === previous) lastResult = saved.result
+        if (rewardResult === previous) rewardResult = saved.result
+    }
+
+    private fun applySnapshot(snapshot: PracticeSnapshot) {
+        history = snapshot.history
+        rewardBalances = snapshot.rewards
+        latestResultId = maxOf(latestResultId, snapshot.lastResultId, snapshot.history.maxOfOrNull { it.id } ?: 0L)
+    }
+
+    fun deleteResult(id: Long) {
+        historyDetail = null
+        val request = rewardRequestVersion
+        viewModelScope.launch {
+            try {
+                storeLock.withLock {
+                    withContext(ioDispatcher) { store.delete(id) }
+                    applySnapshot(withContext(ioDispatcher) { store.loadSnapshot() })
+                    if (rewardRequestVersion == request && rewardResult?.id == id) dismissReward()
+                }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 DebugLog.event(DebugEvent.HISTORY_FAILURE, error = error)
                 message = "Unable to delete this result."
@@ -252,9 +423,16 @@ class MathViewModel(
 
     fun clearHistory() {
         historyDetail = null
+        val request = rewardRequestVersion
         viewModelScope.launch {
             try {
-                history = storeLock.withLock { withContext(Dispatchers.IO) { store.clear() } }
+                storeLock.withLock {
+                    withContext(ioDispatcher) { store.clear() }
+                    applySnapshot(withContext(ioDispatcher) { store.loadSnapshot() })
+                    if (rewardRequestVersion == request) dismissReward()
+                }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 DebugLog.event(DebugEvent.HISTORY_FAILURE, error = error)
                 message = "Unable to clear practice history."
@@ -263,7 +441,14 @@ class MathViewModel(
     }
 
     private suspend fun reloadHistory() {
-        history = storeLock.withLock { withContext(Dispatchers.IO) { store.load() } }
+        try {
+            storeLock.withLock { applySnapshot(withContext(ioDispatcher) { store.loadSnapshot() }) }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            DebugLog.event(DebugEvent.HISTORY_FAILURE, error = error)
+            message = "Unable to load rewards and practice history."
+        }
     }
 
     fun consumeMessage() { message = null }
@@ -272,6 +457,18 @@ class MathViewModel(
         showTimer = value
         settings.edit().putBoolean("show_timer", value).apply()
     }
+
+    fun chooseRewardsEnabled(value: Boolean) {
+        rewardsEnabled = value
+        settings.edit().putBoolean("rewards_enabled", value).apply()
+    }
+
+    fun chooseTimeLimitMinutes(value: Int) {
+        timeLimitMinutes = normalizeTimeLimit(value)
+        settings.edit().putInt("time_limit_minutes", timeLimitMinutes).apply()
+    }
+
+    private fun normalizeTimeLimit(value: Int): Int = value.coerceIn(0, 60) / 5 * 5
 
     fun chooseShowCorrectAnswers(value: Boolean) {
         showCorrectAnswers = value
