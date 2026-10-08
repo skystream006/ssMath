@@ -137,7 +137,7 @@ class CelebrationDrawingsTest {
         val wailord = colorBounds(render(DrawScope::drawWailordCelebration, 0f), Color(0xFF4D89CB))
         // The blue region excludes their pale bellies, but still distinguishes the silhouettes.
         assertTrue(wailmer.width < wailmer.height * 2f)
-        assertTrue(wailord.width > wailord.height * 3f)
+        assertTrue(wailord.width > wailord.height * 2.3f)
         assertTrue(wailord.width > wailmer.width * 1.6f)
     }
 

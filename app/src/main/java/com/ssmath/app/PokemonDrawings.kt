@@ -289,6 +289,7 @@ internal fun DrawScope.drawBouffalantCelebration(progress: Float) {
                 pokemonOval(darkBrown, cos(angle) * 33f - 15f, -13f + sin(angle) * 28f - 15f,
                     30f, 30f)
             }
+            drawOval(darkBrown, Offset(-34f, -41f), Size(68f, 63f))
             drawOval(Color(0xFF69493A), Offset(-23f, -41f), Size(31f, 17f))
             for (side in listOf(-1f, 1f)) {
                 withTransform({ scale(side, 1f, pivot = Offset.Zero) }) {
