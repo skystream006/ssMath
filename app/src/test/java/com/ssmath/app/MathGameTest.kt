@@ -93,6 +93,45 @@ class MathGameTest {
         assertEquals(expected, problems)
     }
 
+    @Test fun divisionUsesIndependentOperandMaximumsWithWholeAnswers() {
+        listOf(1 to 1, 1 to MAX_MAXIMUM, MAX_MAXIMUM to 1, 100 to 7, 7 to 100,
+            MAX_MAXIMUM to MAX_MAXIMUM).forEach { (first, second) ->
+            var game = GameState.start(Operation.DIVISION, first, generator, questionCount = 100, maximumSecond = second)
+            repeat(100) {
+                assertEquals(first, game.maximum)
+                assertEquals(second, game.maximumSecond)
+                assertTrue(game.problem.left in 1..first)
+                assertTrue(game.problem.right in 1..second)
+                assertEquals(0, game.problem.left % game.problem.right)
+                game = game.answer(game.problem.answer, generator)
+            }
+            assertTrue(game.perfect)
+        }
+    }
+
+    @Test fun divisionCanUseEveryPairWithinIndependentMaximums() {
+        listOf(12 to 3, 3 to 12).forEach { (first, second) ->
+            val expected = (1..first).flatMap { left ->
+                (1..second).filter { left % it == 0 }.map { right -> Problem(left, right, Operation.DIVISION) }
+            }.toSet()
+            val actual = (1..2000).map {
+                generator.next(Operation.DIVISION, first, maximumSecond = second)
+            }.toSet()
+            assertEquals(expected, actual)
+        }
+    }
+
+    @Test fun divisionRejectsInvalidOperandMaximums() {
+        listOf(0, -1, MAX_MAXIMUM + 1, Int.MAX_VALUE).forEach { invalid ->
+            assertThrows(IllegalArgumentException::class.java) {
+                GameState.start(Operation.DIVISION, invalid, generator, maximumSecond = 10)
+            }
+            assertThrows(IllegalArgumentException::class.java) {
+                GameState.start(Operation.DIVISION, 10, generator, maximumSecond = invalid)
+            }
+        }
+    }
+
     @Test fun avoidsRepeatingTheSameProblemConsecutively() {
         var previous = generator.next(Operation.ADDITION, 3)
         repeat(200) {

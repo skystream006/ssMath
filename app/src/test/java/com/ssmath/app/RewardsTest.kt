@@ -93,6 +93,15 @@ class RewardsTest {
         }
     }
 
+    @Test fun removingFragmentsUnpacksWholeRewardsAndClampsSpentBalancesAtZero() {
+        assertEquals(RewardBalance(0, 2), RewardBalance(1, 0).removeFragments(1))
+        assertEquals(RewardBalance(1, 1), RewardBalance(2, 2).removeFragments(4))
+        assertEquals(RewardBalance(), RewardBalance().removeFragments(1))
+        assertEquals(RewardBalance(), RewardBalance(1, 0).removeFragments(Int.MAX_VALUE))
+        assertEquals(RewardBalance(2, 2), RewardBalance(2, 2).removeFragments(0))
+        assertThrows(IllegalArgumentException::class.java) { RewardBalance().removeFragments(-1) }
+    }
+
     @Test fun rewardTypesHaveSingularPluralAndFragmentLabels() {
         assertEquals("Ice Cream Cone", RewardType.ICE_CREAM.label)
         assertEquals("Ice Cream Cones", RewardType.ICE_CREAM.pluralLabel)

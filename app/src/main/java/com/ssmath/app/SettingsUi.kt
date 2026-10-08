@@ -319,7 +319,7 @@ fun HistoryScreen(model: MathViewModel) {
                 LazyColumn(Modifier.fillMaxSize().testTag("history-list"), contentPadding = PaddingValues(bottom = 16.dp)) {
                     items(model.history, key = { it.id }) { result ->
                         ListItem(
-                            headlineContent = { Text("${result.operation.label} · ${result.minimum} to ${result.maximum}") },
+                            headlineContent = { Text("${result.operation.label} · ${result.numberDescription.removePrefix("numbers ")}") },
                             supportingContent = {
                                 Column {
                                     Text("${formatFinishedAt(result.finishedAt)}\n${result.correct} right · ${result.wrong} wrong · ${formatDuration(result.durationMs)}")
@@ -345,13 +345,14 @@ fun HistoryScreen(model: MathViewModel) {
     if (confirmClear) {
         AlertDialog(onDismissRequest = { confirmClear = false },
             title = { Text("Clear practice history?") },
-            text = { Text("All saved results will be permanently deleted.") },
+            text = { Text("All saved results and their earned reward fragments will be permanently removed. Used rewards cannot be recovered.") },
             confirmButton = { TextButton(onClick = { confirmClear = false; model.clearHistory() }) { Text("Clear") } },
             dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } })
     }
     if (confirmDelete && detail != null) {
         AlertDialog(onDismissRequest = { confirmDelete = false },
             title = { Text("Delete this result?") },
+            text = { Text("This result and its earned reward fragment will be permanently removed. Used rewards cannot be recovered.") },
             confirmButton = { TextButton(onClick = { confirmDelete = false; model.deleteResult(detail.id) }) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } })
     }

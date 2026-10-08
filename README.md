@@ -10,13 +10,19 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    above the **Maximum number** (both 1 to 10,000; minimum cannot exceed maximum),
    and answer **How many questions would you like?** using the **Number of questions**
    field (1 to 1,000; defaults to 10), then press **Submit**.
-   Your choices are remembered for next time.
+   For **Division**, the two inputs instead ask **What is the Maximum First number?**
+   and **What is the Maximum Second number?** Each is an independent limit from
+   1 to 10,000, for the dividend and divisor respectively; either limit may be larger.
+   Your choices are remembered for next time, with division limits saved separately.
 2. **Press Start when Ready** – press **Start** to begin. The timer starts now.
-3. **Practice** – every problem uses two random numbers between the minimum
-   and maximum, inclusive. Subtraction never goes below zero and division always has a
-   whole-number answer. A correct answer earns a point; a wrong answer is added to
+3. **Practice** – addition, subtraction and multiplication use two random numbers
+   between the minimum and maximum, inclusive. Subtraction never goes below zero.
+   Division always has a whole-number answer, using a first number from 1 to its first maximum
+   and a second number from 1 to its second maximum, choosing only exactly divisible pairs.
+   A correct answer earns a point; a wrong answer is added to
    the **Wrong** tally in the bottom-left corner. Either way, a new problem of the
-   same type follows, with your question progress shown above it.
+   same type follows, with your question progress shown above it. A progress bar fills
+   after each answered question, correct or wrong, as a rocket jumps to the next point.
 4. **Results** – after the chosen number of questions (correct or wrong), or
    the wrong-answer limit (or an optional time limit), whichever comes first, the practice stops and shows how many you
    got right, plus every answered problem with a green check (correct) or a red X
@@ -66,6 +72,10 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   Tap an image to replay its animation; close it or wait for it to finish to return to your collection.
   The collection is saved on this device and is not removed when history is deleted.
 - **Practice History** – review any previously saved result, delete one, or clear all.
+  Deleting results also removes their claimed reward fragments from the available
+  balance, breaking whole prizes back into fragments when necessary. Clearing history
+  does this for every deleted result. Balances never go below zero if rewards were
+  already used, and My Pokémons is unchanged.
 - **Rewards system** – on by default. Earn
   prizes for completing **25 or more questions** with **more than 90% correct**.
   After the celebration, tap the hopping gift box to open it and release confetti.
@@ -75,7 +85,7 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   Fewer than 25 questions and exactly 90% correct do not qualify.
   Every 3 fragments of the same type automatically become 1 whole prize, with the
   fragment counter returning to 0. Prizes and their cumulative totals are saved
-  with the result; deleting history does not remove collected rewards.
+  with the result; deleting a result removes its claimed fragment from your available rewards.
   A gift dismissed before opening can still be claimed from its history entry.
   All reward illustrations and animations are drawn in the app and work offline.
 - **Show timer** – off by default. Show or hide the timer while practicing. The timer pauses while

@@ -35,6 +35,12 @@ data class RewardBalance(val whole: Int = 0, val fragments: Int = 0) {
         val total = Math.addExact(totalFragments, 1)
         return RewardBalance(total / 3, total % 3)
     }
+
+    fun removeFragments(count: Int): RewardBalance {
+        require(count >= 0)
+        val total = (totalFragments - count).coerceAtLeast(0)
+        return RewardBalance(total / 3, total % 3)
+    }
 }
 
 /** The inventory balance immediately after this result's fragment was claimed. */

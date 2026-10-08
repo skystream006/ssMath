@@ -214,7 +214,7 @@ class PokemonCollectionTest {
         dispatcher.drain()
         assertNull(model.celebration)
         assertEquals(setOf(Celebration.PIKACHU), model.pokemons)
-        assertEquals(1, model.rewardBalances.values.sumOf { it.totalFragments })
+        assertEquals(0, model.rewardBalances.values.sumOf { it.totalFragments })
         assertTrue(model.history.isEmpty())
         val restored = model()
         assertEquals(model.pokemons, restored.pokemons)
@@ -249,7 +249,7 @@ class PokemonCollectionTest {
         model.clearHistory()
         dispatcher.drain()
         assertEquals(Celebration.entries.toSet(), model.pokemons)
-        assertEquals(1, model.rewardBalances.values.sumOf { it.totalFragments })
+        assertEquals(0, model.rewardBalances.values.sumOf { it.totalFragments })
         assertTrue(model.history.isEmpty())
         assertEquals(model.pokemons, model().pokemons)
     }
