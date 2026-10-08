@@ -96,6 +96,36 @@ class PokemonCollectionTest {
         }
     }
 
+    @Test fun allPokemonsHaveNationalPokedexNumbersAndPaddedCollectionLabels() {
+        val expected = mapOf(
+            Celebration.PIKACHU to (25 to "#0025 Pikachu"),
+            Celebration.SQUIRTLE to (7 to "#0007 Squirtle"),
+            Celebration.BULBASAUR to (1 to "#0001 Bulbasaur"),
+            Celebration.CHARMANDER to (4 to "#0004 Charmander"),
+            Celebration.JIGGLYPUFF to (39 to "#0039 Jigglypuff"),
+            Celebration.PALAFIN to (964 to "#0964 Palafin"),
+            Celebration.FINIZEN to (963 to "#0963 Finizen"),
+            Celebration.WAILMER to (320 to "#0320 Wailmer"),
+            Celebration.WAILORD to (321 to "#0321 Wailord"),
+            Celebration.BOUFFALANT to (626 to "#0626 Bouffalant"),
+            Celebration.VELUZA to (976 to "#0976 Veluza"),
+            Celebration.MANTYKE to (458 to "#0458 Mantyke"),
+            Celebration.MANTINE to (226 to "#0226 Mantine")
+        )
+        assertEquals(Celebration.pokemons.toSet(), expected.keys)
+        expected.forEach { (pokemon, values) ->
+            assertEquals(pokemon.name, values.first, pokemon.ndex)
+            assertEquals(values.second, pokemon.collectionLabel)
+        }
+    }
+
+    @Test fun otherCelebrationsKeepTheirNamesWithoutNationalPokedexNumbers() {
+        Celebration.entries.filter { it.category == CelebrationCategory.OTHER }.forEach {
+            assertNull(it.ndex)
+            assertEquals(it.label, it.collectionLabel)
+        }
+    }
+
     @Test fun shortPracticesOnlyPresentAndCollectOtherCelebrationsEvenAfterUnlockingEverything() {
         val model = model()
         model.collectAllCelebrations()

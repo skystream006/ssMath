@@ -80,7 +80,7 @@ class PokemonSettingsTest {
         assertSectionCount(CelebrationCategory.OTHER, "0/5")
         compose.onAllNodesWithTag("pokemon-PALAFIN").assertCountEquals(1)
         compose.onNodeWithTag("pokemon-PIKACHU").assertDoesNotExist()
-        compose.onNodeWithTag("pokemon-PALAFIN").assert(hasText("Palafin")).performClick()
+        compose.onNodeWithTag("pokemon-PALAFIN").assert(hasText("#0964 Palafin")).performClick()
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("celebration-PALAFIN").assertIsDisplayed()
@@ -144,7 +144,7 @@ class PokemonSettingsTest {
         assertSectionCount(CelebrationCategory.OTHER,
             if (celebration.category == CelebrationCategory.OTHER) "1/5" else "0/5")
         compose.onNodeWithText(celebration.category.label).assertIsDisplayed()
-        compose.onNodeWithTag("pokemon-${celebration.name}").assert(hasText(celebration.label)).assertIsDisplayed()
+        compose.onNodeWithTag("pokemon-${celebration.name}").assert(hasText(celebration.collectionLabel)).assertIsDisplayed()
         assertEquals(setOf(celebration), HistoryStore(file).loadSnapshot().pokemons)
     }
 
@@ -180,6 +180,31 @@ class PokemonSettingsTest {
         assertEquals(Screen.SETUP, model.screen)
         assertNull(model.celebration)
         assertNull(model.rewardResult)
+    }
+
+    @Test fun gallerySortsPokemonsByNdexAndKeepsOtherCelebrationsInTheirOriginalOrder() {
+        HistoryStore(file).collectPokemons(Celebration.entries.reversed())
+        val model = model()
+        model.openPokemons()
+        compose.setContent { MathAppContent(model) }
+        val expected = listOf(
+            Celebration.BULBASAUR, Celebration.CHARMANDER, Celebration.SQUIRTLE,
+            Celebration.PIKACHU, Celebration.JIGGLYPUFF, Celebration.MANTINE,
+            Celebration.WAILMER, Celebration.WAILORD, Celebration.MANTYKE,
+            Celebration.BOUFFALANT, Celebration.FINIZEN, Celebration.PALAFIN, Celebration.VELUZA,
+            Celebration.DOLPHINS, Celebration.WHALES, Celebration.ANCHOVIES,
+            Celebration.PARTY, Celebration.CANDY_SHOWER
+        )
+        expected.zipWithNext().forEach { (first, second) ->
+            compose.onNodeWithTag("pokemon-gallery").performScrollToKey(first.name)
+            val firstBounds = compose.onNodeWithTag("pokemon-${first.name}")
+                .assert(hasText(first.collectionLabel)).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val secondBounds = compose.onNodeWithTag("pokemon-${second.name}")
+                .assert(hasText(second.collectionLabel)).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            assertTrue("${first.label} should appear before ${second.label}",
+                firstBounds.top < secondBounds.top ||
+                    (firstBounds.top == secondBounds.top && firstBounds.right <= secondBounds.left))
+        }
     }
 
     @Test fun sevenDescriptionTapsUnlockAllAnimationsWithoutEnablingLoggingOrDuplicatingEntries() {
@@ -227,7 +252,7 @@ class PokemonSettingsTest {
         }
         Celebration.entries.forEach { pokemon ->
             compose.onNodeWithTag("pokemon-gallery").performScrollToKey(pokemon.name)
-            assertTextFits(pokemon.label)
+            assertTextFits(pokemon.collectionLabel)
         }
     }
 
