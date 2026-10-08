@@ -43,7 +43,7 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
 - **App updates** – at the top, check GitHub for a newer release using the button
   beside the installed version, then download and install it.
 - **My Rewards** – directly below App updates, view your collected prizes and
-  one-third fragments, even when the rewards system is disabled.
+  one-third fragments in a four-column grid, even when the rewards system is disabled.
 - **Practice History** – review any previously saved result, delete one, or clear all.
 - **Rewards system** – off by default. Enable it before starting practice to earn
   prizes for completing **more than 25 questions** with **more than 90% correct**.

@@ -17,6 +17,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -27,6 +28,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class, qualifiers = "w360dp-h800dp")
@@ -60,6 +62,7 @@ class RewardUiTest {
         compose.onNodeWithContentDescription("Ice Cream Cone").assertExists()
         compose.onNodeWithContentDescription("One third of an ice cream cone").assertExists()
         compose.onNodeWithContentDescription("One third of a video game controller").assertExists()
+        compose.onAllNodesWithText("1/3").assertCountEquals(RewardType.entries.size)
     }
 
     @Test fun giftIsAnAccessibleButtonAndRapidTapsOnlyOpenOnce() {
@@ -228,7 +231,30 @@ class RewardUiTest {
         compose.onNodeWithTag("awarded-fragment").assertIsDisplayed()
     }
 
-    @Test fun inventoryScrollsThroughAllWholeAndFragmentCountsAtDoubleTextSize() {
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun inventoryDisplaysFourRewardsPerRow() {
+        assertFourRewardsPerRow()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h800dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun inventoryDisplaysFourRewardsPerRowOnNarrowScreens() {
+        assertFourRewardsPerRow()
+    }
+
+    @Test
+    @Config(qualifiers = "w800dp-h600dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun inventoryDisplaysFourRewardsPerRowOnWideScreens() {
+        assertFourRewardsPerRow()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h800dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun inventoryScrollsThroughAllWholeAndFragmentCountsAtDoubleTextSize() {
         val balances = RewardType.entries.mapIndexed { index, type ->
             type to RewardBalance(index + 1, index % 3)
         }.toMap()
@@ -241,6 +267,7 @@ class RewardUiTest {
         }
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithText("3 fragments = 1 reward").assertIsDisplayed()
+        compose.onNodeWithText("1/3").assertDoesNotExist()
         RewardType.entries.forEach { type ->
             val balance = balances.getValue(type)
             compose.onNodeWithTag("reward-inventory").performScrollToKey(type.name)
@@ -249,6 +276,14 @@ class RewardUiTest {
                 .filterToOne(hasText("Whole: ${balance.whole}")).assertIsDisplayed()
             compose.onNodeWithTag("inventory-fragments-${type.name}").onChildren()
                 .filterToOne(hasText("Fragments: ${balance.fragments}/3")).assertIsDisplayed()
+            listOf(type.pluralLabel, "Whole: ${balance.whole}", "Fragments: ${balance.fragments}/3")
+                .forEach { text ->
+                    val layouts = mutableListOf<TextLayoutResult>()
+                    compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag("reward-card-${type.name}")))
+                        .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+                    assertTrue(layouts.isNotEmpty())
+                    assertFalse("$text overflows", layouts.single().hasVisualOverflow)
+                }
             compose.onNodeWithContentDescription(type.label).assertIsDisplayed()
             compose.onNodeWithContentDescription(rewardImageDescription(type, true)).assertIsDisplayed()
         }
@@ -286,6 +321,32 @@ class RewardUiTest {
             compose.onNodeWithTag("inventory-fragments-${type.name}").onChildren()
                 .filterToOne(hasText("Fragments: 0/3")).assertIsDisplayed()
         }
+    }
+
+    private fun assertFourRewardsPerRow() {
+        compose.setContent { MathTheme { RewardInventory(emptyMap()) } }
+        compose.mainClock.advanceTimeBy(64)
+        val grid = compose.onNodeWithTag("reward-inventory").fetchSemanticsNode().boundsInRoot
+        val firstRow = RewardType.entries.take(4).map { type ->
+            compose.onNodeWithTag("reward-card-${type.name}").assertIsDisplayed()
+                .fetchSemanticsNode().boundsInRoot
+        }
+        firstRow.forEach { card ->
+            assertEquals(firstRow.first().top, card.top, 1f)
+            assertEquals(firstRow.first().width, card.width, 1f)
+            assertTrue(card.left >= grid.left && card.right <= grid.right)
+        }
+        firstRow.zipWithNext().forEach { (left, right) ->
+            assertTrue(left.right < right.left)
+        }
+        val header = compose.onNodeWithTag("reward-inventory-header").fetchSemanticsNode().boundsInRoot
+        assertTrue(header.bottom <= firstRow.first().top)
+        assertEquals(firstRow.first().left, header.left, 1f)
+        assertEquals(firstRow.last().right, header.right, 1f)
+        val nextRow = compose.onNodeWithTag("reward-card-${RewardType.entries[4].name}")
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertEquals(firstRow.first().left, nextRow.left, 1f)
+        assertTrue(nextRow.top > firstRow.maxOf { it.bottom })
     }
 
     private fun assertScoreText(correct: Int, count: Int, expected: String) {

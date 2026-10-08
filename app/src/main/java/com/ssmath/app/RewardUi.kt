@@ -10,14 +10,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -66,13 +67,18 @@ internal fun rewardImageDescription(type: RewardType, fragment: Boolean): String
 }
 
 @Composable
-internal fun RewardImage(type: RewardType, fragment: Boolean, modifier: Modifier = Modifier) {
+internal fun RewardImage(
+    type: RewardType,
+    fragment: Boolean,
+    modifier: Modifier = Modifier,
+    showFragmentBadge: Boolean = true
+) {
     Box(modifier.size(144.dp).semantics(mergeDescendants = true) {
         contentDescription = rewardImageDescription(type, fragment)
         role = Role.Image
     }) {
         Canvas(Modifier.matchParentSize()) { drawRewardArtwork(type, fragment) }
-        if (fragment) {
+        if (fragment && showFragmentBadge) {
             Surface(
                 modifier = Modifier.align(Alignment.BottomEnd),
                 shape = RoundedCornerShape(12.dp),
@@ -211,13 +217,18 @@ internal fun RewardGiftDialog(
 
 @Composable
 internal fun RewardInventory(balances: Map<RewardType, RewardBalance>, modifier: Modifier = Modifier) {
-    LazyColumn(
-        modifier.fillMaxWidth().testTag("reward-inventory"),
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(4),
+        modifier = modifier.fillMaxWidth().testTag("reward-inventory"),
         contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Column(
+                Modifier.fillMaxWidth().testTag("reward-inventory-header"),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text("3 fragments = 1 reward", style = MaterialTheme.typography.titleMedium)
                 Text("Collect three matching fragments to complete a reward. Your collection stays on this device.")
             }
@@ -225,21 +236,21 @@ internal fun RewardInventory(balances: Map<RewardType, RewardBalance>, modifier:
         items(RewardType.entries, key = { it.name }) { type ->
             val balance = balances[type] ?: RewardBalance()
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth().testTag("reward-card-${type.name}")
             ) {
                 Column(
-                    Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Modifier.padding(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(type.pluralLabel, style = MaterialTheme.typography.titleLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        RewardInventoryPart(type, false, "Whole: ${balance.whole}",
-                            Modifier.weight(1f).testTag("inventory-whole-${type.name}"))
-                        RewardInventoryPart(type, true, "Fragments: ${balance.fragments}/3",
-                            Modifier.weight(1f).testTag("inventory-fragments-${type.name}"))
-                    }
+                    Text(type.pluralLabel, style = MaterialTheme.typography.labelMedium,
+                        textAlign = TextAlign.Center)
+                    RewardInventoryPart(type, false, "Whole: ${balance.whole}",
+                        Modifier.fillMaxWidth().testTag("inventory-whole-${type.name}"))
+                    RewardInventoryPart(type, true, "Fragments: ${balance.fragments}/3",
+                        Modifier.fillMaxWidth().testTag("inventory-fragments-${type.name}"))
                 }
             }
         }
@@ -260,8 +271,9 @@ private fun RewardInventoryPart(type: RewardType, fragment: Boolean, count: Stri
                 RewardType.VIDEO_GAME -> Color(0xFFEAE5FF)
             }
         ) {
-            RewardImage(type, fragment, Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp))
+            RewardImage(type, fragment, Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp),
+                showFragmentBadge = false)
         }
-        Text(count, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge)
+        Text(count, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
     }
 }
