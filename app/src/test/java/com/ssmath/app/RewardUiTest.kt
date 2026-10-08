@@ -323,6 +323,146 @@ class RewardUiTest {
         }
     }
 
+    @Test fun usePickerShowsOnlyWholePicturesAndTheirAvailableCounts() {
+        compose.mainClock.autoAdvance = true
+        val balances = RewardType.entries.mapIndexed { index, type ->
+            type to RewardBalance(index, 2)
+        }.toMap()
+        compose.setContent { MathTheme { UseRewardsDialog(balances, false, null, {}, {}) } }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("What reward would you like to use?").assertIsDisplayed()
+        RewardType.entries.forEachIndexed { index, type ->
+            compose.onNodeWithTag("use-rewards-grid").performScrollToKey(type.name)
+            val card = compose.onNodeWithTag("use-reward-${type.name}")
+                .assertIsDisplayed().assert(hasText("Whole: $index"))
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+            if (index == 0) card.assertIsNotEnabled() else card.assertIsEnabled()
+            compose.onNodeWithContentDescription(type.label).assertIsDisplayed()
+            compose.onNodeWithContentDescription(rewardImageDescription(type, true)).assertDoesNotExist()
+        }
+        compose.onNodeWithText("1/3").assertDoesNotExist()
+    }
+
+    @Test fun choosingAndDecliningARewardDoesNotUseIt() {
+        compose.mainClock.autoAdvance = true
+        var used = 0
+        var dismissed = false
+        compose.setContent {
+            MathTheme {
+                UseRewardsDialog(mapOf(RewardType.LOLLIPOP to RewardBalance(2, 1)), false, null,
+                    { used++ }, { dismissed = true })
+            }
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithContentDescription("Lollipop").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("You would like to use 1 Lollipop?").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(0, used) }
+        compose.onNodeWithText("No").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithTag("use-reward-LOLLIPOP").assert(hasText("Whole: 2"))
+        compose.onNodeWithText("Cancel").performClick()
+        compose.runOnIdle {
+            assertEquals(0, used)
+            assertTrue(dismissed)
+        }
+    }
+
+    @Test fun confirmingOnlyUsesOneRewardEvenWithDuplicateCallbacks() {
+        compose.mainClock.autoAdvance = true
+        var balances by mutableStateOf(mapOf(RewardType.LOLLIPOP to RewardBalance(1, 2)))
+        var used = 0
+        compose.setContent {
+            MathTheme {
+                UseRewardsDialog(balances, false, null, { type ->
+                    assertEquals(RewardType.LOLLIPOP, type)
+                    used++
+                    balances = mapOf(type to RewardBalance(0, 2))
+                }, {})
+            }
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithContentDescription("Lollipop").performClick()
+        compose.mainClock.advanceTimeBy(64)
+        val confirm = compose.onNodeWithText("Yes").fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        compose.runOnIdle {
+            confirm()
+            confirm()
+            assertEquals(1, used)
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("No whole rewards available yet.").assertIsDisplayed()
+        compose.onNodeWithTag("use-reward-LOLLIPOP").assertIsNotEnabled().assert(hasText("Whole: 0"))
+        compose.onNodeWithText("Yes").assertDoesNotExist()
+    }
+
+    @Test fun emptyPickerCannotRequestAnyReward() {
+        compose.mainClock.autoAdvance = true
+        var used = 0
+        compose.setContent { MathTheme { UseRewardsDialog(emptyMap(), false, null, { used++ }, {}) } }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("No whole rewards available yet.").assertIsDisplayed()
+        RewardType.entries.forEach { type ->
+            compose.onNodeWithTag("use-rewards-grid").performScrollToKey(type.name)
+            compose.onNodeWithTag("use-reward-${type.name}")
+                .assertIsNotEnabled().assert(hasText("Whole: 0")).performClick()
+        }
+        compose.onNodeWithText("Yes").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(0, used) }
+    }
+
+    @Test fun savingDisablesThePickerAndFailureAllowsAnotherConfirmation() {
+        compose.mainClock.autoAdvance = true
+        var saving by mutableStateOf(true)
+        var error by mutableStateOf<String?>(null)
+        var used = 0
+        compose.setContent {
+            MathTheme {
+                UseRewardsDialog(mapOf(RewardType.LOLLIPOP to RewardBalance(1, 2)), saving, error,
+                    { used++ }, {})
+            }
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("Saving your reward…").assertIsDisplayed()
+        compose.onNodeWithTag("use-reward-LOLLIPOP").assertIsNotEnabled().performClick()
+        compose.runOnIdle {
+            assertEquals(0, used)
+            saving = false
+            error = "Unable to use this reward. Free device storage and try again."
+        }
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText(error!!).assertIsDisplayed()
+        compose.onNodeWithTag("use-reward-LOLLIPOP").assertIsEnabled().performClick()
+        compose.mainClock.advanceTimeBy(64)
+        compose.onNodeWithText("Yes").performClick()
+        compose.runOnIdle { assertEquals(1, used) }
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h800dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun usePickerScrollsToEveryRewardAtDoubleTextSize() {
+        compose.mainClock.autoAdvance = true
+        compose.setContent {
+            MathTheme {
+                CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, 2f)) {
+                    UseRewardsDialog(RewardType.entries.associateWith { RewardBalance(1, 2) }, false, null, {}, {})
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(64)
+        RewardType.entries.forEach { type ->
+            compose.onNodeWithTag("use-rewards-grid").performScrollToKey(type.name)
+            compose.onNodeWithTag("use-reward-${type.name}").assertIsDisplayed().performClick()
+            compose.mainClock.advanceTimeBy(64)
+            compose.onNodeWithText("You would like to use 1 ${type.label}?").assertIsDisplayed()
+            compose.onNodeWithText("Yes").assertIsDisplayed()
+            compose.onNodeWithText("No").performClick()
+            compose.mainClock.advanceTimeBy(64)
+        }
+        compose.onNodeWithText("Cancel").assertIsDisplayed()
+    }
+
     private fun assertFourRewardsPerRow() {
         compose.setContent { MathTheme { RewardInventory(emptyMap()) } }
         compose.mainClock.advanceTimeBy(64)

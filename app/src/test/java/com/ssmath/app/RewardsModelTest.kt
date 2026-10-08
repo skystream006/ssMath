@@ -403,6 +403,85 @@ class RewardsModelTest {
         assertEquals(before, file.readText())
     }
 
+    @Test fun usingRewardsWorksWhenEarningIsDisabledAndSurvivesReload() {
+        collectLollipops()
+        val model = model()
+        val history = model.history
+        assertFalse(model.rewardsEnabled)
+        model.openRewards()
+        model.useReward(RewardType.LOLLIPOP)
+        assertFalse(model.usingReward)
+        assertNull(model.rewardUseError)
+        assertEquals(RewardBalance(1, 2), model.rewardBalances[RewardType.LOLLIPOP])
+        assertEquals(history, model.history)
+        assertEquals(model.rewardBalances, model().rewardBalances)
+        model.clearHistory()
+        assertEquals(RewardBalance(1, 2), model().rewardBalances[RewardType.LOLLIPOP])
+    }
+
+    @Test fun useRequiresTheRewardsPageAndAnAvailableWholeReward() {
+        collectLollipops()
+        val model = model()
+        model.useReward(RewardType.LOLLIPOP)
+        assertEquals(RewardBalance(2, 2), model.rewardBalances[RewardType.LOLLIPOP])
+        model.openRewards()
+        model.useReward(RewardType.VIDEO_GAME)
+        repeat(4) { model.useReward(RewardType.LOLLIPOP) }
+        assertEquals(RewardBalance(0, 2), model.rewardBalances[RewardType.LOLLIPOP])
+        assertNull(model.rewardUseError)
+        assertEquals(model.rewardBalances, model().rewardBalances)
+    }
+
+    @Test fun rapidUseRequestsOnlyConsumeOnceAndSerializeWithHistoryChanges() {
+        collectLollipops()
+        val dispatcher = QueuedDispatcher()
+        val model = model(dispatcher)
+        dispatcher.drain()
+        model.openRewards()
+        dispatcher.drain()
+        repeat(4) { model.useReward(RewardType.LOLLIPOP) }
+        assertTrue(model.usingReward)
+        assertEquals(RewardBalance(2, 2), model.rewardBalances[RewardType.LOLLIPOP])
+        model.clearHistory()
+        model.closeOverlay()
+        dispatcher.drain()
+        assertFalse(model.usingReward)
+        assertEquals(Overlay.SETTINGS, model.overlay)
+        assertTrue(model.history.isEmpty())
+        assertEquals(RewardBalance(1, 2), model.rewardBalances[RewardType.LOLLIPOP])
+        assertEquals(model.rewardBalances, model().rewardBalances)
+    }
+
+    @Test fun failedUseDoesNotChangeBalancesAndAllowsRetry() {
+        collectLollipops()
+        val model = model()
+        model.openRewards()
+        val before = file.readText()
+        assertTrue(blockedWrite.mkdir())
+        repeat(2) {
+            model.useReward(RewardType.LOLLIPOP)
+            assertFalse(model.usingReward)
+            assertNotNull(model.rewardUseError)
+            assertEquals(RewardBalance(2, 2), model.rewardBalances[RewardType.LOLLIPOP])
+            assertEquals(before, file.readText())
+        }
+        assertTrue(blockedWrite.delete())
+        model.useReward(RewardType.LOLLIPOP)
+        assertNull(model.rewardUseError)
+        assertEquals(RewardBalance(1, 2), model.rewardBalances[RewardType.LOLLIPOP])
+    }
+
+    private fun collectLollipops() {
+        val store = HistoryStore(file)
+        repeat(8) {
+            val result = PracticeResult(it + 1L, it + 1L, Operation.ADDITION, 10, 1_000,
+                List(26) { Attempt(Problem(1, 1, Operation.ADDITION), 2) },
+                prizeType = RewardType.LOLLIPOP)
+            store.add(result)
+            store.claimReward(result.id)
+        }
+    }
+
     private class QueuedDispatcher : CoroutineDispatcher() {
         private val tasks = ArrayDeque<Runnable>()
         override fun dispatch(context: CoroutineContext, block: Runnable) { tasks.addLast(block) }

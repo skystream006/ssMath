@@ -64,6 +64,41 @@ class RewardsSettingsTest {
         assertEquals(5, restored.timeLimitMinutes)
     }
 
+    @Test fun upperRightUseRewardsActionConfirmsAndUpdatesTheInventory() {
+        val file = File(application.filesDir, "practice_history.json")
+        val store = HistoryStore(file)
+        repeat(5) {
+            val result = PracticeResult(it + 1L, it + 1L, Operation.ADDITION, 10, 1_000,
+                List(26) { Attempt(Problem(1, 1, Operation.ADDITION), 2) },
+                prizeType = RewardType.LOLLIPOP)
+            store.add(result)
+            store.claimReward(result.id)
+        }
+        val model = MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate)
+        model.openRewards()
+        compose.setContent { MathAppContent(model) }
+        assertFalse(model.rewardsEnabled)
+        val title = compose.onNodeWithText("My Rewards").fetchSemanticsNode().boundsInRoot
+        val button = compose.onNodeWithText("Use rewards").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertTrue(button.left >= title.right)
+        assertEquals(title.center.y, button.center.y, 1f)
+        compose.onNodeWithText("Use rewards").performClick()
+        compose.onNodeWithTag("use-reward-LOLLIPOP").assert(hasText("Whole: 1")).performClick()
+        compose.onNodeWithText("You would like to use 1 Lollipop?").assertIsDisplayed()
+        compose.onNodeWithText("No").performClick()
+        assertEquals(RewardBalance(1, 2), model.rewardBalances[RewardType.LOLLIPOP])
+        compose.onNodeWithTag("use-reward-LOLLIPOP").performClick()
+        compose.onNodeWithText("Yes").performClick()
+        compose.onNodeWithTag("use-reward-LOLLIPOP").assertIsNotEnabled().assert(hasText("Whole: 0"))
+        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithTag("inventory-whole-LOLLIPOP").onChildren()
+            .filterToOne(hasText("Whole: 0")).assertIsDisplayed()
+        compose.onNodeWithTag("inventory-fragments-LOLLIPOP").onChildren()
+            .filterToOne(hasText("Fragments: 2/3")).assertIsDisplayed()
+        assertEquals(RewardBalance(0, 2), HistoryStore(file).loadSnapshot().rewards[RewardType.LOLLIPOP])
+        assertEquals(5, model.history.size)
+    }
+
     @Test fun timeLimitOffersNoneAndFiveMinuteStepsThroughSixty() {
         val model = MathViewModel(application)
         model.chooseRewardsEnabled(true)
