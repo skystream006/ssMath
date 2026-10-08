@@ -50,11 +50,11 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   fragments and practice history are unchanged.
 - **Practice History** – review any previously saved result, delete one, or clear all.
 - **Rewards system** – off by default. Enable it before starting practice to earn
-  prizes for completing **more than 25 questions** with **more than 90% correct**.
+  prizes for completing **25 or more questions** with **more than 90% correct**.
   After the celebration, tap the hopping gift box to open it and release confetti.
-  Sessions of 26–49 questions earn a random Lollipop, Ice Cream Cone, Gummi Bear,
+  Sessions of 25–49 questions earn a random Lollipop, Ice Cream Cone, Gummi Bear,
   or Ramen Fragment; sessions of 50 or more earn a Video Game Fragment.
-  Exactly 25 questions and exactly 90% correct do not qualify.
+  Fewer than 25 questions and exactly 90% correct do not qualify.
   Every 3 fragments of the same type automatically become 1 whole prize, with the
   fragment counter returning to 0. Prizes and their cumulative totals are saved
   with the result; deleting history does not remove collected rewards.

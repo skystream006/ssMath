@@ -80,7 +80,7 @@ fun SettingsScreen(model: MathViewModel) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Rewards system")
-                    Text("Earn prize fragments by completing more than 25 questions with over 90% correct",
+                    Text("Earn prize fragments by completing 25 or more questions with over 90% correct",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(model.rewardsEnabled, model::chooseRewardsEnabled,

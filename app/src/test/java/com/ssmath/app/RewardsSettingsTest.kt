@@ -47,6 +47,8 @@ class RewardsSettingsTest {
     @Test fun timeLimitRequiresBothSwitchesAndRemembersSelection() {
         val model = MathViewModel(application)
         compose.setContent { MathTheme { SettingsScreen(model) } }
+        compose.onNodeWithText("Earn prize fragments by completing 25 or more questions with over 90% correct")
+            .performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("time-limit").assertDoesNotExist()
         compose.onNodeWithContentDescription("Rewards system").performScrollTo().assertIsOff().performClick()
         compose.onNodeWithTag("time-limit").performScrollTo().performClick()
