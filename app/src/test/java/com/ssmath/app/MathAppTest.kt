@@ -77,7 +77,7 @@ class MathAppTest {
         compose.onNodeWithText("Press Start when Ready").assertIsDisplayed()
         compose.onNodeWithText("numbers 4 to 6", substring = true).assertIsDisplayed()
         compose.onNodeWithTag("start-button").performClick()
-        compose.onNodeWithTag("timer").assertIsDisplayed()
+        compose.onNodeWithTag("timer").assertDoesNotExist()
         compose.onNodeWithTag("wrong-tally").assertTextEquals("Wrong: 0")
 
         answer(model.game!!.problem.answer)
@@ -166,11 +166,13 @@ class MathAppTest {
         }
     }
 
-    @Test fun settingsCanHideTheTimerAndOpenPracticeHistory() {
+    @Test fun settingsCanShowAndHideTheTimerAndOpenPracticeHistory() {
         val model = model()
         compose.setContent { MathAppContent(model) }
         compose.onNodeWithContentDescription("Settings").assertIsDisplayed().performClick()
-        compose.onNodeWithContentDescription("Show timer").assertIsOn().performClick()
+        compose.onNodeWithContentDescription("Show timer").performScrollTo().assertIsOff().performClick()
+        assertTrue(model.showTimer)
+        compose.onNodeWithContentDescription("Show timer").assertIsOn().performClick().assertIsOff()
         assertFalse(model.showTimer)
         compose.onNodeWithTag("practice-history").performClick()
         compose.onNodeWithText("No practice results yet", substring = true).assertIsDisplayed()
@@ -185,15 +187,26 @@ class MathAppTest {
         compose.onNodeWithTag("timer").assertDoesNotExist()
     }
 
-    @Test fun correctAnswerVisibilityIsRemembered() {
+    @Test fun timerVisibilityDefaultsOffAndIsRemembered() {
         val model = model()
-        assertTrue(model.showCorrectAnswers)
-        model.chooseShowCorrectAnswers(false)
-        assertFalse(model.showCorrectAnswers)
+        assertFalse(model.showTimer)
+        model.chooseShowTimer(true)
+        assertTrue(model.showTimer)
         val restored = model()
-        assertFalse(restored.showCorrectAnswers)
-        restored.chooseShowCorrectAnswers(true)
-        assertTrue(model().showCorrectAnswers)
+        assertTrue(restored.showTimer)
+        restored.chooseShowTimer(false)
+        assertFalse(model().showTimer)
+    }
+
+    @Test fun correctAnswerVisibilityDefaultsOffAndIsRemembered() {
+        val model = model()
+        assertFalse(model.showCorrectAnswers)
+        model.chooseShowCorrectAnswers(true)
+        assertTrue(model.showCorrectAnswers)
+        val restored = model()
+        assertTrue(restored.showCorrectAnswers)
+        restored.chooseShowCorrectAnswers(false)
+        assertFalse(model().showCorrectAnswers)
     }
 
     @Test fun textSizeDefaultsToNormalAndIsRemembered() {
@@ -321,7 +334,7 @@ class MathAppTest {
         assertEquals(Screen.PLAYING, model.screen)
     }
 
-    @Test fun settingsCanHideWrongAnswerFeedbackDuringPractice() {
+    @Test fun settingsCanShowAndHideWrongAnswerFeedbackDuringPractice() {
         val model = model()
         model.selectOperation(Operation.ADDITION)
         model.submitSetup()
@@ -332,16 +345,12 @@ class MathAppTest {
         val first = model.game!!.problem
         answer(first.answer + 1)
         val revealedFeedback = "Not quite: ${first.text} = ${first.answer}"
-        compose.onNodeWithText(revealedFeedback).assertIsDisplayed()
-        compose.onNodeWithContentDescription("Settings").performClick()
-        compose.onNodeWithContentDescription("Show correct answers").assertIsOn().performClick().assertIsOff()
-        compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText(revealedFeedback).assertDoesNotExist()
         compose.onNodeWithText("Not quite!").assertIsDisplayed()
         assertEquals(Feedback("Not quite!", false), model.feedback)
 
         compose.onNodeWithContentDescription("Settings").performClick()
-        compose.onNodeWithContentDescription("Show correct answers").performClick().assertIsOn()
+        compose.onNodeWithContentDescription("Show correct answers").assertIsOff().performClick().assertIsOn()
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText(revealedFeedback).assertIsDisplayed()
         compose.onNodeWithContentDescription("Settings").performClick()
@@ -369,7 +378,6 @@ class MathAppTest {
 
     @Test fun hiddenCorrectAnswersStayHiddenInResultsAndHistory() {
         val model = model()
-        model.chooseShowCorrectAnswers(false)
         model.selectOperation(Operation.ADDITION)
         model.updateQuestionCount("1")
         model.submitSetup()

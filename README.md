@@ -20,7 +20,8 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
 4. **Results** – after the chosen number of questions (correct or wrong), or
    the wrong-answer limit (or an optional time limit), whichever comes first, the practice stops and shows how many you
    got right, plus every answered problem with a green check (correct) or a red X
-   (wrong, with the correct answer). Results are saved with the date and time.
+   (wrong, with the correct answer if **Show correct answers** is enabled).
+   Results are saved with the date and time.
    If all the chosen questions were answered, even with mistakes, one of ten randomly chosen
    congratulations animations plays: dolphins, whales, or anchovies jumping out
    of the water, a balloon-and-confetti party, a candy shower, Pikachu running toward
@@ -49,7 +50,7 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   Only whole rewards can be used. Remaining counts are saved on this device;
   fragments and practice history are unchanged.
 - **Practice History** – review any previously saved result, delete one, or clear all.
-- **Rewards system** – off by default. Enable it before starting practice to earn
+- **Rewards system** – on by default. Earn
   prizes for completing **25 or more questions** with **more than 90% correct**.
   After the celebration, tap the hopping gift box to open it and release confetti.
   Sessions of 25–49 questions earn a random Lollipop, Ice Cream Cone, Gummi Bear,
@@ -60,14 +61,14 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   with the result; deleting history does not remove collected rewards.
   A gift dismissed before opening can still be claimed from its history entry.
   All reward illustrations and animations are drawn in the app and work offline.
-- **Show timer** – show or hide the timer while practicing. The timer pauses while
+- **Show timer** – off by default. Show or hide the timer while practicing. The timer pauses while
   Settings, Practice History, or My Rewards is open, or the app is in the background.
   When both Rewards system and Show timer are enabled, **Time limit** offers
   **None** or **5–60 minutes** in 5-minute increments. The selection applies to the
   next practice. A timed practice shows time remaining and ends when time runs out,
   saving the partial result without a prize. Changing settings during practice does
   not remove its active time limit.
-- **Show correct answers** – on by default. Turn off to hide correct answers after
+- **Show correct answers** – off by default. Turn on to reveal correct answers after
   mistakes during practice, in Results, and in Practice History. Wrong answers are
   still marked and counted, and saved attempts are unchanged. This choice is remembered.
 - **Appearance** – the **Blue Wave** look or a **Color theme** (midnight, royal
