@@ -52,7 +52,13 @@ enum class Celebration(val description: String) {
     DOLPHINS("Dolphins jumping out of the water saying Hurray!!"),
     WHALES("Whales jumping out of the water saying Hurray!!"),
     ANCHOVIES("Anchovies jumping out of the water saying Hurray!!"),
-    PARTY("Congratulations party with balloons and confetti")
+    PARTY("Congratulations party with balloons and confetti"),
+    CANDY_SHOWER("A colorful shower of candy"),
+    PIKACHU("Pikachu running toward you and zapping lightning"),
+    SQUIRTLE("Squirtle shooting water from his mouth"),
+    BULBASAUR("Bulbasaur shooting leaves from his bulb"),
+    CHARMANDER("Charmander shooting fire into the air"),
+    JIGGLYPUFF("Jigglypuff rolling and jumping")
 }
 
 internal const val CELEBRATION_DURATION_MS = 7_200
@@ -93,8 +99,17 @@ internal fun CelebrationScene(celebration: Celebration, progress: () -> Float) {
         }) {
         Canvas(Modifier.matchParentSize()) {
             withTransform({ scale(size.width / 320f, size.height / 220f, pivot = Offset.Zero) }) {
-                if (celebration == Celebration.PARTY) drawParty(progress())
-                else drawOcean(celebration, progress())
+                val frame = progress()
+                when (celebration) {
+                    Celebration.DOLPHINS, Celebration.WHALES, Celebration.ANCHOVIES -> drawOcean(celebration, frame)
+                    Celebration.PARTY -> drawParty(frame)
+                    Celebration.CANDY_SHOWER -> drawCandyShower(frame)
+                    Celebration.PIKACHU -> drawPikachuCelebration(frame)
+                    Celebration.SQUIRTLE -> drawSquirtleCelebration(frame)
+                    Celebration.BULBASAUR -> drawBulbasaurCelebration(frame)
+                    Celebration.CHARMANDER -> drawCharmanderCelebration(frame)
+                    Celebration.JIGGLYPUFF -> drawJigglypuffCelebration(frame)
+                }
             }
         }
         Column(Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
@@ -137,7 +152,7 @@ private fun DrawScope.drawOcean(celebration: Celebration, progress: Float) {
                 Celebration.DOLPHINS -> drawDolphin()
                 Celebration.WHALES -> drawWhale()
                 Celebration.ANCHOVIES -> drawAnchovy()
-                Celebration.PARTY -> Unit
+                else -> Unit
             }
         }
         if (phase < 0.2f || phase > 0.8f) {
