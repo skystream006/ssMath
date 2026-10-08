@@ -178,8 +178,17 @@ private fun TimeLimitSetting(minutes: Int, onChange: (Int) -> Unit) {
 
 @Composable
 fun RewardsScreen(model: MathViewModel) {
-    ScreenScaffold("My Rewards", model::closeOverlay) {
+    var usingRewards by rememberSaveable { mutableStateOf(false) }
+    ScreenScaffold("My Rewards", model::closeOverlay, actions = {
+        TextButton(onClick = { usingRewards = true }) { Text("Use rewards") }
+    }) {
         RewardInventory(model.rewardBalances)
+    }
+    if (usingRewards) {
+        UseRewardsDialog(
+            model.rewardBalances, model.usingReward, model.rewardUseError,
+            model::useReward, { usingRewards = false }
+        )
     }
 }
 

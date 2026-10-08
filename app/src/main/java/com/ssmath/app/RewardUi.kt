@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -32,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -255,6 +257,88 @@ internal fun RewardInventory(balances: Map<RewardType, RewardBalance>, modifier:
             }
         }
     }
+}
+
+@Composable
+internal fun UseRewardsDialog(
+    balances: Map<RewardType, RewardBalance>,
+    usingReward: Boolean,
+    error: String?,
+    onUse: (RewardType) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selected by rememberSaveable { mutableStateOf<RewardType?>(null) }
+    val choice = selected
+    AlertDialog(
+        onDismissRequest = { if (selected != null) selected = null else onDismiss() },
+        title = { Text(if (choice == null) "What reward would you like to use?" else "Use reward?") },
+        text = {
+            if (choice != null) {
+                Text("You would like to use 1 ${choice.label}?")
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (usingReward) {
+                        Text("Saving your reward…", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    } else if (balances.values.none { it.whole > 0 }) {
+                        Text("No whole rewards available yet.")
+                    }
+                    if (error != null) {
+                        Text(error, color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    }
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(100.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp).testTag("use-rewards-grid"),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(RewardType.entries, key = { it.name }) { type ->
+                            val whole = balances[type]?.whole ?: 0
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                modifier = Modifier.fillMaxWidth().testTag("use-reward-${type.name}")
+                                    .clickable(enabled = whole > 0 && !usingReward, role = Role.Button) {
+                                        selected = type
+                                    }
+                                    .semantics { stateDescription = "$whole available" }
+                            ) {
+                                Column(
+                                    Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(type.label, style = MaterialTheme.typography.labelMedium,
+                                        textAlign = TextAlign.Center)
+                                    RewardInventoryPart(type, false, "Whole: $whole", Modifier.fillMaxWidth())
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (choice != null) {
+                TextButton(
+                    enabled = !usingReward && (balances[choice]?.whole ?: 0) > 0,
+                    onClick = {
+                        if (selected == choice) {
+                            selected = null
+                            onUse(choice)
+                        }
+                    }
+                ) { Text("Yes") }
+            } else {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
+        },
+        dismissButton = {
+            if (choice != null) {
+                TextButton(onClick = { selected = null }) { Text("No") }
+            }
+        }
+    )
 }
 
 @Composable

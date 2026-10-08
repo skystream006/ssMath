@@ -123,6 +123,57 @@ class HistoryStoreTest {
         assertEquals(RewardBalance(0, 1), HistoryStore(file).claimReward(1).rewards[RewardType.LOLLIPOP])
     }
 
+    @Test fun usingEachRewardPersistsExactlyOneWholeWithoutChangingFragmentsOrHistory() {
+        RewardType.entries.forEachIndexed { index, type ->
+            repeat(8) {
+                val id = index * 8 + it + 1L
+                store.addNewResult(eligible(id, type))
+                store.claimReward(id)
+            }
+        }
+        RewardType.entries.forEach { type ->
+            val before = store.loadSnapshot()
+            val expected = before.copy(rewards = before.rewards + (type to RewardBalance(1, 2)))
+            assertEquals(expected, store.useReward(type))
+            assertEquals(expected, HistoryStore(file).loadSnapshot())
+            before.history.forEach { store.claimReward(it.id) }
+            assertEquals(expected, store.loadSnapshot())
+        }
+        val remaining = store.loadSnapshot().rewards
+        store.delete(store.load().first().id)
+        store.clear()
+        assertEquals(remaining, HistoryStore(file).loadSnapshot().rewards)
+    }
+
+    @Test fun unavailableRewardsNeverConsumeFragmentsOrCreateNegativeBalances() {
+        assertEquals(PracticeSnapshot(), store.useReward(RewardType.LOLLIPOP))
+        assertFalse(file.exists())
+        repeat(5) {
+            store.add(eligible(it + 1L))
+            store.claimReward(it + 1L)
+        }
+        assertEquals(RewardBalance(0, 2), store.useReward(RewardType.LOLLIPOP).rewards[RewardType.LOLLIPOP])
+        val before = file.readText()
+        repeat(3) { store.useReward(RewardType.LOLLIPOP) }
+        store.useReward(RewardType.VIDEO_GAME)
+        assertEquals(before, file.readText())
+    }
+
+    @Test fun failedRewardUseLeavesTheSavedSnapshotUntouchedAndCanBeRetried() {
+        repeat(3) {
+            store.add(eligible(it + 1L))
+            store.claimReward(it + 1L)
+        }
+        val before = file.readText()
+        val blocked = File(directory, "${file.name}.tmp").apply { mkdir() }
+        assertThrows(IOException::class.java) { store.useReward(RewardType.LOLLIPOP) }
+        assertEquals(before, file.readText())
+        assertTrue(blocked.delete())
+        val used = store.useReward(RewardType.LOLLIPOP)
+        assertEquals(RewardBalance(), used.rewards[RewardType.LOLLIPOP])
+        assertEquals(used, HistoryStore(file).loadSnapshot())
+    }
+
     @Test fun clearingDeletingAndTrimmingHistoryDoNotDeleteOrDuplicateInventory() {
         store.add(eligible(1))
         store.claimReward(1)
@@ -179,6 +230,7 @@ class HistoryStoreTest {
             assertThrows(IOException::class.java) { store.loadSnapshot() }
             assertThrows(IOException::class.java) { store.add(result(2)) }
             assertThrows(IOException::class.java) { store.claimReward(1) }
+            assertThrows(IOException::class.java) { store.useReward(RewardType.LOLLIPOP) }
             assertThrows(IOException::class.java) { store.delete(1) }
             assertThrows(IOException::class.java) { store.clear() }
             assertEquals(text, file.readText())

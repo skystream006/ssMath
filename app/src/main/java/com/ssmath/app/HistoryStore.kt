@@ -123,6 +123,15 @@ class HistoryStore(private val file: File) {
         ))
     }
 
+    fun useReward(type: RewardType): PracticeSnapshot {
+        val snapshot = loadSnapshot()
+        val balance = snapshot.rewards[type] ?: return snapshot
+        if (balance.whole == 0) return snapshot
+        return save(snapshot.copy(
+            rewards = snapshot.rewards + (type to balance.copy(whole = balance.whole - 1))
+        ))
+    }
+
     fun delete(id: Long): List<PracticeResult> {
         val snapshot = loadSnapshot()
         return save(snapshot.copy(history = snapshot.history.filter { it.id != id })).history

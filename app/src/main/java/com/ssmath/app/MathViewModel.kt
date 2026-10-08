@@ -75,6 +75,10 @@ class MathViewModel(
         private set
     var rewardError by mutableStateOf<String?>(null)
         private set
+    var usingReward by mutableStateOf(false)
+        private set
+    var rewardUseError by mutableStateOf<String?>(null)
+        private set
     var message by mutableStateOf<String?>(null)
         private set
 
@@ -311,6 +315,7 @@ class MathViewModel(
 
     fun openRewards() {
         dismissOverlayReward()
+        rewardUseError = null
         overlay = Overlay.REWARDS
         updateTimer()
         viewModelScope.launch { reloadHistory() }
@@ -380,6 +385,26 @@ class MathViewModel(
                 if (rewardRequestVersion == request) rewardError = "Unable to save your prize. Free device storage and try again."
             } finally {
                 claimingReward = false
+            }
+        }
+    }
+
+    fun useReward(type: RewardType) {
+        if (usingReward || overlay != Overlay.REWARDS || (rewardBalances[type]?.whole ?: 0) == 0) return
+        usingReward = true
+        rewardUseError = null
+        viewModelScope.launch {
+            try {
+                storeLock.withLock {
+                    applySnapshot(withContext(ioDispatcher) { store.useReward(type) })
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                DebugLog.event(DebugEvent.HISTORY_FAILURE, error = error)
+                rewardUseError = "Unable to use this reward. Free device storage and try again."
+            } finally {
+                usingReward = false
             }
         }
     }
