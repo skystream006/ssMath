@@ -77,6 +77,17 @@ class CelebrationDrawingsTest {
         assertTrue(center(jumping) { it / 320 } < center(rolled) { it / 320 } - 40)
     }
 
+    @Test fun jigglypuffDoesNotClipAtTheBottomWhileRolling() {
+        val pink = Color(0xFFFFB5D8).toArgb()
+        val outline = Color(0xFF30324D).toArgb()
+        for (step in 0..48) {
+            val progress = step / 100f
+            val frame = render(DrawScope::drawJigglypuffCelebration, progress)
+            assertFalse("Jigglypuff clips at progress $progress",
+                frame.takeLast(320).any { it == pink || it == outline })
+        }
+    }
+
     private fun render(draw: DrawScope.(Float) -> Unit, progress: Float): IntArray {
         val image = ImageBitmap(320, 220)
         CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(image), Size(320f, 220f)) {

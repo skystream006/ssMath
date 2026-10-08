@@ -284,7 +284,8 @@ internal fun DrawScope.drawJigglypuffCelebration(progress: Float) {
     val jumping = ((progress - 0.48f) / 0.52f).coerceIn(0f, 1f)
     val hop = abs(sin(jumping * 2f * PI.toFloat()))
     val x = 61f + rolling * 151f - jumping * 52f
-    val y = 164f - hop * 54f
+    val rollLift = sin(rolling * PI.toFloat()) * 16f
+    val y = 164f - rollLift - hop * 54f
     drawOval(ink.copy(alpha = 0.12f), Offset(x - 35f + hop * 9f, 200f),
         Size(70f - hop * 18f, 8f))
     withTransform({
