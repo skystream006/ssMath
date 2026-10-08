@@ -57,9 +57,9 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
 - **My Pokémons** – directly below My Rewards, collect a still image of each
   celebration you see after completing a practice, even when rewards are disabled.
   Each celebration is collected only once and labelled with its name, grouped under
-  **Pokémons** or **Other**. The header shows your collected count out of all 18
-  animations (13 Pokémon and 5 Other). Tap an image to replay its
-  animation; close it or wait for it to finish to return to your collection.
+  **Pokémons** or **Other**. Each section heading shows its own collected/total
+  fraction (out of 13 Pokémon or 5 Other), including zero when none are collected.
+  Tap an image to replay its animation; close it or wait for it to finish to return to your collection.
   The collection is saved on this device and is not removed when history is deleted.
 - **Practice History** – review any previously saved result, delete one, or clear all.
 - **Rewards system** – on by default. Earn
