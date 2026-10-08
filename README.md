@@ -44,6 +44,10 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   beside the installed version, then download and install it.
 - **My Rewards** – directly below App updates, view your collected prizes and
   one-third fragments in a four-column grid, even when the rewards system is disabled.
+  Tap **Use rewards** in the upper-right corner to see whole reward pictures and
+  available counts. Tap a reward and confirm **Yes** to use one; **No** cancels.
+  Only whole rewards can be used. Remaining counts are saved on this device;
+  fragments and practice history are unchanged.
 - **Practice History** – review any previously saved result, delete one, or clear all.
 - **Rewards system** – off by default. Enable it before starting practice to earn
   prizes for completing **more than 25 questions** with **more than 90% correct**.
