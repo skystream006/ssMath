@@ -22,8 +22,36 @@ internal data class KantoScenePose(
     val articulation: Float = 0f
 )
 
+internal fun KantoScenePose.project(point: Offset): Offset {
+    val angle = rotation * PI.toFloat() / 180f
+    val x = point.x * scaleX
+    val y = point.y * scaleY
+    return Offset(this.x + x * cos(angle) - y * sin(angle), this.y + x * sin(angle) + y * cos(angle))
+}
+
+internal data class KantoWaterJet(val origin: Offset, val reach: Offset)
+
+internal fun kantoWaterJets(ndex: Int, articulation: Float): List<KantoWaterJet> = when (ndex) {
+    9 -> listOf(
+        KantoWaterJet(Offset(-39f, -57.5f), Offset(-15f, -47f)),
+        KantoWaterJet(Offset(39f, -57.5f), Offset(15f, -47f))
+    )
+    55 -> listOf(KantoWaterJet(Offset(0f, -8f), Offset(73f, -28f)))
+    62 -> listOf(
+        KantoWaterJet(Offset(-76f, -17f - articulation * 4f), Offset(-38f, -22f)),
+        KantoWaterJet(Offset(76f, -17f + articulation * 4f), Offset(38f, -22f))
+    )
+    99 -> listOf(KantoWaterJet(Offset(0f, 20f), Offset(-82f, -12f)))
+    117 -> listOf(KantoWaterJet(Offset(56f, -25.5f), Offset(53f, -5f)))
+    119 -> listOf(KantoWaterJet(Offset(-62f, 15.5f), Offset(-48f, -8f)))
+    130 -> listOf(KantoWaterJet(Offset(-48f, 0f), Offset(-63f, -8f)))
+    139 -> listOf(KantoWaterJet(Offset(0f, 18f), Offset(72f, 17f)))
+    else -> error("No water jet emitter for Ndex $ndex")
+}
+
 internal fun kantoScenePose(ndex: Int, motion: KantoMotion, progress: Float): KantoScenePose {
-    val time = progress.coerceIn(0f, 1f) * PI.toFloat() * 2f * (2.3f + ndex % 7 * 0.17f)
+    val time = progress.coerceIn(0f, 1f) * PI.toFloat() * 2f * (2.3f + ndex % 7 * 0.17f) +
+        ndex * 0.071f
     val beat = sin(time)
     val travel = sin(time * 0.63f + ndex * 0.31f)
     val lift = abs(beat)
@@ -87,17 +115,18 @@ internal fun DrawScope.drawKantoEffect(
     val beat = sin(progress * 19f + ndex)
     when (effect) {
         KantoEffect.WATER_JET -> {
-            // Blastoise fires from both cannons; the other water users spray from their mouth.
-            val sources = if (ndex == 9) listOf(Offset(-33f, -39f), Offset(33f, -39f))
-                else listOf(Offset(24f, -12f))
-            sources.forEach { source ->
-                val start = Offset(pose.x + source.x, pose.y + source.y)
-                repeat(9) { i ->
-                    val t = (progress * 3f + i / 9f) % 1f
-                    val x = start.x + t * 65f
-                    val y = start.y - sin(t * 1.6f) * 40f
-                    drawOval(blue.copy(alpha = 1f - t * 0.6f), Offset(x, y),
-                        Size(4f + t * 7f, 3f + t * 4f))
+            withTransform({
+                translate(pose.x, pose.y)
+                rotate(pose.rotation, pivot = Offset.Zero)
+                scale(pose.scaleX, pose.scaleY, pivot = Offset.Zero)
+            }) {
+                kantoWaterJets(ndex, pose.articulation).forEach { jet ->
+                    drawLine(blue, jet.origin, jet.origin + jet.reach * 0.15f, 3f, StrokeCap.Round)
+                    repeat(9) { i ->
+                        val t = (progress * 3f + i / 9f) % 1f
+                        val point = jet.origin + jet.reach * t + Offset(0f, t * t * 6f)
+                        drawCircle(blue.copy(alpha = 1f - t * 0.6f), 2f + t * 3f, point)
+                    }
                 }
             }
         }
@@ -160,13 +189,13 @@ internal fun DrawScope.drawKantoEffect(
                         drawCircle(gold.copy(alpha = fade), 2.5f, Offset(0f, 3f))
                     }
                     KantoEffect.BUBBLES -> {
-                        drawCircle(blue.copy(alpha = fade), 3f + t * 4f, style = Stroke(1.5f))
+                        drawCircle(blue.copy(alpha = fade), 3f + t * 4f, Offset.Zero, style = Stroke(1.5f))
                         drawCircle(Color.White.copy(alpha = fade), 1.2f, Offset(-2f, -2f))
                     }
                     KantoEffect.POLLEN, KantoEffect.SPORES -> {
                         val color = if (effect == KantoEffect.POLLEN) gold else purple
-                        drawCircle(color.copy(alpha = fade * 0.3f), 7f)
-                        drawCircle(color.copy(alpha = fade), 2.5f)
+                        drawCircle(color.copy(alpha = fade * 0.3f), 7f, Offset.Zero)
+                        drawCircle(color.copy(alpha = fade), 2.5f, Offset.Zero)
                     }
                     KantoEffect.WIND -> drawArc(Color.White.copy(alpha = fade * 0.8f),
                         200f, 125f, false, Offset(-17f, -4f), Size(34f, 10f), style = Stroke(2f))
@@ -201,7 +230,7 @@ internal fun DrawScope.drawKantoEffect(
                     }
                     KantoEffect.SLUDGE, KantoEffect.MIST -> {
                         val color = if (effect == KantoEffect.SLUDGE) Color(0xFFB68FCA) else purple
-                        drawCircle(color.copy(alpha = fade * 0.35f), 9f + t * 5f)
+                        drawCircle(color.copy(alpha = fade * 0.35f), 9f + t * 5f, Offset.Zero)
                         drawCircle(color.copy(alpha = fade * 0.3f), 7f, Offset(7f, -3f))
                     }
                     KantoEffect.HEARTS -> drawPath(Path().apply {

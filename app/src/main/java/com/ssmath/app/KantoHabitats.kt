@@ -24,7 +24,7 @@ internal fun DrawScope.drawKantoHabitat(ndex: Int, habitat: KantoHabitat, progre
         KantoHabitat.FOREST -> 0xFFC1DDAB to 0xFF699672
         KantoHabitat.CANOPY -> 0xFFD9E6B3 to 0xFF7BA578
         KantoHabitat.HIVE -> 0xFFF6E4AD to 0xFFB9BF77
-        KantoHabitat.SKY -> 0xFFC1E0F6 to 0xFFE7EFF9
+        KantoHabitat.SKY -> if (ndex == 145) 0xFF687A9A to 0xFFADB9CF else 0xFFC1E0F6 to 0xFFE7EFF9
         KantoHabitat.MOUNTAIN -> 0xFFD1DEEC to 0xFF9397AA
         KantoHabitat.GRASSLAND -> 0xFFEDE8BF to 0xFFB3C77F
         KantoHabitat.DESERT -> 0xFFF8E5B9 to 0xFFD7B276

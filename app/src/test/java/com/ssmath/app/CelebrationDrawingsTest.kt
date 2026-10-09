@@ -1,6 +1,7 @@
 package com.ssmath.app
 
 import android.app.Application
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
@@ -129,6 +130,42 @@ class CelebrationDrawingsTest {
                     }
                     val pixels = IntArray(image.width * image.height).also { image.readPixels(it) }
                     assertTrue("${pokemon.label} at $progress in $size", pixels.all { (it ushr 24) == 255 })
+                }
+            }
+        }
+    }
+
+    @Test fun localBubbleSporeAndMistEffectsStayAroundThePokemon() {
+        val white = Color.White.toArgb()
+        listOf(KantoEffect.BUBBLES, KantoEffect.POLLEN, KantoEffect.SPORES, KantoEffect.MIST).forEach { effect ->
+            val frame = render({
+                drawRect(Color.White)
+                drawKantoEffect(8, effect, KantoScenePose(), it)
+            }, 0.4f)
+            assertTrue("$effect should surround the body, not the canvas center after translation",
+                frame.indices.count { it / 320 in 50..185 && frame[it] != white } > 100)
+        }
+    }
+
+    @Test fun waterJetsFollowTheirCannonsMouthsOrFistsDuringBodyTransforms() {
+        assertEquals(listOf(Offset(-39f, -57.5f), Offset(39f, -57.5f)),
+            kantoWaterJets(9, 0f).map { it.origin })
+        assertEquals(Offset(56f, -25.5f), kantoWaterJets(117, 0f).single().origin)
+        val white = Color.White.toArgb()
+        kantoSceneProfiles.filterValues { it.effect == KantoEffect.WATER_JET }.forEach { (ndex, profile) ->
+            listOf(0f, 0.4f, 0.8f).forEach { progress ->
+                val pose = kantoScenePose(ndex, profile.motion, progress)
+                val frame = render({
+                    drawRect(Color.White)
+                    drawKantoEffect(ndex, profile.effect, pose, it)
+                }, progress)
+                kantoWaterJets(ndex, pose.articulation).forEach { jet ->
+                    val origin = pose.project(jet.origin)
+                    val nearby = (-2..2).flatMap { dy -> (-2..2).map { dx ->
+                        (origin.y.toInt() + dy) * 320 + origin.x.toInt() + dx
+                    } }
+                    assertTrue("#$ndex jet must remain attached at $progress",
+                        nearby.count { it in frame.indices && frame[it] != white } > 3)
                 }
             }
         }

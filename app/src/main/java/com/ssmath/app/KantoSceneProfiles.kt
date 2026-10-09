@@ -101,15 +101,15 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     5 to KantoSceneProfile(
         KantoHabitat.VOLCANO, KantoMotion.PROWL, KantoEffect.FIRE,
-        "prowling a volcanic ridge and scattering tail-flame embers",
+        "prowling a volcanic ridge among glowing flame-shaped embers",
     ),
     6 to KantoSceneProfile(
         KantoHabitat.VOLCANO, KantoMotion.FLY, KantoEffect.FIRE,
-        "flying above a glowing crater and breathing ribbons of fire",
+        "flying above a glowing crater amid drifting flames",
     ),
     8 to KantoSceneProfile(
         KantoHabitat.POND, KantoMotion.SWIM, KantoEffect.BUBBLES,
-        "swimming across a sheltered pond and blowing playful bubbles",
+        "swimming across a sheltered pond among playful bubbles",
     ),
     9 to KantoSceneProfile(
         KantoHabitat.COAST, KantoMotion.STOMP, KantoEffect.WATER_JET,
@@ -173,11 +173,11 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     24 to KantoSceneProfile(
         KantoHabitat.SWAMP, KantoMotion.SLITHER, KantoEffect.SLUDGE,
-        "slithering through marsh reeds and splashing poisonous sludge",
+        "slithering through a murky marsh amid clouds of poisonous sludge",
     ),
     26 to KantoSceneProfile(
         KantoHabitat.POWER_PLANT, KantoMotion.SCURRY, KantoEffect.ELECTRIC,
-        "scurrying past power plant coils and discharging cheek sparks",
+        "scurrying beneath power plant cables amid bright electric sparks",
     ),
     27 to KantoSceneProfile(
         KantoHabitat.DESERT, KantoMotion.DIG, KantoEffect.DUST,
@@ -197,7 +197,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     31 to KantoSceneProfile(
         KantoHabitat.MOUNTAIN, KantoMotion.STOMP, KantoEffect.ROCKS,
-        "stomping around a mountain nest and scattering protective stones",
+        "stomping across mountain slopes and scattering loose stones",
     ),
     32 to KantoSceneProfile(
         KantoHabitat.GRASSLAND, KantoMotion.HOP, KantoEffect.SLASH,
@@ -213,7 +213,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     35 to KantoSceneProfile(
         KantoHabitat.MOONLIT, KantoMotion.HOP, KantoEffect.STARS,
-        "hopping beneath the full moon amid twinkling star-shaped lights",
+        "hopping beneath a crescent moon amid twinkling star-shaped lights",
     ),
     36 to KantoSceneProfile(
         KantoHabitat.MOONLIT, KantoMotion.SWAY, KantoEffect.STARS,
@@ -221,11 +221,11 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     37 to KantoSceneProfile(
         KantoHabitat.FOREST, KantoMotion.PROWL, KantoEffect.FIRE,
-        "prowling a woodland path and breathing small foxfire flames",
+        "prowling through woodland amid small foxfire flames",
     ),
     38 to KantoSceneProfile(
         KantoHabitat.RUINS, KantoMotion.SWAY, KantoEffect.FIRE,
-        "swaying beside mossy ruins and curling wisps of ancient foxfire",
+        "swaying beside weathered ruins among wisps of ancient foxfire",
     ),
     40 to KantoSceneProfile(
         KantoHabitat.MEADOW, KantoMotion.BOB, KantoEffect.MUSIC,
@@ -241,7 +241,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     43 to KantoSceneProfile(
         KantoHabitat.MEADOW, KantoMotion.SWAY, KantoEffect.LEAVES,
-        "swaying in meadow soil and shaking its leafy crown",
+        "swaying in meadow soil amid drifting green leaves",
     ),
     44 to KantoSceneProfile(
         KantoHabitat.RAINFOREST, KantoMotion.SWAY, KantoEffect.SPORES,
@@ -249,11 +249,11 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     45 to KantoSceneProfile(
         KantoHabitat.RAINFOREST, KantoMotion.SPIN, KantoEffect.POLLEN,
-        "spinning beneath rainforest ferns and spreading heavy flower pollen",
+        "spinning beneath rainforest trees and spreading heavy flower pollen",
     ),
     46 to KantoSceneProfile(
         KantoHabitat.FOREST, KantoMotion.CRAWL, KantoEffect.SPORES,
-        "crawling over a forest log and shedding tiny mushroom spores",
+        "crawling across the forest floor and shedding tiny mushroom spores",
     ),
     47 to KantoSceneProfile(
         KantoHabitat.SWAMP, KantoMotion.CRAWL, KantoEffect.SPORES,
@@ -261,7 +261,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     48 to KantoSceneProfile(
         KantoHabitat.FOREST, KantoMotion.HOP, KantoEffect.POLLEN,
-        "hopping among forest flowers and shaking loose clinging pollen",
+        "hopping through forest undergrowth and shaking powder from its fur",
     ),
     49 to KantoSceneProfile(
         KantoHabitat.CANOPY, KantoMotion.FLUTTER, KantoEffect.POLLEN,
@@ -272,8 +272,8 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
         "digging through a narrow burrow and puffing soil into the air",
     ),
     51 to KantoSceneProfile(
-        KantoHabitat.BURROW, KantoMotion.BOB, KantoEffect.DUST,
-        "bobbing above connected burrows and scattering loose soil",
+        KantoHabitat.BURROW, KantoMotion.DIG, KantoEffect.DUST,
+        "digging through connected burrows and scattering loose soil",
     ),
     52 to KantoSceneProfile(
         KantoHabitat.CITY, KantoMotion.PROWL, KantoEffect.COINS,
@@ -301,11 +301,11 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     58 to KantoSceneProfile(
         KantoHabitat.CITY, KantoMotion.PROWL, KantoEffect.FIRE,
-        "prowling a city street on patrol and breathing warning embers",
+        "prowling a city street on patrol amid flickering embers",
     ),
     59 to KantoSceneProfile(
         KantoHabitat.GRASSLAND, KantoMotion.GALLOP, KantoEffect.FIRE,
-        "galloping across open grassland with blazing fire at its heels",
+        "galloping across open grassland amid blazing fire",
     ),
     60 to KantoSceneProfile(
         KantoHabitat.POND, KantoMotion.SWIM, KantoEffect.RIPPLES,
@@ -313,7 +313,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     61 to KantoSceneProfile(
         KantoHabitat.POND, KantoMotion.BOB, KantoEffect.BUBBLES,
-        "bobbing beside pond reeds and blowing bubbles over its belly spiral",
+        "bobbing beside pond reeds as bubbles rise nearby",
     ),
     62 to KantoSceneProfile(
         KantoHabitat.RIVER, KantoMotion.SPAR, KantoEffect.WATER_JET,
@@ -325,7 +325,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     64 to KantoSceneProfile(
         KantoHabitat.RUINS, KantoMotion.LEVITATE, KantoEffect.PSYCHIC,
-        "levitating above ruined steps and channeling psychic rings through its spoon",
+        "levitating beside ruined pillars within rings of psychic power",
     ),
     65 to KantoSceneProfile(
         KantoHabitat.RUINS, KantoMotion.LEVITATE, KantoEffect.PSYCHIC,
@@ -333,7 +333,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     66 to KantoSceneProfile(
         KantoHabitat.MOUNTAIN, KantoMotion.SPAR, KantoEffect.IMPACT,
-        "sparring beside mountain boulders and landing small practice impacts",
+        "sparring in mountain foothills and landing small practice impacts",
     ),
     67 to KantoSceneProfile(
         KantoHabitat.DOJO, KantoMotion.SPAR, KantoEffect.IMPACT,
@@ -361,7 +361,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     73 to KantoSceneProfile(
         KantoHabitat.REEF, KantoMotion.FLOAT, KantoEffect.BUBBLES,
-        "floating above a coral reef and trailing bubbles between long tentacles",
+        "floating above a coral reef with long tentacles amid rising bubbles",
     ),
     76 to KantoSceneProfile(
         KantoHabitat.MOUNTAIN, KantoMotion.ROLL, KantoEffect.ROCKS,
@@ -369,15 +369,15 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     77 to KantoSceneProfile(
         KantoHabitat.GRASSLAND, KantoMotion.GALLOP, KantoEffect.FIRE,
-        "galloping through sunlit grass with flickering flames around its hooves",
+        "galloping through sunlit grass amid flickering flames",
     ),
     78 to KantoSceneProfile(
         KantoHabitat.GRASSLAND, KantoMotion.GALLOP, KantoEffect.FIRE,
-        "galloping across rolling plains as its fiery mane streams embers",
+        "galloping across rolling plains as fiery embers drift nearby",
     ),
     79 to KantoSceneProfile(
         KantoHabitat.RIVER, KantoMotion.SWAY, KantoEffect.RIPPLES,
-        "swaying on a riverbank and dipping its tail into rippling water",
+        "swaying on a riverbank beside widening water ripples",
     ),
     80 to KantoSceneProfile(
         KantoHabitat.COAST, KantoMotion.BREATHE, KantoEffect.BUBBLES,
@@ -385,11 +385,11 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     81 to KantoSceneProfile(
         KantoHabitat.POWER_PLANT, KantoMotion.LEVITATE, KantoEffect.ELECTRIC,
-        "levitating beside power plant wires and arcing electricity between magnets",
+        "levitating beside power plant wires amid sparks around its magnets",
     ),
     82 to KantoSceneProfile(
         KantoHabitat.POWER_PLANT, KantoMotion.SPIN, KantoEffect.ELECTRIC,
-        "spinning near a generator and linking its magnets with electric arcs",
+        "spinning beneath power plant cables amid scattered electric flashes",
     ),
     83 to KantoSceneProfile(
         KantoHabitat.POND, KantoMotion.HOP, KantoEffect.SLASH,
@@ -405,11 +405,11 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     86 to KantoSceneProfile(
         KantoHabitat.ICE, KantoMotion.SWIM, KantoEffect.BUBBLES,
-        "swimming beside floating ice and puffing bubbles from its muzzle",
+        "swimming beside polar ice amid small rising bubbles",
     ),
     87 to KantoSceneProfile(
         KantoHabitat.ICE, KantoMotion.SWIM, KantoEffect.ICE,
-        "swimming beneath polar ice and trailing glittering frost",
+        "swimming through icy waters and trailing glittering frost",
     ),
     88 to KantoSceneProfile(
         KantoHabitat.SWAMP, KantoMotion.CRAWL, KantoEffect.SLUDGE,
@@ -421,7 +421,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     90 to KantoSceneProfile(
         KantoHabitat.SEABED, KantoMotion.BOB, KantoEffect.BUBBLES,
-        "bobbing above the sandy seabed and letting bubbles escape its shell",
+        "bobbing above the sandy seabed with bubbles around its shell",
     ),
     91 to KantoSceneProfile(
         KantoHabitat.REEF, KantoMotion.BOB, KantoEffect.ICE,
@@ -445,15 +445,15 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     96 to KantoSceneProfile(
         KantoHabitat.MOONLIT, KantoMotion.SWAY, KantoEffect.SLEEP,
-        "swaying beneath moonlit trees and releasing sleepy dream motes",
+        "swaying beside moonlit rocks and releasing sleepy dream motes",
     ),
     97 to KantoSceneProfile(
         KantoHabitat.MOONLIT, KantoMotion.SWAY, KantoEffect.PSYCHIC,
-        "swaying in a moonlit grove and casting hypnotic psychic rings",
+        "swaying across a moonlit landscape and casting hypnotic psychic rings",
     ),
     98 to KantoSceneProfile(
         KantoHabitat.COAST, KantoMotion.SCURRY, KantoEffect.BUBBLES,
-        "scurrying sideways over coastal sand and blowing foamy bubbles",
+        "scurrying sideways over coastal sand among foamy bubbles",
     ),
     99 to KantoSceneProfile(
         KantoHabitat.COAST, KantoMotion.SCURRY, KantoEffect.WATER_JET,
@@ -465,7 +465,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     101 to KantoSceneProfile(
         KantoHabitat.POWER_PLANT, KantoMotion.BOB, KantoEffect.ELECTRIC,
-        "bobbing beside power plant machinery with building electric surges",
+        "bobbing beside power plant buildings amid surging electricity",
     ),
     102 to KantoSceneProfile(
         KantoHabitat.FOREST, KantoMotion.BOB, KantoEffect.PSYCHIC,
@@ -473,7 +473,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     103 to KantoSceneProfile(
         KantoHabitat.RAINFOREST, KantoMotion.SWAY, KantoEffect.LEAVES,
-        "swaying like a rainforest palm and scattering long fronds",
+        "swaying like a rainforest palm amid drifting green leaves",
     ),
     104 to KantoSceneProfile(
         KantoHabitat.MOUNTAIN, KantoMotion.HOP, KantoEffect.DUST,
@@ -485,7 +485,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     106 to KantoSceneProfile(
         KantoHabitat.DOJO, KantoMotion.SPAR, KantoEffect.IMPACT,
-        "sparring on dojo mats and striking with long-reaching kicking impacts",
+        "sparring on a dojo floor with long-reaching kicking impacts",
     ),
     107 to KantoSceneProfile(
         KantoHabitat.DOJO, KantoMotion.SPAR, KantoEffect.IMPACT,
@@ -493,7 +493,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     108 to KantoSceneProfile(
         KantoHabitat.MEADOW, KantoMotion.SWAY, KantoEffect.LEAVES,
-        "swaying through meadow plants and sweeping leaves with its long tongue",
+        "swaying through meadow plants as leaves drift around its long tongue",
     ),
     109 to KantoSceneProfile(
         KantoHabitat.CITY, KantoMotion.FLOAT, KantoEffect.MIST,
@@ -501,7 +501,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     110 to KantoSceneProfile(
         KantoHabitat.CITY, KantoMotion.BOB, KantoEffect.MIST,
-        "bobbing between city rooftops and exhaling twin clouds of smog",
+        "bobbing between city buildings amid spreading clouds of smog",
     ),
     111 to KantoSceneProfile(
         KantoHabitat.MOUNTAIN, KantoMotion.STOMP, KantoEffect.ROCKS,
@@ -517,7 +517,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     114 to KantoSceneProfile(
         KantoHabitat.FOREST, KantoMotion.SWAY, KantoEffect.VINES,
-        "swaying in tangled forest undergrowth and looping its blue vines",
+        "swaying in tangled forest undergrowth and looping long vines",
     ),
     115 to KantoSceneProfile(
         KantoHabitat.GRASSLAND, KantoMotion.HOP, KantoEffect.IMPACT,
@@ -525,7 +525,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     116 to KantoSceneProfile(
         KantoHabitat.REEF, KantoMotion.SWIM, KantoEffect.BUBBLES,
-        "swimming among reef corals and blowing bubbles through its snout",
+        "swimming among reef corals amid gently rising bubbles",
     ),
     117 to KantoSceneProfile(
         KantoHabitat.REEF, KantoMotion.SWIM, KantoEffect.WATER_JET,
@@ -533,11 +533,11 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     118 to KantoSceneProfile(
         KantoHabitat.POND, KantoMotion.SWIM, KantoEffect.RIPPLES,
-        "swimming beneath pond blossoms and drawing delicate ripples with its fins",
+        "swimming beside pond lilies and drawing delicate ripples with its fins",
     ),
     119 to KantoSceneProfile(
         KantoHabitat.RIVER, KantoMotion.SWIM, KantoEffect.WATER_JET,
-        "swimming up a rocky river and spraying water around its horn",
+        "swimming along a winding river and spraying water around its horn",
     ),
     120 to KantoSceneProfile(
         KantoHabitat.COAST, KantoMotion.SPIN, KantoEffect.BUBBLES,
@@ -557,15 +557,15 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     124 to KantoSceneProfile(
         KantoHabitat.ICE, KantoMotion.SWAY, KantoEffect.MUSIC,
-        "swaying across an icy stage and singing a lilting tune",
+        "swaying across frozen ground and singing a lilting tune",
     ),
     125 to KantoSceneProfile(
         KantoHabitat.POWER_PLANT, KantoMotion.STOMP, KantoEffect.ELECTRIC,
-        "stomping near humming generators and crackling with stored electricity",
+        "stomping beneath power lines and crackling with stored electricity",
     ),
     126 to KantoSceneProfile(
         KantoHabitat.VOLCANO, KantoMotion.PROWL, KantoEffect.FIRE,
-        "prowling beside molten lava and breathing bursts of searing flame",
+        "prowling beside molten lava amid bursts of searing flame",
     ),
     127 to KantoSceneProfile(
         KantoHabitat.FOREST, KantoMotion.SPAR, KantoEffect.SLASH,
@@ -585,7 +585,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     131 to KantoSceneProfile(
         KantoHabitat.ICE, KantoMotion.SWIM, KantoEffect.MUSIC,
-        "swimming between ice floes and singing across the water",
+        "swimming through icy waters and singing across the waves",
     ),
     132 to KantoSceneProfile(
         KantoHabitat.SWAMP, KantoMotion.PULSE, KantoEffect.SLUDGE,
@@ -605,7 +605,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     136 to KantoSceneProfile(
         KantoHabitat.MEADOW, KantoMotion.PROWL, KantoEffect.FIRE,
-        "prowling a sunny meadow and breathing warm flickering flames",
+        "prowling a sunny meadow amid warm flickering flames",
     ),
     137 to KantoSceneProfile(
         KantoHabitat.DIGITAL, KantoMotion.PULSE, KantoEffect.PIXELS,
@@ -613,11 +613,11 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     138 to KantoSceneProfile(
         KantoHabitat.SEABED, KantoMotion.CRAWL, KantoEffect.BUBBLES,
-        "crawling over ancient seabed stones and trailing shell bubbles",
+        "crawling across seabed shells and trailing small bubbles",
     ),
     139 to KantoSceneProfile(
         KantoHabitat.SEABED, KantoMotion.SWIM, KantoEffect.WATER_JET,
-        "swimming above seabed fossils and propelling itself with water jets",
+        "swimming above seabed shells and spraying narrow water jets",
     ),
     140 to KantoSceneProfile(
         KantoHabitat.SEABED, KantoMotion.CRAWL, KantoEffect.BUBBLES,
@@ -645,7 +645,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     146 to KantoSceneProfile(
         KantoHabitat.VOLCANO, KantoMotion.FLY, KantoEffect.FIRE,
-        "flying above volcanic peaks and trailing a legendary plume of flame",
+        "flying above a volcanic peak amid floating flames",
     ),
     147 to KantoSceneProfile(
         KantoHabitat.RIVER, KantoMotion.SWIM, KantoEffect.RIPPLES,
@@ -657,7 +657,7 @@ internal val kantoSceneProfiles: Map<Int, KantoSceneProfile> = mapOf(
     ),
     149 to KantoSceneProfile(
         KantoHabitat.COAST, KantoMotion.FLY, KantoEffect.WIND,
-        "flying along a rugged coast and sweeping sea breezes toward shore",
+        "flying along a sandy coast and sweeping sea breezes toward shore",
     ),
     150 to KantoSceneProfile(
         KantoHabitat.CAVE, KantoMotion.LEVITATE, KantoEffect.PSYCHIC,
