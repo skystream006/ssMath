@@ -316,6 +316,23 @@ class PokemonCollectionTest {
         assertEquals(1, model.history.size)
     }
 
+    @Test fun dismissingBeforeSelectionFinishesStillAllowsThePrizeWithoutALateAnimation() {
+        val dispatcher = QueuedDispatcher()
+        val model = model(dispatcher = dispatcher)
+        start(model, count = 25)
+        repeat(25) { answer(model) }
+        assertTrue(model.selectingCelebration)
+        assertFalse(model.rewardDialogVisible)
+        model.dismissCelebration()
+        assertFalse(model.selectingCelebration)
+        assertTrue(model.rewardDialogVisible)
+        model.claimReward()
+        dispatcher.drain()
+        assertNull(model.celebration)
+        assertTrue(model.pokemons.isEmpty())
+        assertEquals(1, model.rewardBalances.values.sumOf { it.totalFragments })
+    }
+
     @Test fun unreadableCollectionDoesNotAllowPotentialDuplicates() {
         file.writeText("{")
         val model = model()

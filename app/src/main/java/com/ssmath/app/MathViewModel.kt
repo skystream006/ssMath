@@ -262,7 +262,7 @@ class MathViewModel(
             try {
                 storeLock.withLock {
                     if (pendingResult === pending) {
-                        celebration = if (answeredAllQuestions && collectionLoaded)
+                        celebration = if (selectingCelebration && collectionLoaded)
                             Celebration.select(state.questionCount, celebrationRandom, pokemons) else null
                         selectingCelebration = false
                     }
@@ -297,7 +297,10 @@ class MathViewModel(
         screen = Screen.SETUP
     }
 
-    fun dismissCelebration() { celebration = null }
+    fun dismissCelebration() {
+        celebration = null
+        selectingCelebration = false
+    }
 
     fun collectPresentedCelebration(presented: Celebration) {
         if (celebration != presented || overlay != null || presented in pokemons) return
