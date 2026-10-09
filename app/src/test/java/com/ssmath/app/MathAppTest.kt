@@ -43,6 +43,24 @@ class MathAppTest {
 
     private fun model() = MathViewModel(application, ProblemGenerator(Random(7)), clock = { now }, wallClock = { 1_700_000_000_000 })
 
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun homeCollectionButtonsShowImagesBeforeLabelsAtEveryTextSize() {
+        val model = model()
+        compose.setContent { MathAppContent(model) }
+        for (percent in 80..200 step 10) {
+            compose.runOnIdle { model.chooseTextSize(percent) }
+            assertHomeCollectionImages()
+            listOf("Rewards", "Pokémon").forEach { label ->
+                val layout = textLayout(label)
+                assertFalse("$label overflows horizontally at $percent%: ${layout.size.width} < " +
+                    "${layout.multiParagraph.width}, constraints=${layout.layoutInput.constraints}", layout.didOverflowWidth)
+                assertFalse("$label overflows vertically at $percent%", layout.didOverflowHeight)
+                assertEquals(1, layout.lineCount)
+            }
+        }
+    }
+
     @Test fun homeShowsSetupBelowCollectionButtonsThatStayVisibleWhileScrolling() {
         val model = model()
         compose.setContent { MathAppContent(model) }
@@ -121,6 +139,7 @@ class MathAppTest {
         val model = model()
         model.chooseTextSize(200)
         compose.setContent { MathAppContent(model) }
+        assertHomeCollectionImages()
         listOf("Rewards", "Pokémon").forEach { label ->
             compose.onNodeWithText(label).assertIsDisplayed().assertHasClickAction()
             val layout = textLayout(label)
@@ -850,6 +869,23 @@ class MathAppTest {
         compose.onNodeWithTag("start-button").performClick()
         compose.onNodeWithTag("question-progress").assertTextEquals("Question 1 of 6")
         compose.onNode(isDialog()).assertDoesNotExist()
+    }
+
+    private fun assertHomeCollectionImages() {
+        listOf("home-rewards" to "Rewards", "home-pokemons" to "Pokémon").forEach { (tag, label) ->
+            val button = compose.onNodeWithTag(tag).assertIsDisplayed().assertHasClickAction()
+                .assertTextEquals(label).fetchSemanticsNode()
+            assertFalse(button.config.contains(SemanticsProperties.ContentDescription))
+            val image = compose.onNodeWithTag("$tag-image", useUnmergedTree = true).assertIsDisplayed()
+                .assert(hasAnyAncestor(hasTestTag(tag))).fetchSemanticsNode()
+            assertFalse(image.config.contains(SemanticsProperties.ContentDescription))
+            val text = compose.onNodeWithText(label, useUnmergedTree = true).assertIsDisplayed()
+                .fetchSemanticsNode().boundsInRoot
+            assertTrue("$label image must precede the label", image.boundsInRoot.right < text.left)
+            assertEquals(text.center.y, image.boundsInRoot.center.y, 1f)
+            assertTrue(image.boundsInRoot.left >= button.boundsInRoot.left)
+            assertTrue(text.right <= button.boundsInRoot.right)
+        }
     }
 
     private fun textLayout(text: String): TextLayoutResult {
