@@ -53,7 +53,8 @@ class MathAppTest {
             assertHomeCollectionImages()
             listOf("Rewards", "Pokémon").forEach { label ->
                 val layout = textLayout(label)
-                assertFalse("$label overflows horizontally at $percent%", layout.didOverflowWidth)
+                assertFalse("$label overflows horizontally at $percent%: ${layout.size.width} < " +
+                    "${layout.multiParagraph.width}, constraints=${layout.layoutInput.constraints}", layout.didOverflowWidth)
                 assertFalse("$label overflows vertically at $percent%", layout.didOverflowHeight)
                 assertEquals(1, layout.lineCount)
             }

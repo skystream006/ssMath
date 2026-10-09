@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -233,7 +234,7 @@ private fun HomeScreen(model: MathViewModel) {
                 Image(painterResource(R.drawable.ic_gift_box), contentDescription = null,
                     modifier = Modifier.size(24.dp).testTag("home-rewards-image"))
                 Spacer(Modifier.width(8.dp))
-                Text("Rewards", textAlign = TextAlign.Center)
+                Text("Rewards", Modifier.width(IntrinsicSize.Max), textAlign = TextAlign.Center)
             }
             Button(onClick = model::openPokemons,
                 modifier = Modifier.weight(1f).widthIn(min = minimumButtonWidth)
@@ -242,7 +243,7 @@ private fun HomeScreen(model: MathViewModel) {
                 Image(painterResource(R.drawable.ic_pokeball), contentDescription = null,
                     modifier = Modifier.size(24.dp).testTag("home-pokemons-image"))
                 Spacer(Modifier.width(8.dp))
-                Text("Pokémon", textAlign = TextAlign.Center)
+                Text("Pokémon", Modifier.width(IntrinsicSize.Max), textAlign = TextAlign.Center)
             }
         }
         SetupForm(model, Modifier.weight(1f).widthIn(max = 440.dp).fillMaxWidth()
