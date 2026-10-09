@@ -3,6 +3,9 @@ package com.ssmath.app
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -54,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -68,6 +72,8 @@ internal fun rewardImageDescription(type: RewardType, fragment: Boolean): String
         RewardType.GUMMI_BEAR -> "One third of a gummi bear"
         RewardType.RAMEN -> "One third of a square of dried ramen"
         RewardType.VIDEO_GAME -> "One third of a video game controller"
+        RewardType.BED_TIME -> "One third of a bedtime scene"
+        RewardType.RESTAURANT -> "One third of a restaurant"
     }
 }
 
@@ -78,11 +84,22 @@ internal fun RewardImage(
     modifier: Modifier = Modifier,
     showFragmentBadge: Boolean = true
 ) {
+    val animation = if (type == RewardType.BED_TIME || type == RewardType.RESTAURANT) {
+        val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+        if (lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) {
+            rememberInfiniteTransition(label = "reward-artwork").animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(3_200, easing = LinearEasing)),
+                label = "${type.name} motion"
+            )
+        } else null
+    } else null
     Box(modifier.size(144.dp).semantics(mergeDescendants = true) {
         contentDescription = rewardImageDescription(type, fragment)
         role = Role.Image
     }) {
-        Canvas(Modifier.matchParentSize()) { drawRewardArtwork(type, fragment) }
+        Canvas(Modifier.matchParentSize()) { drawRewardArtwork(type, fragment, animation?.value ?: 0f) }
         if (fragment && showFragmentBadge) {
             Surface(
                 modifier = Modifier.align(Alignment.BottomEnd),
@@ -371,6 +388,8 @@ private fun RewardInventoryPart(type: RewardType, fragment: Boolean, count: Stri
                 RewardType.GUMMI_BEAR -> Color(0xFFDDF5EA)
                 RewardType.RAMEN -> Color(0xFFFFF1D2)
                 RewardType.VIDEO_GAME -> Color(0xFFEAE5FF)
+                RewardType.BED_TIME -> Color(0xFFE3E6FF)
+                RewardType.RESTAURANT -> Color(0xFFFFE5D7)
             }
         ) {
             RewardImage(type, fragment, Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp),

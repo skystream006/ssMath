@@ -25,17 +25,18 @@ private val giftColors = listOf(
     Color(0xFF8472E8), Color(0xFF55BEEA)
 )
 
-internal fun DrawScope.drawRewardArtwork(type: RewardType, fragment: Boolean) {
+internal fun DrawScope.drawRewardArtwork(type: RewardType, fragment: Boolean, progress: Float = 0f) {
     val scale = min(size.width, size.height) / 200f
     withTransform({
         translate((size.width - 200f * scale) / 2f, (size.height - 200f * scale) / 2f)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        if (fragment) drawRewardFragment(type) else drawWholeReward(type)
+        val phase = progress.coerceIn(0f, 1f)
+        if (fragment) drawRewardFragment(type, phase) else drawWholeReward(type, phase)
     }
 }
 
-private fun DrawScope.drawWholeReward(type: RewardType) {
+private fun DrawScope.drawWholeReward(type: RewardType, progress: Float) {
     when (type) {
         RewardType.LOLLIPOP -> drawLollipop()
         RewardType.ICE_CREAM -> drawIceCream()
@@ -45,10 +46,12 @@ private fun DrawScope.drawWholeReward(type: RewardType) {
             drawTablet()
             drawController()
         }
+        RewardType.BED_TIME -> drawBedTime(progress)
+        RewardType.RESTAURANT -> drawRestaurant(progress)
     }
 }
 
-private fun DrawScope.drawRewardFragment(type: RewardType) {
+private fun DrawScope.drawRewardFragment(type: RewardType, progress: Float) {
     // Cut the full-size drawing, then center the piece. Details are never miniaturized.
     if (type == RewardType.LOLLIPOP) {
         val wedge = Path().apply {
@@ -104,7 +107,7 @@ private fun DrawScope.drawRewardFragment(type: RewardType) {
     withTransform({ translate(32f, if (type == RewardType.VIDEO_GAME) -23f else 0f) }) {
         clipPath(piece) {
             // A game fragment is part of the controller, never a miniature controller/tablet set.
-            if (type == RewardType.VIDEO_GAME) drawController() else drawWholeReward(type)
+            if (type == RewardType.VIDEO_GAME) drawController() else drawWholeReward(type, progress)
             drawPath(brokenEdge, rewardInk.copy(alpha = 0.8f), style = Stroke(3f))
         }
     }
@@ -230,6 +233,108 @@ private fun DrawScope.drawRamen() {
         }
     }
     drawPath(block, rewardInk, style = rewardOutline)
+}
+
+private fun DrawScope.drawBedTime(progress: Float) {
+    val night = Color(0xFF494579)
+    val breath = (1f - cos(progress * 2f * PI.toFloat())) / 2f
+    drawRoundRect(night, Offset(28f, 24f), Size(144f, 152f), CornerRadius(18f))
+    drawRoundRect(rewardInk, Offset(28f, 24f), Size(144f, 152f), CornerRadius(18f), style = rewardOutline)
+    drawPath(Path().apply {
+        moveTo(151f, 37f)
+        cubicTo(123f, 33f, 120f, 70f, 147f, 73f)
+        quadraticTo(160f, 74f, 164f, 62f)
+        cubicTo(140f, 72f, 137f, 48f, 151f, 37f)
+        close()
+    }, Color(0xFFFFDF8C))
+    listOf(Offset(47f, 43f), Offset(98f, 38f), Offset(113f, 78f), Offset(160f, 91f))
+        .forEachIndexed { index, point ->
+            val twinkle = (1f + cos(progress * 2f * PI.toFloat() + index)) / 2f
+            drawGiftStar(point, 3f + twinkle * 2f, Color(0xFFFFEDB2).copy(alpha = 0.5f + twinkle * 0.5f))
+        }
+    withTransform({ translate(0f, -breath * 5f) }) {
+        drawPath(Path().apply {
+            moveTo(61f, 59f); lineTo(72f, 59f); lineTo(61f, 70f); lineTo(72f, 70f)
+            moveTo(82f, 45f); lineTo(90f, 45f); lineTo(82f, 53f); lineTo(90f, 53f)
+        }, Color(0xFFD5CBFF), style = Stroke(2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+    drawRoundRect(Color(0xFFE7AA79), Offset(36f, 91f), Size(10f, 80f), CornerRadius(4f))
+    drawRoundRect(rewardInk, Offset(36f, 91f), Size(10f, 80f), CornerRadius(4f), style = rewardOutline)
+    drawRoundRect(Color(0xFFE7AA79), Offset(153f, 115f), Size(10f, 56f), CornerRadius(4f))
+    drawRoundRect(rewardInk, Offset(153f, 115f), Size(10f, 56f), CornerRadius(4f), style = rewardOutline)
+    drawRoundRect(Color(0xFFFFE9D0), Offset(43f, 115f), Size(111f, 36f), CornerRadius(8f))
+    drawRoundRect(rewardInk, Offset(43f, 115f), Size(111f, 36f), CornerRadius(8f), style = rewardOutline)
+    drawRoundRect(Color(0xFFECE7FF), Offset(44f, 107f), Size(48f, 20f), CornerRadius(8f))
+    withTransform({ translate(0f, -breath * 2f) }) {
+        drawCircle(Color(0xFFF5C69E), 17f, Offset(66f, 106f))
+        drawCircle(rewardInk, 17f, Offset(66f, 106f), style = Stroke(2f))
+        drawArc(Color(0xFF8B573F), 180f, 160f, false,
+            Offset(49f, 89f), Size(34f, 26f), style = Stroke(6f, cap = StrokeCap.Round))
+        drawArc(rewardInk, 15f, 150f, false,
+            Offset(62f, 102f), Size(10f, 6f), style = Stroke(2f, cap = StrokeCap.Round))
+        drawCircle(Color(0xFFEB9A93), 3f, Offset(76f, 111f))
+        val blanket = Path().apply {
+            moveTo(87f, 113f)
+            quadraticTo(114f, 101f, 153f, 117f)
+            lineTo(153f, 151f); lineTo(85f, 151f)
+            quadraticTo(80f, 132f, 87f, 113f); close()
+        }
+        drawPath(blanket, Color(0xFF8D80D6))
+        drawPath(blanket, rewardInk, style = rewardOutline)
+        drawGiftStar(Offset(106f, 126f), 5f, Color(0xFFFFDF8C))
+        drawGiftStar(Offset(136f, 137f), 5f, Color(0xFFFFDF8C))
+    }
+    drawRoundRect(Color(0xFFC88A5D), Offset(43f, 151f), Size(111f, 9f), CornerRadius(3f))
+    drawRoundRect(rewardInk, Offset(43f, 151f), Size(111f, 9f), CornerRadius(3f), style = rewardOutline)
+}
+
+private fun DrawScope.drawRestaurant(progress: Float) {
+    val wave = sin(progress * 2f * PI.toFloat())
+    drawRoundRect(Color(0xFFFFE9C8), Offset(28f, 35f), Size(144f, 139f), CornerRadius(9f))
+    drawRoundRect(rewardInk, Offset(28f, 35f), Size(144f, 139f), CornerRadius(9f), style = rewardOutline)
+    drawRoundRect(Color(0xFF398F89), Offset(68f, 22f), Size(64f, 32f), CornerRadius(9f))
+    drawRoundRect(rewardInk, Offset(68f, 22f), Size(64f, 32f), CornerRadius(9f), style = rewardOutline)
+    drawCircle(Color(0xFFFFF6E5), 10f, Offset(100f, 38f))
+    drawCircle(Color(0xFF86C7BC), 6f, Offset(100f, 38f), style = Stroke(1.5f))
+    drawLine(Color.White, Offset(82f, 28f), Offset(82f, 47f), 2f, cap = StrokeCap.Round)
+    drawPath(Path().apply {
+        moveTo(78f, 28f); lineTo(78f, 35f); quadraticTo(82f, 40f, 86f, 35f); lineTo(86f, 28f)
+    }, Color.White, style = Stroke(2f, cap = StrokeCap.Round))
+    drawOval(Color.White, Offset(114f, 28f), Size(7f, 10f))
+    drawLine(Color.White, Offset(117.5f, 36f), Offset(117.5f, 47f), 2f, cap = StrokeCap.Round)
+    drawRoundRect(Color(0xFF6EBAB6), Offset(39f, 99f), Size(62f, 53f), CornerRadius(5f))
+    drawRoundRect(rewardInk, Offset(39f, 99f), Size(62f, 53f), CornerRadius(5f), style = rewardOutline)
+    drawLine(Color(0xFFD1F1E4), Offset(45f, 106f), Offset(55f, 106f), 3f, cap = StrokeCap.Round)
+    repeat(3) { index ->
+        val x = 55f + index * 14f
+        val drift = sin(progress * 2f * PI.toFloat() + index) * 3f
+        drawPath(Path().apply {
+            moveTo(x, 126f)
+            cubicTo(x - 5f + drift, 121f, x + 5f + drift, 117f, x + drift, 112f)
+        }, Color(0xFFE9FFF5).copy(alpha = 0.75f), style = Stroke(2.5f, cap = StrokeCap.Round))
+    }
+    drawOval(Color(0xFFFFF6E5), Offset(47f, 135f), Size(47f, 10f))
+    drawArc(Color(0xFFF3AB50), 180f, 180f, true, Offset(53f, 123f), Size(35f, 25f))
+    drawCircle(Color(0xFFD65560), 4f, Offset(72f, 129f))
+    drawLine(Color(0xFF398F89), Offset(72f, 125f), Offset(77f, 122f), 2f, cap = StrokeCap.Round)
+    drawRoundRect(Color(0xFF967BC3), Offset(118f, 96f), Size(41f, 73f), CornerRadius(5f))
+    drawRoundRect(rewardInk, Offset(118f, 96f), Size(41f, 73f), CornerRadius(5f), style = rewardOutline)
+    drawRoundRect(Color(0xFFCAEAE3), Offset(125f, 104f), Size(27f, 35f), CornerRadius(3f))
+    drawCircle(Color(0xFFFFDF8C), 3f, Offset(150f, 149f))
+    repeat(8) { index ->
+        val left = 28f + index * 18f
+        val bottom = 81f + wave * 2f
+        val stripe = Path().apply {
+            moveTo(left + 4f, 59f); lineTo(left + 14f, 59f)
+            lineTo(left + 18f, bottom)
+            quadraticTo(left + 9f, bottom + 10f, left, bottom)
+            close()
+        }
+        drawPath(stripe, if (index % 2 == 0) Color(0xFFE46B71) else Color(0xFFFFF6E5))
+        drawPath(stripe, rewardInk, style = Stroke(1.5f, join = StrokeJoin.Round))
+    }
+    drawLine(rewardInk, Offset(32f, 59f), Offset(168f, 59f), 3f, cap = StrokeCap.Round)
+    drawRoundRect(Color(0xFFC88A5D), Offset(24f, 169f), Size(152f, 7f), CornerRadius(3f))
 }
 
 private fun DrawScope.drawTablet() {
