@@ -68,6 +68,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -80,6 +81,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -214,12 +216,19 @@ private fun DialogCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun HomeScreen(model: MathViewModel) {
+    val textMeasurer = rememberTextMeasurer()
+    val labelWidth = listOf("Rewards", "Pokémon").maxOf {
+        textMeasurer.measure(it, MaterialTheme.typography.labelLarge, softWrap = false).size.width
+    }
+    // Both buttons must fit the wider label, image, spacing, and horizontal padding.
+    val minimumButtonWidth = with(LocalDensity.current) { labelWidth.toDp() } + 24.dp + 8.dp + 16.dp
     Column(Modifier.fillMaxSize().testTag("home-screen"), horizontalAlignment = Alignment.CenterHorizontally) {
         FlowRow(Modifier.widthIn(max = 440.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 2) {
             Button(onClick = model::openRewards,
-                modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("home-rewards"),
+                modifier = Modifier.weight(1f).widthIn(min = minimumButtonWidth)
+                    .heightIn(min = 48.dp).testTag("home-rewards"),
                 contentPadding = PaddingValues(8.dp)) {
                 Image(painterResource(R.drawable.ic_gift_box), contentDescription = null,
                     modifier = Modifier.size(24.dp).testTag("home-rewards-image"))
@@ -227,7 +236,8 @@ private fun HomeScreen(model: MathViewModel) {
                 Text("Rewards", textAlign = TextAlign.Center)
             }
             Button(onClick = model::openPokemons,
-                modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("home-pokemons"),
+                modifier = Modifier.weight(1f).widthIn(min = minimumButtonWidth)
+                    .heightIn(min = 48.dp).testTag("home-pokemons"),
                 contentPadding = PaddingValues(8.dp)) {
                 Image(painterResource(R.drawable.ic_pokeball), contentDescription = null,
                     modifier = Modifier.size(24.dp).testTag("home-pokemons-image"))

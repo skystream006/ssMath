@@ -45,10 +45,19 @@ class MathAppTest {
 
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun homeCollectionButtonsShowDecorativeImagesBeforeTheirLabels() {
+    fun homeCollectionButtonsShowImagesBeforeLabelsAtEveryTextSize() {
         val model = model()
         compose.setContent { MathAppContent(model) }
-        assertHomeCollectionImages()
+        for (percent in 80..200 step 10) {
+            compose.runOnIdle { model.chooseTextSize(percent) }
+            assertHomeCollectionImages()
+            listOf("Rewards", "Pokémon").forEach { label ->
+                val layout = textLayout(label)
+                assertFalse("$label overflows horizontally at $percent%", layout.didOverflowWidth)
+                assertFalse("$label overflows vertically at $percent%", layout.didOverflowHeight)
+                assertEquals(1, layout.lineCount)
+            }
+        }
     }
 
     @Test fun homeShowsSetupBelowCollectionButtonsThatStayVisibleWhileScrolling() {
