@@ -5,6 +5,7 @@ package com.ssmath.app
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -67,6 +69,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -218,12 +221,18 @@ private fun HomeScreen(model: MathViewModel) {
             Button(onClick = model::openRewards,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("home-rewards"),
                 contentPadding = PaddingValues(8.dp)) {
-                Text("Rewards", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Image(painterResource(R.drawable.ic_gift_box), contentDescription = null,
+                    modifier = Modifier.size(24.dp).testTag("home-rewards-image"))
+                Spacer(Modifier.width(8.dp))
+                Text("Rewards", textAlign = TextAlign.Center)
             }
             Button(onClick = model::openPokemons,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("home-pokemons"),
                 contentPadding = PaddingValues(8.dp)) {
-                Text("Pokémon", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Image(painterResource(R.drawable.ic_pokeball), contentDescription = null,
+                    modifier = Modifier.size(24.dp).testTag("home-pokemons-image"))
+                Spacer(Modifier.width(8.dp))
+                Text("Pokémon", textAlign = TextAlign.Center)
             }
         }
         SetupForm(model, Modifier.weight(1f).widthIn(max = 440.dp).fillMaxWidth()

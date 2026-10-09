@@ -5,7 +5,8 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
 
 ## How it works
 
-1. **Home screen** – use the **Rewards** and **Pokémon** buttons at the top to open
+1. **Home screen** – use the **Rewards** (gift box) and **Pokémon** (Poké Ball) buttons
+   at the top, each with its image to the left of the label, to open
    your collections; Back returns you to the home screen without losing your setup choices.
    Below the buttons, choose what to practice (**Addition**, **Subtraction**,
    **Multiplication** or **Division**), enter the **Minimum number** (defaults to 1)
