@@ -65,6 +65,8 @@ class MathViewModel(
         private set
     var celebration by mutableStateOf<Celebration?>(null)
         private set
+    var selectingCelebration by mutableStateOf(false)
+        private set
     var earlyFinishMessage by mutableStateOf<String?>(null)
         private set
     var history by mutableStateOf<List<PracticeResult>>(emptyList())
@@ -78,7 +80,8 @@ class MathViewModel(
     var rewardResult by mutableStateOf<PracticeResult?>(null)
         private set
     private var rewardDialogOverlay by mutableStateOf<Overlay?>(null)
-    val rewardDialogVisible: Boolean get() = rewardResult != null && celebration == null && overlay == rewardDialogOverlay
+    val rewardDialogVisible: Boolean get() = rewardResult != null && celebration == null &&
+        !selectingCelebration && overlay == rewardDialogOverlay
     var claimingReward by mutableStateOf(false)
         private set
     var rewardError by mutableStateOf<String?>(null)
@@ -127,6 +130,7 @@ class MathViewModel(
     private var rewardRequestVersion = 0L
     private class PendingResult(var result: PracticeResult, var saved: Boolean = false)
     private var pendingResult: PendingResult? = null
+    private var collectionLoaded = false
 
     val maximum: Int? get() = parseMaximum(maximumText)
     val minimum: Int? get() = parseMaximum(minimumText)?.takeIf { it <= (maximum ?: MAX_MAXIMUM) }
@@ -181,6 +185,7 @@ class MathViewModel(
         game = null
         answerText = ""
         celebration = null
+        selectingCelebration = false
         earlyFinishMessage = null
         lastResult = null
         pendingResult = null
@@ -201,6 +206,7 @@ class MathViewModel(
         game = GameState.start(operation, maximum, generator, questionCount, minimum, maximumSecond)
         answerText = ""
         celebration = null
+        selectingCelebration = false
         earlyFinishMessage = null
         lastResult = null
         pendingResult = null
@@ -244,7 +250,8 @@ class MathViewModel(
         pendingResult = pending
         lastResult = result
         val answeredAllQuestions = !expired && state.attempts.size == state.questionCount
-        celebration = if (answeredAllQuestions) Celebration.select(state.questionCount, celebrationRandom, pokemons) else null
+        celebration = null
+        selectingCelebration = answeredAllQuestions
         earlyFinishMessage = if (expired) "Time's up! You got ${state.correct} right out of ${state.questionCount}"
             else if (answeredAllQuestions) null
             else "Nice try! You got ${state.correct} right out of ${state.questionCount}"
@@ -253,7 +260,14 @@ class MathViewModel(
         DebugLog.event(DebugEvent.GAME_FINISHED)
         viewModelScope.launch {
             try {
-                storeLock.withLock { persistResult(pending) }
+                storeLock.withLock {
+                    if (pendingResult === pending) {
+                        celebration = if (answeredAllQuestions && collectionLoaded)
+                            Celebration.select(state.questionCount, celebrationRandom, pokemons) else null
+                        selectingCelebration = false
+                    }
+                    persistResult(pending)
+                }
                 DebugLog.event(DebugEvent.HISTORY_SAVED)
             } catch (error: CancellationException) {
                 throw error
@@ -263,6 +277,8 @@ class MathViewModel(
                     message = "Unable to save these results. Free device storage and try again."
                     if (rewardResult === pending.result) rewardError = "Unable to save your prize. Free device storage and try again."
                 }
+            } finally {
+                if (pendingResult === pending) selectingCelebration = false
             }
         }
     }
@@ -272,6 +288,7 @@ class MathViewModel(
         game = null
         answerText = ""
         celebration = null
+        selectingCelebration = false
         earlyFinishMessage = null
         pendingResult = null
         dismissReward()
@@ -489,6 +506,7 @@ class MathViewModel(
         history = snapshot.history
         rewardBalances = snapshot.rewards
         pokemons = snapshot.pokemons
+        collectionLoaded = true
         latestResultId = maxOf(latestResultId, snapshot.lastResultId, snapshot.history.maxOfOrNull { it.id } ?: 0L)
     }
 
