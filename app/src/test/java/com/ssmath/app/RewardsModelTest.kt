@@ -494,6 +494,7 @@ class RewardsModelTest {
         val dispatcher = QueuedDispatcher()
         val model = model(dispatcher)
         dispatcher.drain()
+        model.openSettings()
         model.openRewards()
         dispatcher.drain()
         repeat(4) { model.useReward(RewardType.LOLLIPOP) }
