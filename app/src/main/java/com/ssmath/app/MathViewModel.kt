@@ -44,6 +44,7 @@ class MathViewModel(
         private set
     var overlay by mutableStateOf<Overlay?>(null)
         private set
+    private var collectionReturnOverlay: Overlay? = null
     var selectedOperation by mutableStateOf(Operation.fromPreference(settings.getString("operation", null)))
         private set
     var minimumText by mutableStateOf(settings.getInt("minimum", MIN_MAXIMUM).toString())
@@ -362,6 +363,7 @@ class MathViewModel(
     fun openRewards() {
         dismissOverlayReward()
         rewardUseError = null
+        if (overlay != Overlay.REWARDS && overlay != Overlay.POKEMONS) collectionReturnOverlay = overlay
         overlay = Overlay.REWARDS
         updateTimer()
         viewModelScope.launch { reloadHistory() }
@@ -369,6 +371,7 @@ class MathViewModel(
 
     fun openPokemons() {
         dismissOverlayReward()
+        if (overlay != Overlay.REWARDS && overlay != Overlay.POKEMONS) collectionReturnOverlay = overlay
         overlay = Overlay.POKEMONS
         updateTimer()
         viewModelScope.launch { reloadHistory() }
@@ -380,8 +383,11 @@ class MathViewModel(
             historyDetail = null
             return
         }
-        overlay = if (overlay == Overlay.HISTORY || overlay == Overlay.REWARDS || overlay == Overlay.POKEMONS)
-            Overlay.SETTINGS else null
+        overlay = when (overlay) {
+            Overlay.HISTORY -> Overlay.SETTINGS
+            Overlay.REWARDS, Overlay.POKEMONS -> collectionReturnOverlay
+            else -> null
+        }
         updateTimer()
     }
 

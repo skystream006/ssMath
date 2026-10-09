@@ -43,6 +43,102 @@ class MathAppTest {
 
     private fun model() = MathViewModel(application, ProblemGenerator(Random(7)), clock = { now }, wallClock = { 1_700_000_000_000 })
 
+    @Test fun homeShowsSetupBelowCollectionButtonsThatStayVisibleWhileScrolling() {
+        val model = model()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("home-screen").assertIsDisplayed()
+        compose.onNode(isDialog()).assertDoesNotExist()
+        val rewards = compose.onNodeWithTag("home-rewards").assertIsDisplayed().assertIsEnabled()
+            .fetchSemanticsNode().boundsInRoot
+        val pokemons = compose.onNodeWithTag("home-pokemons").assertIsDisplayed().assertIsEnabled()
+            .fetchSemanticsNode().boundsInRoot
+        val setup = compose.onNodeWithText("What would you like to practice?").assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(rewards.right <= pokemons.left)
+        assertEquals(rewards.top, pokemons.top, 1f)
+        assertTrue(maxOf(rewards.bottom, pokemons.bottom) <= setup.top)
+
+        compose.onNodeWithTag("submit-setup").performScrollTo().assertIsDisplayed().assertIsNotEnabled()
+        assertEquals(rewards, compose.onNodeWithTag("home-rewards").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+        assertEquals(pokemons, compose.onNodeWithTag("home-pokemons").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithContentDescription("Settings").assertIsDisplayed()
+    }
+
+    @Test fun homeCollectionsReturnToTheirEntryScreenAndKeepSetupChoices() {
+        val model = model()
+        model.chooseRewardsEnabled(false)
+        model.selectOperation(Operation.DIVISION)
+        model.updateDivisionMaximumFirst("40")
+        model.updateDivisionMaximumSecond("7")
+        model.updateQuestionCount("15")
+        compose.setContent { MathAppContent(model) }
+
+        listOf(Triple("home-rewards", "my-rewards", Overlay.REWARDS),
+            Triple("home-pokemons", "my-pokemons", Overlay.POKEMONS)).forEach { (homeTag, settingsTag, overlay) ->
+            repeat(2) { returnMethod ->
+                compose.onNodeWithTag(homeTag).assertIsEnabled().performClick()
+                assertEquals(overlay, model.overlay)
+                compose.runOnIdle {
+                    if (overlay == Overlay.REWARDS) model.openRewards() else model.openPokemons()
+                }
+                compose.onNodeWithTag("home-screen").assertDoesNotExist()
+                if (returnMethod == 0) compose.onNodeWithContentDescription("Back").performClick()
+                else compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                assertNull(model.overlay)
+                assertEquals(Screen.SETUP, model.screen)
+                compose.onNodeWithTag("home-screen").assertIsDisplayed()
+
+                compose.onNodeWithContentDescription("Settings").performClick()
+                compose.onNodeWithTag(settingsTag).performClick()
+                assertEquals(overlay, model.overlay)
+                compose.runOnIdle {
+                    if (overlay == Overlay.REWARDS) model.openRewards() else model.openPokemons()
+                }
+                if (returnMethod == 0) compose.onNodeWithContentDescription("Back").performClick()
+                else compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                assertEquals(Overlay.SETTINGS, model.overlay)
+                compose.onNodeWithText("Settings").assertIsDisplayed()
+                compose.onNodeWithContentDescription("Back").performClick()
+                assertNull(model.overlay)
+            }
+        }
+        compose.onNodeWithTag("operation-DIVISION").assertIsSelected()
+        compose.onNodeWithTag("minimum-input").performScrollTo().assertTextContains("40")
+        compose.onNodeWithTag("maximum-input").performScrollTo().assertTextContains("7")
+        compose.onNodeWithTag("question-count-input").performScrollTo().assertTextContains("15")
+        compose.onNodeWithTag("submit-setup").performScrollTo().assertIsEnabled().performClick()
+        compose.onNodeWithText("Division · first up to 40 · second up to 7 · 15 questions").assertIsDisplayed()
+        compose.onNodeWithTag("home-rewards").assertDoesNotExist()
+        compose.onNodeWithTag("home-pokemons").assertDoesNotExist()
+        compose.onNodeWithText("Back").performClick()
+        compose.onNodeWithTag("home-screen").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h480dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun homeButtonsAndSetupRemainUsableWithLargeTextOnSmallScreens() {
+        val model = model()
+        model.chooseTextSize(200)
+        compose.setContent { MathAppContent(model) }
+        listOf("Rewards", "Pokémon").forEach { label ->
+            compose.onNodeWithText(label).assertIsDisplayed().assertHasClickAction()
+            val layout = textLayout(label)
+            assertFalse("$label overflows horizontally", layout.didOverflowWidth)
+            assertFalse("$label overflows vertically", layout.didOverflowHeight)
+            assertEquals(1, layout.lineCount)
+        }
+        compose.onNodeWithTag("operation-ADDITION").performScrollTo().performClick()
+        compose.onNodeWithTag("question-count-input").performScrollTo().performTextReplacement("3")
+        compose.onNodeWithTag("submit-setup").performScrollTo().assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithTag("home-rewards").assertIsDisplayed()
+        compose.onNodeWithTag("home-pokemons").assertIsDisplayed()
+        assertTrue(compose.onNodeWithTag("submit-setup").fetchSemanticsNode().boundsInRoot.bottom <=
+            compose.onNodeWithTag("settings-button").fetchSemanticsNode().boundsInRoot.top)
+        compose.onNodeWithTag("submit-setup").performClick()
+        compose.onNodeWithTag("start-button").performScrollTo().assertIsDisplayed()
+    }
+
     @Test fun timerOnlyRunsWhileTheGameIsVisible() {
         val model = model()
         model.selectOperation(Operation.ADDITION)

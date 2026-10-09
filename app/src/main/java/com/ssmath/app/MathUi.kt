@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -160,7 +161,7 @@ private fun MainContent(model: MathViewModel) {
         }
     }
     when (model.screen) {
-        Screen.SETUP -> SetupDialog(model)
+        Screen.SETUP -> HomeScreen(model)
         Screen.READY -> ReadyDialog(model)
         Screen.PLAYING -> PlayingScreen(model)
         Screen.RESULTS -> model.lastResult?.let { result ->
@@ -209,9 +210,31 @@ private fun DialogCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SetupDialog(model: MathViewModel) {
+private fun HomeScreen(model: MathViewModel) {
+    Column(Modifier.fillMaxSize().testTag("home-screen"), horizontalAlignment = Alignment.CenterHorizontally) {
+        FlowRow(Modifier.widthIn(max = 440.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 2) {
+            Button(onClick = model::openRewards,
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("home-rewards"),
+                contentPadding = PaddingValues(8.dp)) {
+                Text("Rewards", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
+            Button(onClick = model::openPokemons,
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("home-pokemons"),
+                contentPadding = PaddingValues(8.dp)) {
+                Text("Pokémon", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
+        }
+        SetupForm(model, Modifier.weight(1f).widthIn(max = 440.dp).fillMaxWidth()
+            .padding(bottom = 64.dp).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp))
+    }
+}
+
+@Composable
+private fun SetupForm(model: MathViewModel, modifier: Modifier) {
     val division = model.selectedOperation == Operation.DIVISION
-    DialogCard {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("What would you like to practice?", style = MaterialTheme.typography.titleLarge)
         Operation.entries.chunked(2).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

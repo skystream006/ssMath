@@ -5,7 +5,9 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
 
 ## How it works
 
-1. **Setup dialog** – choose what to practice (**Addition**, **Subtraction**,
+1. **Home screen** – use the **Rewards** and **Pokémon** buttons at the top to open
+   your collections; Back returns you to the home screen without losing your setup choices.
+   Below the buttons, choose what to practice (**Addition**, **Subtraction**,
    **Multiplication** or **Division**), enter the **Minimum number** (defaults to 1)
    above the **Maximum number** (both 1 to 10,000; minimum cannot exceed maximum),
    and answer **How many questions would you like?** using the **Number of questions**
@@ -48,7 +50,7 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    If the wrong-answer limit ends practice before the last question, a dialog says
    **Nice try! You got {XX} right out of {TOTAL}**, using the chosen number of
    questions as the total. Press **View results** to dismiss it.
-   Press **Done** to return to the setup dialog.
+   Press **Done** to return to the home screen.
 
 The semi-transparent (50% opacity) settings button in the bottom-right corner opens
 **Settings**:
