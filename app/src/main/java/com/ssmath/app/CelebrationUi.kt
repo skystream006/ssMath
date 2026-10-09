@@ -225,7 +225,7 @@ enum class Celebration(
     MEW("Mew", 151);
 
     constructor(label: String, ndex: Int) : this(
-        label, "$label dancing and cheering with confetti", CelebrationCategory.POKEMONS, ndex
+        label, "$label ${kantoSceneProfile(ndex).action}", CelebrationCategory.POKEMONS, ndex
     )
 
     val collectionLabel: String

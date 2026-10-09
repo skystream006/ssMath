@@ -37,8 +37,11 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    the screen and zapping lightning, Squirtle shooting water from his mouth,
    Bulbasaur shooting leaves from his bulb, Charmander shooting fire into the air,
    Jigglypuff rolling and jumping, or Palafin, Finizen, Wailmer, Wailord, Bouffalant,
-   Veluza, Mantyke, or Mantine celebrating, plus 144 additional Pokémon dancing
-   with confetti, from Ivysaur through Mew. Each has its own offline vector artwork.
+   Veluza, Mantyke, or Mantine celebrating, plus 144 additional Pokémon from Ivysaur
+   through Mew in species-specific habitats. Their offline vector scenes feature
+   crawling caterpillars, hanging cocoons, flying birds, swimming aquatic creatures,
+   burrowing moles, and more, with matching effects such as leaves, bubbles, fire,
+   and psychic rings. Related species have different scenery layouts and motion.
    The 157 Pokémon scenes belong to the
    **Pokémons** category and can only appear after completing **15 or more questions**.
    The remaining five scenes belong to **Other** and can appear at any practice length;

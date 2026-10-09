@@ -2,44 +2,38 @@ package com.ssmath.app
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.sin
 
 internal const val KANTO_INK = 0xFF30324D
-private val confettiColors = listOf(Color(0xFFFFCA60), Color(0xFFEF86AB), Color(0xFF71CABB))
-
 internal fun DrawScope.drawKantoCelebration(celebration: Celebration, progress: Float) {
-    drawRect(Brush.verticalGradient(listOf(Color(0xFFEAF5FF), Color(0xFFF4E9FF)), 0f, 220f),
-        size = Size(320f, 220f))
-    repeat(24) { index ->
-        val phase = (progress * 1.7f + index * 0.137f) % 1f
-        val x = 10f + (index * 73 % 300) + sin(phase * 8f + index) * 6f
+    val ndex = requireNotNull(celebration.ndex)
+    val profile = kantoSceneProfile(ndex)
+    val time = progress.coerceIn(0f, 1f)
+    val pose = kantoScenePose(ndex, profile.motion, time)
+    drawKantoHabitat(ndex, profile.habitat, time)
+    drawOval(Color(KANTO_INK).copy(alpha = 0.12f),
+        Offset(pose.x - 43f, 201f), Size(86f, 8f))
+    if (profile.motion == KantoMotion.HANG) {
+        drawLine(Color(0xFFFFF6DC), Offset(160f, 48f),
+            Offset(pose.x, pose.y - 58f), 2f)
+    }
+    clipRect(0f, 0f, 320f, if (profile.motion == KantoMotion.DIG) 202f else 220f) {
         withTransform({
-            translate(x, -10f + phase * 245f)
-            rotate(index * 31f + phase * 240f, pivot = Offset.Zero)
+            translate(pose.x, pose.y)
+            rotate(pose.rotation, pivot = Offset.Zero)
+            scale(pose.scaleX, pose.scaleY, pivot = Offset.Zero)
         }) {
-            drawRect(confettiColors[index % confettiColors.size], Offset(-2f, -4f), Size(4f, 8f))
+            drawKantoPokemon(ndex, pose.articulation)
         }
     }
-    val motion = sin(progress * 7f * PI.toFloat())
-    val hop = abs(sin(progress * 3.5f * PI.toFloat()))
-    drawOval(Color(KANTO_INK).copy(alpha = 0.12f),
-        Offset(111f + hop * 8f, 203f), Size(98f - hop * 16f, 9f))
-    withTransform({
-        translate(160f + motion * 8f, 148f - hop * 12f)
-        rotate(motion * 4f, pivot = Offset.Zero)
-    }) {
-        drawKantoPokemon(requireNotNull(celebration.ndex), motion)
-    }
+    drawKantoEffect(ndex, profile.effect, pose, time)
 }
 
 internal fun DrawScope.drawKantoPokemon(ndex: Int, motion: Float) {
