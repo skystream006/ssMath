@@ -94,6 +94,10 @@ class MathViewModel(
         private set
     var rewardsEnabled by mutableStateOf(settings.getBoolean("rewards_enabled", true))
         private set
+    var disabledRewards by mutableStateOf(RewardType.entries.filter {
+        it.name in settings.getStringSet("disabled_rewards", emptySet()).orEmpty()
+    }.toSet())
+        private set
     var timeLimitMinutes by mutableStateOf(normalizeTimeLimit(settings.getInt("time_limit_minutes", 0)))
         private set
     var activeTimeLimitMs by mutableStateOf<Long?>(null)
@@ -235,7 +239,7 @@ class MathViewModel(
             minimum = state.minimum, maximumSecond = state.maximumSecond.takeIf { state.operation == Operation.DIVISION },
             questionCount = state.questionCount, timedOut = expired,
             prizeType = selectPrize(state.questionCount, state.correct, state.attempts.size,
-                rewardsEnabledAtStart, rewardsEnabled, expired, rewardRandom))
+                rewardsEnabledAtStart, rewardsEnabled, expired, rewardRandom, disabledRewards))
         val pending = PendingResult(result)
         pendingResult = pending
         lastResult = result
@@ -555,6 +559,11 @@ class MathViewModel(
     fun chooseRewardsEnabled(value: Boolean) {
         rewardsEnabled = value
         settings.edit().putBoolean("rewards_enabled", value).apply()
+    }
+
+    fun chooseRewardEnabled(type: RewardType, enabled: Boolean) {
+        disabledRewards = if (enabled) disabledRewards - type else disabledRewards + type
+        settings.edit().putStringSet("disabled_rewards", disabledRewards.map { it.name }.toSet()).apply()
     }
 
     fun chooseTimeLimitMinutes(value: Int) {

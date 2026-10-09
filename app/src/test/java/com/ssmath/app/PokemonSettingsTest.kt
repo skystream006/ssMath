@@ -213,7 +213,7 @@ class PokemonSettingsTest {
         }
     }
 
-    @Test fun sevenDescriptionTapsUnlockAllAnimationsWithoutEnablingLoggingOrDuplicatingEntries() {
+    @Test fun sevenDescriptionTapsOpenAdminAndOnlyTheButtonAddsAnimations() {
         val store = HistoryStore(file)
         store.collectPokemon(Celebration.SQUIRTLE)
         val before = store.loadSnapshot()
@@ -226,17 +226,59 @@ class PokemonSettingsTest {
         repeat(6) { description.performClick() }
         assertEquals(before.pokemons, model.pokemons)
         assertEquals(before, store.loadSnapshot())
+        compose.onNodeWithText("Admin").assertDoesNotExist()
         description.performClick()
+        compose.onNodeWithText("Admin").assertIsDisplayed()
+        compose.onNodeWithText("Add all animations").assertIsDisplayed()
+        assertEquals(before, store.loadSnapshot())
+        compose.onNodeWithText("Close").performClick()
+        assertEquals(before.pokemons, model.pokemons)
+        repeat(7) { description.performClick() }
+        compose.onNodeWithText("Add all animations").performClick()
         val expected = before.copy(pokemons = Celebration.entries.toSet())
         assertEquals(expected.pokemons, model.pokemons)
         assertEquals(expected, store.loadSnapshot())
+        compose.onNodeWithText("Add all animations").assertIsNotEnabled()
+        compose.onNodeWithText("162/162 animations collected").assertIsDisplayed()
+        compose.onNodeWithText("Close").performClick()
         repeat(7) { description.performClick() }
+        compose.onNodeWithText("Add all animations").assertIsNotEnabled()
         assertEquals(expected, store.loadSnapshot())
+        compose.onNodeWithText("Close").performClick()
         assertFalse(DebugLog.enabled.value)
         compose.onNodeWithContentDescription("Debug logging").performScrollTo().assertIsOff()
         compose.onNodeWithTag("my-pokemons").performScrollTo().performClick()
         assertSectionCount(CelebrationCategory.POKEMONS, "157/157")
         assertSectionCount(CelebrationCategory.OTHER, "5/5")
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h800dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun adminActionsAndEveryRewardAreReadableAndScrollableWithLargeText() {
+        val model = model()
+        model.chooseTextSize(200)
+        model.openSettings()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithText("Debug logging").performScrollTo().performClick()
+        val description = compose.onNodeWithTag("debug-logging-description").performScrollTo()
+        repeat(7) { description.performClick() }
+        assertTextFits("Admin")
+        compose.onNodeWithText("Add all animations").performScrollTo()
+        assertTextFits("Add all animations")
+        RewardTier.entries.forEach { tier ->
+            val heading = "${tier.label} · ${tier.questionCountLabel}"
+            compose.onNodeWithText(heading).performScrollTo()
+            assertTextFits(heading)
+            RewardType.entries.filter { it.tier == tier }.forEach { type ->
+                compose.onNodeWithText(type.label).performScrollTo()
+                assertTextFits(type.label)
+                compose.onNodeWithContentDescription("${type.label} reward").assertIsDisplayed().assertIsOn()
+            }
+        }
+        compose.onNodeWithText("Close").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Admin").assertDoesNotExist()
+        assertTrue(model.pokemons.isEmpty())
     }
 
     @Test

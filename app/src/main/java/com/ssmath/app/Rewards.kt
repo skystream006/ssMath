@@ -60,10 +60,11 @@ fun selectPrize(
     enabledAtStart: Boolean,
     enabledAtFinish: Boolean,
     timedOut: Boolean = false,
-    random: Random = Random.Default
+    random: Random = Random.Default,
+    disabledRewards: Set<RewardType> = emptySet()
 ): RewardType? {
     if (!enabledAtStart || !enabledAtFinish || !qualifiesForReward(questionCount, correct, answered, timedOut)) return null
     val tier = rewardTierForQuestionCount(questionCount) ?: return null
-    val prizes = RewardType.entries.filter { it.tier == tier }
-    return prizes.singleOrNull() ?: prizes.random(random)
+    val prizes = RewardType.entries.filter { it.tier == tier && it !in disabledRewards }
+    return prizes.singleOrNull() ?: prizes.randomOrNull(random)
 }

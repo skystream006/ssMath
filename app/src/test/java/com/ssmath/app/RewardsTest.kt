@@ -7,8 +7,9 @@ import org.junit.Test
 
 class RewardsTest {
     private fun prize(count: Int, correct: Int = count, answered: Int = count,
-        atStart: Boolean = true, atFinish: Boolean = true, timedOut: Boolean = false, seed: Int = 1) =
-        selectPrize(count, correct, answered, atStart, atFinish, timedOut, Random(seed))
+        atStart: Boolean = true, atFinish: Boolean = true, timedOut: Boolean = false, seed: Int = 1,
+        disabledRewards: Set<RewardType> = emptySet()) =
+        selectPrize(count, correct, answered, atStart, atFinish, timedOut, Random(seed), disabledRewards)
 
     @Test fun questionCountsMapToNamedTiersAtTheBoundaries() {
         listOf(Int.MIN_VALUE, 0, 1, 24).forEach { assertNull(rewardTierForQuestionCount(it)) }
@@ -66,6 +67,36 @@ class RewardsTest {
         assertNotNull(prize(49, 45))
         assertNull(prize(49, 44))
         assertNotNull(prize(50, 46))
+    }
+
+    @Test fun selectionUsesOnlyEnabledRewardsFromTheEligibleTier() {
+        listOf(25, 49, 50, 1000).forEach { count ->
+            val tierRewards = RewardType.entries.filter { it.tier == rewardTierForQuestionCount(count) }.toSet()
+            tierRewards.forEach { disabled ->
+                val selected = (0..200).map { prize(count, seed = it, disabledRewards = setOf(disabled)) }.toSet()
+                assertEquals(tierRewards - disabled, selected)
+            }
+            tierRewards.forEach { onlyEnabled ->
+                repeat(10) {
+                    assertEquals(onlyEnabled, prize(count, seed = it,
+                        disabledRewards = RewardType.entries.toSet() - onlyEnabled))
+                }
+            }
+        }
+    }
+
+    @Test fun disablingAnEntireTierGivesNoPrizeAndNeverFallsBackToAnotherTier() {
+        RewardTier.entries.forEach { tier ->
+            val disabled = RewardType.entries.filter { it.tier == tier }.toSet()
+            listOf(25, 49, 50, 1000).forEach { count ->
+                if (rewardTierForQuestionCount(count) == tier) {
+                    assertNull(prize(count, disabledRewards = disabled))
+                } else {
+                    assertEquals(rewardTierForQuestionCount(count), prize(count, disabledRewards = disabled)?.tier)
+                }
+                assertNull(prize(count, disabledRewards = RewardType.entries.toSet()))
+            }
+        }
     }
 
     @Test fun rewardsRequireBothSettingsChecksEveryQuestionAndNoTimeout() {

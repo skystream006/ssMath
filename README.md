@@ -88,6 +88,9 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   Bed Time features a sleeping child, floating Zs, and twinkling stars; Restaurant
   features a swaying striped awning and a steaming meal. Their artwork animates
   when revealed and in My Rewards and Use rewards.
+  Individual rewards can be enabled or disabled in the **Admin** dialog described below.
+  Only enabled rewards from the qualifying tier are selected; if none are enabled in
+  that tier, no prize is awarded. Existing prizes and fragments remain available.
   Fewer than 25 questions and exactly 90% correct do not qualify.
   Every 3 fragments of the same type automatically become 1 whole prize, with the
   fragment counter returning to 0. Prizes and their cumulative totals are saved
@@ -208,5 +211,13 @@ answers, practice results or other personal content. Logs are stored privately o
 the device and can be viewed, shared or cleared from Settings.
 
 Tap the description beginning **Off by default** below **Enable debug logging**
-seven times to add all celebration animations to **My Pokémons**, without duplicating
-ones already collected. This works even while debug logging and rewards are disabled.
+seven times to open the **Admin** dialog. Opening or closing it does not add animations.
+Press **Add all animations** to add every celebration to **My Pokémons**, without
+duplicating ones already collected or changing history and rewards.
+
+Under **Available rewards**, enable or disable each reward, grouped by tier. Choices
+are saved on this device and apply when a practice finishes, including a practice
+already in progress. Disabling every reward in a tier means no prize for that tier;
+it does not prevent celebrations or remove existing prizes and fragments, including
+unopened gifts in history. Re-enable a reward to make it available for future awards.
+Both admin sections work even while debug logging and the rewards system are disabled.
