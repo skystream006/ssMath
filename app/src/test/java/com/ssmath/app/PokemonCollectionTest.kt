@@ -96,6 +96,40 @@ class PokemonCollectionTest {
         }
     }
 
+    @Test fun selectionOnlyUsesUncollectedEligibleCelebrations() {
+        val remaining = setOf(Celebration.PARTY, Celebration.PIKACHU, Celebration.MEW)
+        val collected = Celebration.entries.toSet() - remaining
+        listOf(1, 14, 15, 25, 1000).forEach { count ->
+            val selected = (0..200).map { Celebration.select(count, Random(it), collected) }.toSet()
+            assertEquals(if (count < 15) setOf(Celebration.PARTY) else remaining, selected)
+        }
+    }
+
+    @Test fun lastMissingCelebrationIsAlwaysSelectedBeforeAnyRepeat() {
+        Celebration.entries.forEach { missing ->
+            val collected = Celebration.entries.toSet() - missing
+            repeat(20) { seed ->
+                assertEquals(missing, Celebration.select(15, Random(seed), collected))
+            }
+        }
+    }
+
+    @Test fun shortPracticesDoNotRepeatOtherScenesWhilePokemonCollectionIsIncomplete() {
+        val collected = Celebration.entries.toSet() - Celebration.MEW
+        (1..14).forEach { count ->
+            assertNull(Celebration.select(count, Random(0), collected))
+        }
+    }
+
+    @Test fun completeCollectionAllowsEveryEligibleCelebrationAgain() {
+        val collected = Celebration.entries.toSet()
+        listOf(1, 14, 15, 1000).forEach { count ->
+            val expected = if (count < 15) collected.filter { it.category == CelebrationCategory.OTHER }.toSet()
+                else collected
+            assertEquals(expected, (0..10_000).map { Celebration.select(count, Random(it), collected) }.toSet())
+        }
+    }
+
     @Test fun originalPokemonsKeepNationalPokedexNumbersAndPaddedCollectionLabels() {
         val expected = mapOf(
             Celebration.PIKACHU to (25 to "#0025 Pikachu"),
@@ -141,12 +175,12 @@ class PokemonCollectionTest {
     }
 
     @Test fun eachPresentedCelebrationIsCollectedOnceEvenWithRewardsDisabled() {
-        Celebration.entries.forEachIndexed { index, pokemon ->
-            val model = model(pokemon)
+        repeat(Celebration.entries.size) { index ->
+            val model = model()
             model.chooseRewardsEnabled(false)
             start(model)
             repeat(15) { answer(model, correct = it != 0) }
-            assertEquals(pokemon, model.celebration)
+            val pokemon = requireNotNull(model.celebration)
             assertFalse(pokemon in model.pokemons)
             repeat(3) { model.collectPresentedCelebration(pokemon) }
             assertEquals(index + 1, model.pokemons.size)
@@ -156,6 +190,159 @@ class PokemonCollectionTest {
             assertTrue(model.rewardBalances.isEmpty())
         }
         assertEquals(Celebration.entries.toSet(), HistoryStore(file).loadSnapshot().pokemons)
+    }
+
+    @Test fun consecutivePracticesCollectEverySceneBeforeAllowingRepeats() {
+        val model = model()
+        repeat(Celebration.entries.size) { index ->
+            start(model)
+            repeat(15) { answer(model) }
+            val presented = requireNotNull(model.celebration)
+            assertFalse(presented in model.pokemons)
+            model.collectPresentedCelebration(presented)
+            assertEquals(index + 1, model.pokemons.size)
+            model.done()
+        }
+        assertEquals(Celebration.entries.toSet(), model.pokemons)
+        start(model)
+        repeat(15) { answer(model) }
+        val repeated = requireNotNull(model.celebration)
+        assertTrue(repeated in model.pokemons)
+        model.collectPresentedCelebration(repeated)
+        assertEquals(Celebration.entries.toSet(), model.pokemons)
+    }
+
+    @Test fun exhaustedShortPracticesShowResultsUntilTheFullCollectionIsComplete() {
+        val model = model()
+        repeat(5) {
+            start(model, count = 1)
+            answer(model)
+            val presented = requireNotNull(model.celebration)
+            assertEquals(CelebrationCategory.OTHER, presented.category)
+            assertFalse(presented in model.pokemons)
+            model.collectPresentedCelebration(presented)
+            model.done()
+        }
+        listOf(1, 14).forEach { count ->
+            start(model, count)
+            repeat(count) { answer(model) }
+            assertNull(model.celebration)
+            assertNull(model.earlyFinishMessage)
+            assertEquals(Screen.RESULTS, model.screen)
+            assertEquals(count, model.lastResult!!.attempts.size)
+            assertEquals(5, model.pokemons.size)
+            model.done()
+        }
+        start(model)
+        repeat(15) { answer(model) }
+        assertEquals(CelebrationCategory.POKEMONS, model.celebration!!.category)
+    }
+
+    @Test fun restoredCollectionStillPreventsRepeatsAfterHistoryIsCleared() {
+        val collected = Celebration.entries.toSet() - Celebration.MEW
+        HistoryStore(file).collectPokemons(collected)
+        val model = model()
+        start(model, count = 1)
+        answer(model)
+        assertNull(model.celebration)
+        model.done()
+        model.clearHistory()
+        val restored = model()
+        assertTrue(restored.history.isEmpty())
+        assertEquals(collected, restored.pokemons)
+        start(restored, count = 25)
+        repeat(25) { answer(restored) }
+        assertEquals(Celebration.MEW, restored.celebration)
+        restored.collectPresentedCelebration(Celebration.MEW)
+        restored.dismissCelebration()
+        assertTrue(restored.rewardDialogVisible)
+        restored.claimReward()
+        assertEquals(1, restored.rewardBalances.values.sumOf { it.totalFragments })
+        assertEquals(Celebration.entries.toSet(), model().pokemons)
+    }
+
+    @Test fun selectionWaitsForThePersistedCollectionToLoad() {
+        val collected = Celebration.entries.toSet() - Celebration.MEW
+        HistoryStore(file).collectPokemons(collected)
+        val dispatcher = QueuedDispatcher()
+        val model = model(dispatcher = dispatcher)
+        start(model, count = 1)
+        answer(model)
+        assertTrue(model.selectingCelebration)
+        assertNull(model.celebration)
+        dispatcher.drain()
+        assertFalse(model.selectingCelebration)
+        assertNull(model.celebration)
+        assertEquals(collected, model.pokemons)
+        assertEquals(Screen.RESULTS, model.screen)
+        assertEquals(1, model.history.size)
+    }
+
+    @Test fun pendingCollectionIsSavedBeforeTheNextCelebrationIsSelected() {
+        val collected = Celebration.entries.toSet() - setOf(Celebration.PARTY, Celebration.MEW)
+        HistoryStore(file).collectPokemons(collected)
+        val dispatcher = QueuedDispatcher()
+        val model = model(dispatcher = dispatcher)
+        dispatcher.drain()
+        start(model, count = 1)
+        answer(model)
+        assertEquals(Celebration.PARTY, model.celebration)
+        model.collectPresentedCelebration(Celebration.PARTY)
+        model.done()
+        start(model, count = 25)
+        repeat(25) { answer(model) }
+        assertTrue(model.selectingCelebration)
+        assertNull(model.celebration)
+        assertFalse(model.rewardDialogVisible)
+        dispatcher.drain()
+        assertFalse(model.selectingCelebration)
+        assertEquals(Celebration.MEW, model.celebration)
+        assertFalse(model.rewardDialogVisible)
+        model.dismissCelebration()
+        assertTrue(model.rewardDialogVisible)
+    }
+
+    @Test fun leavingResultsBeforeCollectionLoadsDoesNotShowALateCelebration() {
+        val dispatcher = QueuedDispatcher()
+        val model = model(dispatcher = dispatcher)
+        start(model)
+        repeat(15) { answer(model) }
+        assertTrue(model.selectingCelebration)
+        model.done()
+        dispatcher.drain()
+        assertFalse(model.selectingCelebration)
+        assertNull(model.celebration)
+        assertEquals(Screen.SETUP, model.screen)
+        assertEquals(1, model.history.size)
+    }
+
+    @Test fun dismissingBeforeSelectionFinishesStillAllowsThePrizeWithoutALateAnimation() {
+        val dispatcher = QueuedDispatcher()
+        val model = model(dispatcher = dispatcher)
+        start(model, count = 25)
+        repeat(25) { answer(model) }
+        assertTrue(model.selectingCelebration)
+        assertFalse(model.rewardDialogVisible)
+        model.dismissCelebration()
+        assertFalse(model.selectingCelebration)
+        assertTrue(model.rewardDialogVisible)
+        model.claimReward()
+        dispatcher.drain()
+        assertNull(model.celebration)
+        assertTrue(model.pokemons.isEmpty())
+        assertEquals(1, model.rewardBalances.values.sumOf { it.totalFragments })
+    }
+
+    @Test fun unreadableCollectionDoesNotAllowPotentialDuplicates() {
+        file.writeText("{")
+        val model = model()
+        start(model)
+        repeat(15) { answer(model) }
+        assertFalse(model.selectingCelebration)
+        assertNull(model.celebration)
+        assertNotNull(model.message)
+        assertEquals(Screen.RESULTS, model.screen)
+        assertEquals("{", file.readText())
     }
 
     @Test fun hiddenOrMismatchedCelebrationsAndEarlyFinishesDoNotCollect() {

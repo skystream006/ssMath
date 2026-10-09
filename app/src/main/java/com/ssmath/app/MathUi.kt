@@ -173,7 +173,8 @@ private fun MainContent(model: MathViewModel) {
         Screen.RESULTS -> model.lastResult?.let { result ->
             ResultsContent(result, title = "Results", showCorrectAnswers = model.showCorrectAnswers) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (result.prizeType != null && result.prize == null && model.celebration == null) {
+                    if (result.prizeType != null && result.prize == null && model.celebration == null &&
+                        !model.selectingCelebration) {
                         Button(onClick = { model.showRewardForResult(result) }) { Text("Open gift box") }
                     }
                     Button(onClick = model::done, modifier = Modifier.widthIn(min = 160.dp).testTag("done-button")) { Text("Done") }

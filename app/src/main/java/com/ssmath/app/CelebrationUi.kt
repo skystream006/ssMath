@@ -234,8 +234,17 @@ enum class Celebration(
     companion object {
         val pokemons: List<Celebration> = entries.filter { it.category == CelebrationCategory.POKEMONS }
 
-        fun select(questionCount: Int, random: Random = Random.Default): Celebration =
-            entries.filter { questionCount >= 15 || it.category != CelebrationCategory.POKEMONS }.random(random)
+        fun select(
+            questionCount: Int,
+            random: Random = Random.Default,
+            collected: Set<Celebration> = emptySet()
+        ): Celebration? {
+            val collectionComplete = collected.containsAll(entries)
+            return entries.filter {
+                (questionCount >= 15 || it.category != CelebrationCategory.POKEMONS) &&
+                    (collectionComplete || it !in collected)
+            }.randomOrNull(random)
+        }
     }
 }
 
