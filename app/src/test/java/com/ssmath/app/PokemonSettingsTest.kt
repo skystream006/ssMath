@@ -213,7 +213,7 @@ class PokemonSettingsTest {
         }
     }
 
-    @Test fun sevenDescriptionTapsUnlockAllAnimationsWithoutEnablingLoggingOrDuplicatingEntries() {
+    @Test fun sevenDescriptionTapsOpenAdminAndOnlyTheButtonAddsAnimations() {
         val store = HistoryStore(file)
         store.collectPokemon(Celebration.SQUIRTLE)
         val before = store.loadSnapshot()
@@ -226,12 +226,25 @@ class PokemonSettingsTest {
         repeat(6) { description.performClick() }
         assertEquals(before.pokemons, model.pokemons)
         assertEquals(before, store.loadSnapshot())
+        compose.onNodeWithText("Admin").assertDoesNotExist()
         description.performClick()
+        compose.onNodeWithText("Admin").assertIsDisplayed()
+        compose.onNodeWithText("Add all animations").assertIsDisplayed()
+        assertEquals(before, store.loadSnapshot())
+        compose.onNodeWithText("Close").performClick()
+        assertEquals(before.pokemons, model.pokemons)
+        repeat(7) { description.performClick() }
+        compose.onNodeWithText("Add all animations").performClick()
         val expected = before.copy(pokemons = Celebration.entries.toSet())
         assertEquals(expected.pokemons, model.pokemons)
         assertEquals(expected, store.loadSnapshot())
+        compose.onNodeWithText("Add all animations").assertIsNotEnabled()
+        compose.onNodeWithText("162/162 animations collected").assertIsDisplayed()
+        compose.onNodeWithText("Close").performClick()
         repeat(7) { description.performClick() }
+        compose.onNodeWithText("Add all animations").assertIsNotEnabled()
         assertEquals(expected, store.loadSnapshot())
+        compose.onNodeWithText("Close").performClick()
         assertFalse(DebugLog.enabled.value)
         compose.onNodeWithContentDescription("Debug logging").performScrollTo().assertIsOff()
         compose.onNodeWithTag("my-pokemons").performScrollTo().performClick()
