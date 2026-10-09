@@ -22,7 +22,7 @@ internal fun DrawScope.drawKantoCelebration(celebration: Celebration, progress: 
         Offset(pose.x - 43f, 201f), Size(86f, 8f))
     if (profile.motion == KantoMotion.HANG) {
         drawLine(Color(0xFFFFF6DC), Offset(160f, 48f),
-            pose.project(Offset(0f, -58f)), 2f)
+            pose.project(kantoSuspensionAnchor(ndex, pose.articulation)), 2f)
     }
     clipRect(0f, 0f, 320f, if (profile.motion == KantoMotion.DIG) 202f else 220f) {
         withTransform({

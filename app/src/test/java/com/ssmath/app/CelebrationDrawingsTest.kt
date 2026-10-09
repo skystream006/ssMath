@@ -171,6 +171,17 @@ class CelebrationDrawingsTest {
         }
     }
 
+    @Test fun hangingCreaturesAttachAtTheirCocoonTipsOrArticulatedHook() {
+        assertEquals(setOf(11, 14, 70),
+            kantoSceneProfiles.filterValues { it.motion == KantoMotion.HANG }.keys)
+        assertEquals(Offset(-13f, -62f), kantoSuspensionAnchor(11, 0f))
+        assertEquals(Offset(0f, -62f), kantoSuspensionAnchor(14, 0f))
+        listOf(-1f, 0f, 1f).forEach { articulation ->
+            assertEquals(Offset(36f, -45f + articulation * 3f),
+                kantoSuspensionAnchor(70, articulation))
+        }
+    }
+
     @Test fun everyAddedPokemonMovesItsBodyAndRendersOpaqueUnclippedFrames() {
         val ink = Color(KANTO_INK).toArgb()
         Celebration.pokemons.drop(13).forEach { pokemon ->

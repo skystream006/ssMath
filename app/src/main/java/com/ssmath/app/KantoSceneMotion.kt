@@ -31,6 +31,13 @@ internal fun KantoScenePose.project(point: Offset): Offset {
 
 internal data class KantoWaterJet(val origin: Offset, val reach: Offset)
 
+internal fun kantoSuspensionAnchor(ndex: Int, articulation: Float): Offset = when (ndex) {
+    11 -> Offset(-13f, -62f)
+    14 -> Offset(0f, -62f)
+    70 -> Offset(36f, -45f + articulation * 3f)
+    else -> error("No suspension anchor for Ndex $ndex")
+}
+
 internal fun kantoWaterJets(ndex: Int, articulation: Float): List<KantoWaterJet> = when (ndex) {
     9 -> listOf(
         KantoWaterJet(Offset(-39f, -57.5f), Offset(-15f, -47f)),
