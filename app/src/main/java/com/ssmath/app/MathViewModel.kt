@@ -363,7 +363,7 @@ class MathViewModel(
     fun openRewards() {
         dismissOverlayReward()
         rewardUseError = null
-        collectionReturnOverlay = overlay
+        if (overlay != Overlay.REWARDS && overlay != Overlay.POKEMONS) collectionReturnOverlay = overlay
         overlay = Overlay.REWARDS
         updateTimer()
         viewModelScope.launch { reloadHistory() }
@@ -371,7 +371,7 @@ class MathViewModel(
 
     fun openPokemons() {
         dismissOverlayReward()
-        collectionReturnOverlay = overlay
+        if (overlay != Overlay.REWARDS && overlay != Overlay.POKEMONS) collectionReturnOverlay = overlay
         overlay = Overlay.POKEMONS
         updateTimer()
         viewModelScope.launch { reloadHistory() }

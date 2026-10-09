@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -211,21 +212,22 @@ private fun DialogCard(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 private fun HomeScreen(model: MathViewModel) {
     Column(Modifier.fillMaxSize().testTag("home-screen"), horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(Modifier.widthIn(max = 440.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        FlowRow(Modifier.widthIn(max = 440.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 2) {
             Button(onClick = model::openRewards,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("home-rewards"),
                 contentPadding = PaddingValues(8.dp)) {
-                Text("Rewards", textAlign = TextAlign.Center)
+                Text("Rewards", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             }
             Button(onClick = model::openPokemons,
                 modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("home-pokemons"),
                 contentPadding = PaddingValues(8.dp)) {
-                Text("Pokémon", textAlign = TextAlign.Center)
+                Text("Pokémon", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             }
         }
         SetupForm(model, Modifier.weight(1f).widthIn(max = 440.dp).fillMaxWidth()
-            .verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 72.dp))
+            .padding(bottom = 64.dp).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp))
     }
 }
 

@@ -78,6 +78,9 @@ class MathAppTest {
             repeat(2) { returnMethod ->
                 compose.onNodeWithTag(homeTag).assertIsEnabled().performClick()
                 assertEquals(overlay, model.overlay)
+                compose.runOnIdle {
+                    if (overlay == Overlay.REWARDS) model.openRewards() else model.openPokemons()
+                }
                 compose.onNodeWithTag("home-screen").assertDoesNotExist()
                 if (returnMethod == 0) compose.onNodeWithContentDescription("Back").performClick()
                 else compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
@@ -88,6 +91,9 @@ class MathAppTest {
                 compose.onNodeWithContentDescription("Settings").performClick()
                 compose.onNodeWithTag(settingsTag).performClick()
                 assertEquals(overlay, model.overlay)
+                compose.runOnIdle {
+                    if (overlay == Overlay.REWARDS) model.openRewards() else model.openPokemons()
+                }
                 if (returnMethod == 0) compose.onNodeWithContentDescription("Back").performClick()
                 else compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
                 assertEquals(Overlay.SETTINGS, model.overlay)
