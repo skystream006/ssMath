@@ -324,8 +324,8 @@ class MathViewModel(
                         snapshot.history.find { it.id == pending.result.id }?.let { collected ->
                             val previous = pending.result
                             pending.result = collected
-                            if (lastResult === previous) lastResult = collected
-                            if (rewardResult === previous) rewardResult = collected
+                            if (lastResult == previous) lastResult = collected
+                            if (rewardResult == previous) rewardResult = collected
                             if (historyDetail?.id == collected.id) historyDetail = collected
                         }
                     }
