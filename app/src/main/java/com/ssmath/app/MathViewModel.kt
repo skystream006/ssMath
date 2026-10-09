@@ -244,7 +244,7 @@ class MathViewModel(
         pendingResult = pending
         lastResult = result
         val answeredAllQuestions = !expired && state.attempts.size == state.questionCount
-        celebration = if (answeredAllQuestions) Celebration.select(state.questionCount, celebrationRandom) else null
+        celebration = if (answeredAllQuestions) Celebration.select(state.questionCount, celebrationRandom, pokemons) else null
         earlyFinishMessage = if (expired) "Time's up! You got ${state.correct} right out of ${state.questionCount}"
             else if (answeredAllQuestions) null
             else "Nice try! You got ${state.correct} right out of ${state.questionCount}"

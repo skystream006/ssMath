@@ -45,7 +45,11 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    The 157 Pokémon scenes belong to the
    **Pokémons** category and can only appear after completing **15 or more questions**.
    The remaining five scenes belong to **Other** and can appear at any practice length;
-   below 15 questions, only **Other** scenes appear. Each scene says **Hurray!!**. These animations
+   below 15 questions, only **Other** scenes appear. Only scenes not yet in **My Pokémons**
+   are selected until all 162 animations have been collected; after that, repeats are allowed.
+   If all five **Other** scenes are collected but the full collection is incomplete,
+   practices below 15 questions go straight to results without an animation.
+   Each scene says **Hurray!!**. These animations
    are drawn in the app and work offline. Press **View results** to
    skip the animation, or wait for it to finish.
    The wrong-answer limit is 5 for up to 50 questions; above 50 it is 10% of the
