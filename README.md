@@ -80,12 +80,15 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   Other celebrations keep their names without numbers. Each section heading shows its own collected/total
   fraction (out of 157 Pokémon or 5 Other), including zero when none are collected.
   Tap an image to replay its animation; close it or wait for it to finish to return to your collection.
-  The collection is saved on this device and is not removed when history is deleted.
+  The collection is saved on this device. Each presented celebration is also recorded
+  with its practice result, including repeat celebrations; replaying an image does not award it again.
 - **Practice History** – review any previously saved result, delete one, or clear all.
   Deleting results also removes their claimed reward fragments from the available
   balance, breaking whole prizes back into fragments when necessary. Clearing history
   does this for every deleted result. Balances never go below zero if rewards were
-  already used, and My Pokémons is unchanged.
+  already used. The result's My Pokémons reward is also removed unless another saved
+  result earned the same celebration. Older collection entries without a linked result
+  are kept, as are unrelated celebrations added through Admin.
 - **Rewards system** – on by default. Earn
   prizes for completing **25 or more questions** with **more than 90% correct**.
   After the celebration, tap the hopping gift box to open it and release confetti.

@@ -303,17 +303,32 @@ class MathViewModel(
     }
 
     fun collectPresentedCelebration(presented: Celebration) {
-        if (celebration != presented || overlay != null || presented in pokemons) return
-        collectCelebrations(listOf(presented))
+        val pending = pendingResult ?: return
+        if (celebration != presented || overlay != null || pending.result.pokemonReward != null) return
+        collectCelebrations(listOf(presented), pending)
     }
 
     fun collectAllCelebrations() { collectCelebrations(Celebration.entries) }
 
-    private fun collectCelebrations(celebrations: Collection<Celebration>) {
+    private fun collectCelebrations(celebrations: Collection<Celebration>, pending: PendingResult? = null) {
         viewModelScope.launch {
             try {
                 storeLock.withLock {
-                    applySnapshot(withContext(ioDispatcher) { store.collectPokemons(celebrations) })
+                    if (pending != null && !pending.saved) persistResult(pending)
+                    val snapshot = withContext(ioDispatcher) {
+                        if (pending == null) store.collectPokemons(celebrations)
+                        else store.collectPokemon(pending.result.id, celebrations.single())
+                    }
+                    applySnapshot(snapshot)
+                    if (pending != null) {
+                        snapshot.history.find { it.id == pending.result.id }?.let { collected ->
+                            val previous = pending.result
+                            pending.result = collected
+                            if (lastResult === previous) lastResult = collected
+                            if (rewardResult === previous) rewardResult = collected
+                            if (historyDetail?.id == collected.id) historyDetail = collected
+                        }
+                    }
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -552,9 +567,12 @@ class MathViewModel(
     }
 
     private fun removeDeletedResultReward(id: Long) {
-        if (lastResult?.id == id) lastResult = lastResult?.copy(prizeType = null, prize = null)
+        if (lastResult?.id == id) {
+            lastResult = lastResult?.copy(prizeType = null, prize = null, pokemonReward = null)
+            dismissCelebration()
+        }
         pendingResult?.takeIf { it.saved && it.result.id == id }?.let {
-            it.result = it.result.copy(prizeType = null, prize = null)
+            it.result = it.result.copy(prizeType = null, prize = null, pokemonReward = null)
         }
         if (rewardResult?.id == id) dismissReward()
     }

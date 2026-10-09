@@ -131,14 +131,21 @@ class PokemonSettingsTest {
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("celebration-${celebration.name}").assertIsDisplayed()
         assertEquals(setOf(celebration), model.pokemons)
+        assertEquals(celebration, model.lastResult!!.pokemonReward)
         compose.onNodeWithTag("view-results").performClick()
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("celebration-${celebration.name}").assertDoesNotExist()
         assertNull(model.celebration)
         assertEquals(Screen.RESULTS, model.screen)
+        compose.onNodeWithText("My Pokémons: ${celebration.collectionLabel}").assertIsDisplayed()
         compose.mainClock.autoAdvance = true
         compose.runOnIdle {
             model.done()
+            model.openHistory()
+        }
+        compose.onNodeWithText("My Pokémons: ${celebration.collectionLabel}").assertIsDisplayed().performClick()
+        compose.onNodeWithText("My Pokémons: ${celebration.collectionLabel}").assertIsDisplayed()
+        compose.runOnIdle {
             model.openSettings()
         }
         compose.onNodeWithTag("my-pokemons").performClick()
@@ -149,6 +156,38 @@ class PokemonSettingsTest {
         compose.onNodeWithText(celebration.category.label).assertIsDisplayed()
         compose.onNodeWithTag("pokemon-${celebration.name}").assert(hasText(celebration.collectionLabel)).assertIsDisplayed()
         assertEquals(setOf(celebration), HistoryStore(file).loadSnapshot().pokemons)
+    }
+
+    @Test fun historyDeletionAndClearRemovePokemonAndOtherRewardsFromTheCollection() {
+        val store = HistoryStore(file)
+        listOf(Celebration.PIKACHU, Celebration.PARTY).forEachIndexed { index, celebration ->
+            val id = index + 1L
+            store.add(PracticeResult(id, id, Operation.ADDITION, 10, 1000,
+                List(15) { Attempt(Problem(1, 1, Operation.ADDITION), 2) }))
+            store.collectPokemon(id, celebration)
+        }
+        val model = model()
+        model.openHistory()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithText("My Pokémons: #0025 Pikachu").performClick()
+        compose.onNodeWithText("My Pokémons: #0025 Pikachu").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Delete result").performClick()
+        compose.onNodeWithText("My Pokémons reward unless another saved result", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Delete").performClick()
+        compose.runOnIdle { assertEquals(setOf(Celebration.PARTY), model.pokemons) }
+        compose.onNodeWithText("My Pokémons: #0025 Pikachu").assertDoesNotExist()
+        compose.onNodeWithText("My Pokémons: ${Celebration.PARTY.collectionLabel}").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Clear history").performClick()
+        compose.onNodeWithText("My Pokémons rewards", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Clear").performClick()
+        compose.runOnIdle {
+            assertTrue(model.history.isEmpty())
+            assertTrue(model.pokemons.isEmpty())
+            model.openPokemons()
+        }
+        assertSectionCount(CelebrationCategory.POKEMONS, "0/157")
+        assertSectionCount(CelebrationCategory.OTHER, "0/5")
+        assertTrue(HistoryStore(file).loadSnapshot().pokemons.isEmpty())
     }
 
     @Test fun otherCelebrationsHaveTheirOwnCategoryAndCanReplayWithoutChangingInventory() {

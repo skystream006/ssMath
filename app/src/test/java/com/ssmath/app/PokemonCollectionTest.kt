@@ -182,8 +182,12 @@ class PokemonCollectionTest {
             repeat(15) { answer(model, correct = it != 0) }
             val pokemon = requireNotNull(model.celebration)
             assertFalse(pokemon in model.pokemons)
+            assertNull(model.lastResult!!.pokemonReward)
             repeat(3) { model.collectPresentedCelebration(pokemon) }
             assertEquals(index + 1, model.pokemons.size)
+            assertEquals(pokemon, model.lastResult!!.pokemonReward)
+            assertEquals(pokemon, model.history.first().pokemonReward)
+            assertEquals(model.history, HistoryStore(file).load())
             model.dismissCelebration()
             model.done()
             assertEquals(model.pokemons, model().pokemons)
@@ -210,6 +214,8 @@ class PokemonCollectionTest {
         assertTrue(repeated in model.pokemons)
         model.collectPresentedCelebration(repeated)
         assertEquals(Celebration.entries.toSet(), model.pokemons)
+        assertEquals(repeated, model.lastResult!!.pokemonReward)
+        assertEquals(repeated, HistoryStore(file).load().first().pokemonReward)
     }
 
     @Test fun exhaustedShortPracticesShowResultsUntilTheFullCollectionIsComplete() {
@@ -331,6 +337,7 @@ class PokemonCollectionTest {
         assertNull(model.celebration)
         assertTrue(model.pokemons.isEmpty())
         assertEquals(1, model.rewardBalances.values.sumOf { it.totalFragments })
+        assertNull(model.lastResult!!.pokemonReward)
     }
 
     @Test fun unreadableCollectionDoesNotAllowPotentialDuplicates() {
@@ -400,9 +407,10 @@ class PokemonCollectionTest {
         model.clearHistory()
         dispatcher.drain()
         assertNull(model.celebration)
-        assertEquals(setOf(Celebration.PIKACHU), model.pokemons)
+        assertTrue(model.pokemons.isEmpty())
         assertEquals(0, model.rewardBalances.values.sumOf { it.totalFragments })
         assertTrue(model.history.isEmpty())
+        assertNull(model.lastResult!!.pokemonReward)
         val restored = model()
         assertEquals(model.pokemons, restored.pokemons)
         assertEquals(model.rewardBalances, restored.rewardBalances)
@@ -416,11 +424,14 @@ class PokemonCollectionTest {
         assertTrue(blockedWrite.mkdir())
         model.collectPresentedCelebration(Celebration.PIKACHU)
         assertTrue(model.pokemons.isEmpty())
+        assertNull(model.lastResult!!.pokemonReward)
         assertNotNull(model.message)
         assertEquals(before, file.readText())
         assertTrue(blockedWrite.delete())
         model.collectPresentedCelebration(Celebration.PIKACHU)
         assertEquals(setOf(Celebration.PIKACHU), model().pokemons)
+        assertEquals(Celebration.PIKACHU, model.lastResult!!.pokemonReward)
+        assertEquals(model.lastResult, HistoryStore(file).load().single())
     }
 
     @Test fun bulkCollectionSerializesWithPendingResultsClaimsAndHistoryClear() {
@@ -435,10 +446,56 @@ class PokemonCollectionTest {
         repeat(2) { model.collectAllCelebrations() }
         model.clearHistory()
         dispatcher.drain()
-        assertEquals(Celebration.entries.toSet(), model.pokemons)
+        assertEquals(Celebration.entries.toSet() - Celebration.PIKACHU, model.pokemons)
         assertEquals(0, model.rewardBalances.values.sumOf { it.totalFragments })
         assertTrue(model.history.isEmpty())
         assertEquals(model.pokemons, model().pokemons)
+    }
+
+    @Test fun deletingOrClearingTheLiveResultRemovesItsPokemonAndPreventsRecollection() {
+        listOf(false, true).forEach { clear ->
+            val model = model()
+            model.chooseRewardsEnabled(false)
+            start(model)
+            repeat(15) { answer(model) }
+            val presented = requireNotNull(model.celebration)
+            model.collectPresentedCelebration(presented)
+            assertEquals(presented, model.lastResult!!.pokemonReward)
+            if (clear) model.clearHistory() else model.deleteResult(model.lastResult!!.id)
+            assertTrue(model.history.isEmpty())
+            assertTrue(model.pokemons.isEmpty())
+            assertNull(model.lastResult!!.pokemonReward)
+            assertNull(model.celebration)
+            model.collectPresentedCelebration(presented)
+            assertTrue(HistoryStore(file).loadSnapshot().pokemons.isEmpty())
+            model.done()
+        }
+    }
+
+    @Test fun queuedCollectionUpdatesItsOwnHistoryDetailWithoutChangingTheNextPractice() {
+        val dispatcher = QueuedDispatcher()
+        val model = model(dispatcher = dispatcher)
+        dispatcher.drain()
+        start(model)
+        repeat(15) { answer(model) }
+        val presented = requireNotNull(model.celebration)
+        model.collectPresentedCelebration(presented)
+        model.done()
+        dispatcher.drain()
+        val previous = model.history.single()
+        assertEquals(presented, previous.pokemonReward)
+        assertNull(model.lastResult)
+        start(model)
+        repeat(15) { answer(model) }
+        val next = requireNotNull(model.celebration)
+        model.collectPresentedCelebration(next)
+        model.dismissCelebration()
+        model.openHistory()
+        model.showHistoryDetail(model.lastResult)
+        dispatcher.drain()
+        assertEquals(next, model.historyDetail!!.pokemonReward)
+        assertEquals(next, model.lastResult!!.pokemonReward)
+        assertEquals(presented, model.history.last().pokemonReward)
     }
 
     @Test fun failedBulkCollectionPreservesExistingEntriesAndCanBeRetried() {
