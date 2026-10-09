@@ -323,9 +323,10 @@ private fun DrawScope.drawRestaurant(progress: Float) {
     drawCircle(Color(0xFFFFDF8C), 3f, Offset(150f, 149f))
     repeat(8) { index ->
         val left = 28f + index * 18f
+        val top = 32f + index * 17f
         val bottom = 81f + wave * 2f
         val stripe = Path().apply {
-            moveTo(left + 4f, 59f); lineTo(left + 14f, 59f)
+            moveTo(top, 59f); lineTo(top + 17f, 59f)
             lineTo(left + 18f, bottom)
             quadraticTo(left + 9f, bottom + 10f, left, bottom)
             close()

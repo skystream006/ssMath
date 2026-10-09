@@ -22,12 +22,14 @@ class RewardsTest {
         assertEquals("50 or more questions", RewardTier.TIER_2.questionCountLabel)
     }
 
-    @Test fun rewardTypesBelongToTheirOriginalQuestionCountCategory() {
+    @Test fun rewardTypesBelongToTheirAssignedTier() {
         assertEquals(
-            setOf(RewardType.LOLLIPOP, RewardType.ICE_CREAM, RewardType.GUMMI_BEAR, RewardType.RAMEN),
+            setOf(RewardType.LOLLIPOP, RewardType.ICE_CREAM, RewardType.GUMMI_BEAR, RewardType.RAMEN,
+                RewardType.BED_TIME),
             RewardType.entries.filter { it.tier == RewardTier.TIER_1 }.toSet()
         )
-        assertEquals(listOf(RewardType.VIDEO_GAME), RewardType.entries.filter { it.tier == RewardTier.TIER_2 })
+        assertEquals(setOf(RewardType.VIDEO_GAME, RewardType.RESTAURANT),
+            RewardType.entries.filter { it.tier == RewardTier.TIER_2 }.toSet())
     }
 
     @Test fun tierMetadataDoesNotChangeStoredRewardNames() {
@@ -42,12 +44,13 @@ class RewardsTest {
         listOf(1, 24).forEach { assertNull(prize(it)) }
         listOf(25, 26, 49).forEach { count ->
             val selected = (1..100).map { prize(count, seed = it) }.toSet()
-            assertEquals(RewardType.entries.filter { it != RewardType.VIDEO_GAME }.toSet(), selected)
+            assertEquals(RewardType.entries.filter { it.tier == RewardTier.TIER_1 }.toSet(), selected)
             assertTrue(selected.all { it?.tier == RewardTier.TIER_1 })
         }
-        listOf(50, 51, 100, 1000).forEach {
-            assertEquals(RewardType.VIDEO_GAME, prize(it))
-            assertEquals(RewardTier.TIER_2, prize(it)?.tier)
+        listOf(50, 51, 100, 1000).forEach { count ->
+            val selected = (1..100).map { prize(count, seed = it) }.toSet()
+            assertEquals(RewardType.entries.filter { it.tier == RewardTier.TIER_2 }.toSet(), selected)
+            assertTrue(selected.all { it?.tier == RewardTier.TIER_2 })
         }
     }
 
@@ -106,6 +109,8 @@ class RewardsTest {
         assertEquals("Ice Cream Cone", RewardType.ICE_CREAM.label)
         assertEquals("Ice Cream Cones", RewardType.ICE_CREAM.pluralLabel)
         assertEquals("Ice Cream Cone Fragment", RewardType.ICE_CREAM.fragmentLabel)
+        assertEquals("Bed Time", RewardType.BED_TIME.label)
+        assertEquals("Restaurant", RewardType.RESTAURANT.label)
         RewardType.entries.forEach {
             assertTrue(it.label.isNotBlank())
             assertTrue(it.pluralLabel.isNotBlank())
