@@ -167,13 +167,15 @@ class RewardsSettingsTest {
         compose.mainClock.advanceTimeBy(64)
         compose.onNodeWithTag("gift-box").performClick()
         compose.mainClock.advanceTimeBy(2_000)
+        val type = model.history.single().prizeType!!
         compose.runOnIdle {
-            assertEquals(RewardBalance(fragments = 1), model.rewardBalances[RewardType.VIDEO_GAME])
+            assertEquals(RewardTier.TIER_2, type.tier)
+            assertEquals(RewardBalance(fragments = 1), model.rewardBalances[type])
             assertNotNull(model.history.single().prize)
             model.dismissReward()
         }
         compose.mainClock.advanceTimeBy(64)
-        compose.onNodeWithText("Prize: Video Game Fragment").assertIsDisplayed()
+        compose.onNodeWithText("Prize: ${type.fragmentLabel}").assertIsDisplayed()
         compose.onNodeWithText("Total collected: 1 fragments").assertIsDisplayed()
         compose.onNodeWithText("Open gift box").assertDoesNotExist()
     }

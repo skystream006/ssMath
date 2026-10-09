@@ -83,8 +83,11 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   prizes for completing **25 or more questions** with **more than 90% correct**.
   After the celebration, tap the hopping gift box to open it and release confetti.
   **Tier 1** rewards are for sessions of **25–49 questions**: a random Lollipop,
-  Ice Cream Cone, Gummi Bear, or Ramen Fragment. **Tier 2** rewards are for sessions
-  of **50 or more questions**: a Video Game Fragment.
+  Ice Cream Cone, Gummi Bear, Ramen, or Bed Time Fragment. **Tier 2** rewards are for sessions
+  of **50 or more questions**: a random Video Game or Restaurant Fragment.
+  Bed Time features a sleeping child, floating Zs, and twinkling stars; Restaurant
+  features a swaying striped awning and a steaming meal. Their artwork animates
+  when revealed and in My Rewards and Use rewards.
   Fewer than 25 questions and exactly 90% correct do not qualify.
   Every 3 fragments of the same type automatically become 1 whole prize, with the
   fragment counter returning to 0. Prizes and their cumulative totals are saved

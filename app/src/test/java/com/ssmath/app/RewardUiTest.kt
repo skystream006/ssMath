@@ -1,6 +1,9 @@
 package com.ssmath.app
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,7 +42,7 @@ class RewardUiTest {
         compose.mainClock.autoAdvance = false
     }
 
-    @Test fun allTenIllustrationsExposeAccurateImageDescriptions() {
+    @Test fun allRewardIllustrationsExposeAccurateImageDescriptions() {
         compose.setContent {
             MathTheme {
                 Column {
@@ -62,6 +65,8 @@ class RewardUiTest {
         compose.onNodeWithContentDescription("Ice Cream Cone").assertExists()
         compose.onNodeWithContentDescription("One third of an ice cream cone").assertExists()
         compose.onNodeWithContentDescription("One third of a video game controller").assertExists()
+        compose.onNodeWithContentDescription("One third of a bedtime scene").assertExists()
+        compose.onNodeWithContentDescription("One third of a restaurant").assertExists()
         compose.onAllNodesWithText("1/3").assertCountEquals(RewardType.entries.size)
     }
 
@@ -132,6 +137,72 @@ class RewardUiTest {
             assertEquals(1, opens)
             assertTrue(dismissed)
         }
+    }
+
+    @Test fun bedTimeAndRestaurantGiftsRevealTheirAnimatedFragmentsAfterSaving() {
+        var saved by mutableStateOf(result())
+        var opens = 0
+        compose.setContent {
+            MathTheme { RewardGiftDialog(saved, false, null, { opens++ }, {}) }
+        }
+        listOf(RewardType.BED_TIME to 25, RewardType.RESTAURANT to 50).forEachIndexed { index, (type, count) ->
+            compose.runOnIdle {
+                saved = result().copy(id = index.toLong(), prizeType = type, questionCount = count,
+                    attempts = List(count) { Attempt(Problem(1, 1, Operation.ADDITION), 2) })
+            }
+            compose.mainClock.advanceTimeBy(64)
+            compose.onNodeWithTag("gift-box").performClick()
+            compose.onNodeWithTag("awarded-fragment").assertDoesNotExist()
+            compose.runOnIdle { saved = saved.copy(prize = PrizeAward(type, RewardBalance(0, 1))) }
+            compose.mainClock.advanceTimeBy(REWARD_OPEN_DURATION_MS.toLong() + 64)
+            compose.onNodeWithTag("awarded-fragment").assertIsDisplayed()
+                .assertContentDescriptionEquals(rewardImageDescription(type, true))
+            compose.onNodeWithText(type.fragmentLabel).assertIsDisplayed()
+            compose.onNodeWithTag("awarded-balance").assertTextEquals("Whole: 0 · Fragments: 1/3")
+            compose.mainClock.advanceTimeBy(8_000)
+            compose.onNodeWithTag("awarded-fragment").assertIsDisplayed()
+            compose.runOnIdle { assertEquals(index + 1, opens) }
+        }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun newRewardImagesAnimateOnlyWhileResumed() {
+        compose.setContent {
+            MathTheme {
+                Column {
+                    listOf(RewardType.BED_TIME, RewardType.RESTAURANT).forEach { type ->
+                        Row {
+                            RewardImage(type, false)
+                            RewardImage(type, true)
+                        }
+                    }
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(64)
+        fun pixels(): IntArray = compose.runOnIdle {
+            val view = compose.activity.findViewById<View>(android.R.id.content)
+            val image = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            view.draw(Canvas(image))
+            IntArray(image.width * image.height).also {
+                image.getPixels(it, 0, image.width, 0, 0, image.width, image.height)
+                image.recycle()
+            }
+        }
+        val first = pixels()
+        compose.mainClock.advanceTimeBy(800)
+        assertFalse("Artwork animates on the Compose clock", first.contentEquals(pixels()))
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.mainClock.advanceTimeBy(64)
+        val paused = pixels()
+        compose.mainClock.advanceTimeBy(800)
+        assertArrayEquals("Artwork is static in the background", paused, pixels())
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.mainClock.advanceTimeBy(64)
+        val resumed = pixels()
+        compose.mainClock.advanceTimeBy(800)
+        assertFalse("Artwork animates again after resuming", resumed.contentEquals(pixels()))
     }
 
     @Test fun aPersistenceErrorOffersOneRetryAndCanStillBeDismissed() {

@@ -176,7 +176,7 @@ class HistoryStoreTest {
 
     private fun eligible(id: Long, type: RewardType = RewardType.LOLLIPOP) = PracticeResult(
         id, id, Operation.ADDITION, 10, 1_000,
-        List(if (type == RewardType.VIDEO_GAME) 50 else 26) { Attempt(Problem(1, 1, Operation.ADDITION), 2) },
+        List(if (type.tier == RewardTier.TIER_2) 50 else 26) { Attempt(Problem(1, 1, Operation.ADDITION), 2) },
         prizeType = type
     )
 

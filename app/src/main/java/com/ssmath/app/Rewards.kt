@@ -20,7 +20,9 @@ enum class RewardType(val label: String, val pluralLabel: String, val fragmentLa
     ICE_CREAM("Ice Cream Cone", "Ice Cream Cones", "Ice Cream Cone Fragment", RewardTier.TIER_1),
     GUMMI_BEAR("Gummi Bear", "Gummi Bears", "Gummi Bear Fragment", RewardTier.TIER_1),
     RAMEN("Ramen", "Ramen", "Ramen Fragment", RewardTier.TIER_1),
-    VIDEO_GAME("Video Game", "Video Games", "Video Game Fragment", RewardTier.TIER_2)
+    VIDEO_GAME("Video Game", "Video Games", "Video Game Fragment", RewardTier.TIER_2),
+    BED_TIME("Bed Time", "Bed Time", "Bed Time Fragment", RewardTier.TIER_1),
+    RESTAURANT("Restaurant", "Restaurants", "Restaurant Fragment", RewardTier.TIER_2)
 }
 
 @Serializable

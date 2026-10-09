@@ -22,7 +22,7 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], application = Application::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class RewardDrawingsTest {
-    @Test fun allTenOriginalIllustrationsRenderDistinctWholeAndPartialArtwork() {
+    @Test fun allRewardsRenderDistinctWholeAndPartialArtwork() {
         val signatures = mutableSetOf<Int>()
         RewardType.entries.forEach { type ->
             val whole = artwork(type, false)
@@ -42,7 +42,38 @@ class RewardDrawingsTest {
             signatures += whole.contentHashCode()
             signatures += fragment.contentHashCode()
         }
-        assertEquals(10, signatures.size)
+        assertEquals(RewardType.entries.size * 2, signatures.size)
+    }
+
+    @Test fun newRewardAnimationsMoveWholeAndFragmentDetailsAndLoopSmoothly() {
+        listOf(RewardType.BED_TIME, RewardType.RESTAURANT).forEach { type ->
+            listOf(false, true).forEach { fragment ->
+                fun frame(progress: Float) = render(200, 200) { drawRewardArtwork(type, fragment, progress) }
+                val first = frame(0f)
+                listOf(0.25f, 0.5f, 0.75f).forEach { progress ->
+                    val animated = frame(progress)
+                    assertTrue("$type fragment=$fragment moves at $progress",
+                        first.indices.count { first[it] != animated[it] } > 50)
+                    assertTrue(animated.take(16 * 200).all { it ushr 24 == 0 })
+                    assertTrue(animated.takeLast(16 * 200).all { it ushr 24 == 0 })
+                }
+                val last = frame(1f)
+                assertTrue("$type fragment=$fragment returns to its initial pose",
+                    first.indices.count { first[it] != last[it] } < 10)
+                assertArrayEquals(first, frame(-1f))
+                assertArrayEquals(last, frame(2f))
+            }
+        }
+    }
+
+    @Test fun existingRewardArtworkDoesNotChangeWithAnimationProgress() {
+        listOf(RewardType.LOLLIPOP, RewardType.ICE_CREAM, RewardType.GUMMI_BEAR,
+            RewardType.RAMEN, RewardType.VIDEO_GAME).forEach { type ->
+            listOf(false, true).forEach { fragment ->
+                assertArrayEquals(artwork(type, fragment),
+                    render(200, 200) { drawRewardArtwork(type, fragment, 0.5f) })
+            }
+        }
     }
 
     @Test fun ramenFragmentKeepsFullHeightAndHasARealJaggedMissingEdge() {

@@ -45,9 +45,12 @@ class RewardsModelTest {
         file.delete()
     }
 
-    private fun model(dispatcher: CoroutineDispatcher = Dispatchers.Unconfined): MathViewModel {
+    private fun model(
+        dispatcher: CoroutineDispatcher = Dispatchers.Unconfined,
+        rewardRandom: Random = Random(3)
+    ): MathViewModel {
         val model = MathViewModel(application, ProblemGenerator(Random(7)), clock = { now },
-            wallClock = { wallTime }, ioDispatcher = dispatcher, rewardRandom = Random(3))
+            wallClock = { wallTime }, ioDispatcher = dispatcher, rewardRandom = rewardRandom)
         models += ViewModelStore().apply { put("model", model) }
         shadowOf(Looper.getMainLooper()).idle()
         return model
@@ -172,14 +175,30 @@ class RewardsModelTest {
             assertEquals(eligible, model.lastResult!!.prizeType != null)
             if (eligible) {
                 val type = model.lastResult!!.prizeType!!
-                if (count >= 50) assertEquals(RewardType.VIDEO_GAME, type)
-                else assertNotEquals(RewardType.VIDEO_GAME, type)
+                assertEquals(if (count >= 50) RewardTier.TIER_2 else RewardTier.TIER_1, type.tier)
                 model.dismissCelebration()
                 model.claimReward()
                 assertEquals(type, model.lastResult!!.prize!!.type)
                 assertEquals(model.lastResult, HistoryStore(file).load().first())
                 assertEquals(model.rewardBalances, HistoryStore(file).loadSnapshot().rewards)
             }
+            model.done()
+        }
+    }
+
+    @Test fun bedTimeAndRestaurantCanBeEarnedClaimedAndReloaded() {
+        listOf(RewardType.BED_TIME to 25, RewardType.RESTAURANT to 50).forEach { (type, count) ->
+            val seed = (0..100).first {
+                selectPrize(count, count, count, true, true, random = Random(it)) == type
+            }
+            val model = model(rewardRandom = Random(seed))
+            start(model, count)
+            finish(model, count)
+            assertEquals(type, model.lastResult!!.prizeType)
+            model.dismissCelebration()
+            model.claimReward()
+            assertEquals(PrizeAward(type, RewardBalance(0, 1)), model.lastResult!!.prize)
+            assertEquals(RewardBalance(0, 1), model().rewardBalances[type])
             model.done()
         }
     }
@@ -392,7 +411,8 @@ class RewardsModelTest {
         assertEquals(3, restored.history.map { it.id }.toSet().size)
         assertTrue(restored.history.filter { it.id != firstId }.all { it.id > firstId })
         assertEquals(50, restored.lastResult!!.questionCount)
-        assertEquals(RewardType.VIDEO_GAME, restored.rewardResult!!.prize!!.type)
+        assertEquals(RewardTier.TIER_2, restored.rewardResult!!.prize!!.type.tier)
+        assertEquals(restored.lastResult!!.prizeType, restored.rewardResult!!.prize!!.type)
         assertEquals(1, restored.rewardBalances.values.sumOf { it.totalFragments })
     }
 
