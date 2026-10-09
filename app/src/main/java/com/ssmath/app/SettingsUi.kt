@@ -180,7 +180,7 @@ fun SettingsScreen(model: MathViewModel) {
 private fun AdminDialog(model: MathViewModel, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Admin") },
+        title = { Text("Admin", Modifier.fillMaxWidth()) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -188,9 +188,25 @@ private fun AdminDialog(model: MathViewModel, onDismiss: () -> Unit) {
                 Text("Add every celebration to your collection without changing practice history or rewards.")
                 Button(onClick = model::collectAllCelebrations,
                     enabled = model.pokemons.size < Celebration.entries.size) {
-                    Text("Add all animations")
+                    Text("Add all animations", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
                 Text("${model.pokemons.size}/${Celebration.entries.size} animations collected")
+                HorizontalDivider()
+                Text("Available rewards", style = MaterialTheme.typography.titleMedium)
+                Text("Choose which rewards can be awarded when a practice finishes. Existing prizes and fragments stay available.")
+                RewardTier.entries.forEach { tier ->
+                    Text("${tier.label} · ${tier.questionCountLabel}", Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.titleSmall)
+                    RewardType.entries.filter { it.tier == tier }.forEach { type ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(type.label, Modifier.weight(1f))
+                            Switch(type !in model.disabledRewards,
+                                onCheckedChange = { model.chooseRewardEnabled(type, it) },
+                                modifier = Modifier.semantics { contentDescription = "${type.label} reward" })
+                        }
+                    }
+                }
+                Text("If all rewards in a tier are disabled, practices in that tier give no prize.")
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }

@@ -255,6 +255,35 @@ class PokemonSettingsTest {
     @Test
     @Config(qualifiers = "w320dp-h800dp")
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun adminActionsAndEveryRewardAreReadableAndScrollableWithLargeText() {
+        val model = model()
+        model.chooseTextSize(200)
+        model.openSettings()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithText("Debug logging").performScrollTo().performClick()
+        val description = compose.onNodeWithTag("debug-logging-description").performScrollTo()
+        repeat(7) { description.performClick() }
+        assertTextFits("Admin")
+        compose.onNodeWithText("Add all animations").performScrollTo()
+        assertTextFits("Add all animations")
+        RewardTier.entries.forEach { tier ->
+            val heading = "${tier.label} · ${tier.questionCountLabel}"
+            compose.onNodeWithText(heading).performScrollTo()
+            assertTextFits(heading)
+            RewardType.entries.filter { it.tier == tier }.forEach { type ->
+                compose.onNodeWithText(type.label).performScrollTo()
+                assertTextFits(type.label)
+                compose.onNodeWithContentDescription("${type.label} reward").assertIsDisplayed().assertIsOn()
+            }
+        }
+        compose.onNodeWithText("Close").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Admin").assertDoesNotExist()
+        assertTrue(model.pokemons.isEmpty())
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h800dp")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun allCollectedNamesAreReadableAndScrollableWithLargeText() {
         Celebration.entries.forEach { HistoryStore(file).collectPokemon(it) }
         val model = model()

@@ -118,6 +118,91 @@ class RewardsModelTest {
         assertEquals(1, model.history.size)
     }
 
+    @Test fun individualRewardsDefaultOnAndDisablingAndReenablingPersist() {
+        val first = model()
+        assertTrue(first.disabledRewards.isEmpty())
+        RewardType.entries.forEach { first.chooseRewardEnabled(it, false) }
+        val restored = model()
+        assertEquals(RewardType.entries.toSet(), restored.disabledRewards)
+        assertTrue(restored.rewardsEnabled)
+        RewardType.entries.forEach { type ->
+            restored.chooseRewardEnabled(type, true)
+            assertFalse(type in restored.disabledRewards)
+            assertEquals(restored.disabledRewards, model().disabledRewards)
+        }
+        assertTrue(model().disabledRewards.isEmpty())
+    }
+
+    @Test fun unknownDisabledRewardNamesAreIgnoredWithoutLosingKnownPreferences() {
+        application.getSharedPreferences("settings", 0).edit()
+            .putStringSet("disabled_rewards", setOf("LOLLIPOP", "UNKNOWN_REWARD")).commit()
+        assertEquals(setOf(RewardType.LOLLIPOP), model().disabledRewards)
+    }
+
+    @Test fun practicesUsePersistedRewardChoicesAndStillCelebrateWithAnEmptyTier() {
+        val first = model()
+        RewardType.entries.forEach { first.chooseRewardEnabled(it, false) }
+        val restored = model()
+        RewardType.entries.forEach { type ->
+            val count = if (type.tier == RewardTier.TIER_1) 25 else 50
+            start(restored, count)
+            finish(restored, count)
+            assertNull(restored.lastResult!!.prizeType)
+            assertNull(restored.rewardResult)
+            assertNotNull(restored.celebration)
+            restored.done()
+
+            restored.chooseRewardEnabled(type, true)
+            start(restored, count)
+            finish(restored, count)
+            assertEquals(type, restored.lastResult!!.prizeType)
+            restored.done()
+            restored.chooseRewardEnabled(type, false)
+        }
+    }
+
+    @Test fun rewardChoicesAtFinishApplyToAnAlreadyRunningPractice() {
+        val model = model()
+        start(model, 50)
+        model.openSettings()
+        RewardType.entries.forEach { model.chooseRewardEnabled(it, false) }
+        model.chooseRewardEnabled(RewardType.RESTAURANT, true)
+        model.closeOverlay()
+        finish(model, 50)
+        assertEquals(RewardType.RESTAURANT, model.lastResult!!.prizeType)
+    }
+
+    @Test fun disablingRewardsDoesNotRemoveInventoryOrPreventClaimingAndUsingExistingPrizes() {
+        val model = model()
+        RewardType.entries.forEach { model.chooseRewardEnabled(it, it == RewardType.BED_TIME) }
+        repeat(3) {
+            start(model)
+            finish(model)
+            model.dismissCelebration()
+            model.claimReward()
+            model.done()
+        }
+        start(model)
+        finish(model)
+        val pending = model.lastResult!!
+        model.done()
+        val before = HistoryStore(file).loadSnapshot()
+        model.chooseRewardEnabled(RewardType.BED_TIME, false)
+        assertEquals(before, HistoryStore(file).loadSnapshot())
+
+        val restored = model()
+        assertEquals(RewardType.entries.toSet(), restored.disabledRewards)
+        restored.openHistory()
+        restored.showRewardForResult(pending)
+        restored.claimReward()
+        assertEquals(RewardBalance(1, 1), restored.rewardBalances[RewardType.BED_TIME])
+        restored.openRewards()
+        restored.useReward(RewardType.BED_TIME)
+        assertEquals(RewardBalance(0, 1), restored.rewardBalances[RewardType.BED_TIME])
+        assertEquals(restored.rewardBalances, HistoryStore(file).loadSnapshot().rewards)
+        assertEquals(before.pokemons, restored.pokemons)
+    }
+
     @Test fun pendingHistoryPrizeCanBeClaimedAfterReloadWithoutChangingUnrelatedLastResult() {
         val first = model()
         start(first)

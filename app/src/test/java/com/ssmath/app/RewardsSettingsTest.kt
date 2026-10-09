@@ -120,6 +120,38 @@ class RewardsSettingsTest {
         assertEquals(0, model.timeLimitMinutes)
     }
 
+    @Test fun adminOffersPersistentRewardSwitchesForEveryTierEvenWithRewardsOff() {
+        val model = MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate)
+        model.chooseRewardsEnabled(false)
+        model.openSettings()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithText("Debug logging").performScrollTo().performClick()
+        val description = compose.onNodeWithTag("debug-logging-description").performScrollTo()
+        repeat(7) { description.performClick() }
+        compose.onNodeWithText("Admin").assertIsDisplayed()
+        RewardTier.entries.forEach { tier ->
+            compose.onNodeWithText("${tier.label} · ${tier.questionCountLabel}").performScrollTo().assertIsDisplayed()
+            RewardType.entries.filter { it.tier == tier }.forEach { type ->
+                compose.onNodeWithContentDescription("${type.label} reward")
+                    .performScrollTo().assertIsOn().performClick().assertIsOff()
+            }
+        }
+        assertEquals(RewardType.entries.toSet(), model.disabledRewards)
+        assertEquals(model.disabledRewards, MathViewModel(application).disabledRewards)
+        compose.onNodeWithText("Close").performClick()
+        repeat(7) { description.performClick() }
+        RewardType.entries.forEach { type ->
+            compose.onNodeWithContentDescription("${type.label} reward")
+                .performScrollTo().assertIsOff().performClick().assertIsOn()
+        }
+        assertTrue(MathViewModel(application).disabledRewards.isEmpty())
+        compose.onNodeWithText("Close").performClick()
+        assertFalse(model.rewardsEnabled)
+        assertFalse(DebugLog.enabled.value)
+        assertTrue(model.pokemons.isEmpty())
+        assertEquals(Overlay.SETTINGS, model.overlay)
+    }
+
     @Test fun resultShowsAwardAndItsHistoricalBalance() {
         val result = PracticeResult(1, 1, Operation.ADDITION, 10, 1_000,
             List(50) { Attempt(Problem(1, 1, Operation.ADDITION), 2) },
