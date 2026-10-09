@@ -1,6 +1,7 @@
 package com.ssmath.app
 
 import android.app.Application
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
@@ -71,6 +72,116 @@ class CelebrationDrawingsTest {
         }
     }
 
+    @Test fun requestedPokemonHaveCompleteHabitatProfilesAndAccessibleActions() {
+        val requested = (1..151).toSet() - setOf(1, 4, 7, 25, 39, 74, 75)
+        assertEquals(144, requested.size)
+        assertEquals(requested, kantoSceneProfiles.keys)
+        assertEquals(requested, Celebration.pokemons.drop(13).map { it.ndex }.toSet())
+        val descriptions = mutableSetOf<String>()
+        Celebration.pokemons.drop(13).forEach { pokemon ->
+            val profile = kantoSceneProfile(pokemon.ndex!!)
+            assertTrue("${pokemon.label} must describe its scene", profile.action.isNotBlank())
+            assertEquals("${pokemon.label} ${profile.action}", pokemon.description)
+            assertFalse(pokemon.description.contains("confetti"))
+            assertTrue("${pokemon.label} needs its own action description", descriptions.add(profile.action))
+        }
+        listOf(1, 4, 7, 25, 39, 74, 75, 964).forEach { ndex ->
+            assertThrows(IllegalArgumentException::class.java) { kantoSceneProfile(ndex) }
+        }
+    }
+
+    @Test fun everyRequestedPokemonHasADistinctBackgroundWithoutItsBodyOrEffects() {
+        val backgrounds = mutableSetOf<Int>()
+        kantoSceneProfiles.forEach { (ndex, profile) ->
+            val draw: DrawScope.(Float) -> Unit = { drawKantoHabitat(ndex, profile.habitat, it) }
+            val first = render(draw, 0.6f)
+            assertTrue("#$ndex needs an opaque habitat", first.all { (it ushr 24) == 255 })
+            assertTrue("#$ndex must not reuse another background", backgrounds.add(first.contentHashCode()))
+            assertArrayEquals("#$ndex must replay deterministically", first, render(draw, 0.6f))
+        }
+    }
+
+    @Test fun creatureBehaviorsAreNotTheSameDanceWithDifferentParticles() {
+        val trajectories = mutableSetOf<List<KantoScenePose>>()
+        kantoSceneProfiles.forEach { (ndex, profile) ->
+            val poses = (0..20).map { kantoScenePose(ndex, profile.motion, it / 20f) }
+            assertTrue("#$ndex needs a distinct movement path", trajectories.add(poses))
+            assertTrue("#$ndex must move its body", poses.map {
+                listOf(it.x, it.y, it.rotation, it.scaleX, it.scaleY)
+            }.distinct().size > 10)
+        }
+        assertEquals(KantoMotion.CRAWL, kantoSceneProfile(10).motion)
+        assertEquals(KantoMotion.HANG, kantoSceneProfile(11).motion)
+        assertEquals(KantoMotion.HANG, kantoSceneProfile(14).motion)
+        assertEquals(KantoMotion.DIG, kantoSceneProfile(50).motion)
+        assertEquals(KantoMotion.DIG, kantoSceneProfile(51).motion)
+        assertEquals(KantoMotion.BREATHE, kantoSceneProfile(143).motion)
+        assertEquals(KantoHabitat.DIGITAL, kantoSceneProfile(137).habitat)
+        assertEquals(KantoEffect.WATER_JET, kantoSceneProfile(9).effect)
+    }
+
+    @Test fun requestedScenesRemainVisibleAtPlaybackBoundariesAndInWideLayouts() {
+        Celebration.pokemons.drop(13).forEach { pokemon ->
+            listOf(Size(96f, 66f), Size(480f, 220f)).forEach { size ->
+                listOf(0f, 0.5f, 1f).forEach { progress ->
+                    val image = ImageBitmap(size.width.toInt(), size.height.toInt())
+                    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(image), size) {
+                        drawCelebrationArtwork(pokemon, progress)
+                    }
+                    val pixels = IntArray(image.width * image.height).also { image.readPixels(it) }
+                    assertTrue("${pokemon.label} at $progress in $size", pixels.all { (it ushr 24) == 255 })
+                }
+            }
+        }
+    }
+
+    @Test fun localBubbleSporeAndMistEffectsStayAroundThePokemon() {
+        val white = Color.White.toArgb()
+        listOf(KantoEffect.BUBBLES, KantoEffect.POLLEN, KantoEffect.SPORES, KantoEffect.MIST).forEach { effect ->
+            val frame = render({
+                drawRect(Color.White)
+                drawKantoEffect(8, effect, KantoScenePose(), it)
+            }, 0.4f)
+            assertTrue("$effect should surround the body, not the canvas center after translation",
+                frame.indices.count { it / 320 in 50..185 && frame[it] != white } > 100)
+        }
+    }
+
+    @Test fun waterJetsFollowTheirCannonsMouthsOrFistsDuringBodyTransforms() {
+        assertEquals(listOf(Offset(-39f, -57.5f), Offset(39f, -57.5f)),
+            kantoWaterJets(9, 0f).map { it.origin })
+        assertEquals(Offset(56f, -25.5f), kantoWaterJets(117, 0f).single().origin)
+        val white = Color.White.toArgb()
+        kantoSceneProfiles.filterValues { it.effect == KantoEffect.WATER_JET }.forEach { (ndex, profile) ->
+            listOf(0f, 0.4f, 0.8f).forEach { progress ->
+                val pose = kantoScenePose(ndex, profile.motion, progress)
+                val frame = render({
+                    drawRect(Color.White)
+                    drawKantoEffect(ndex, profile.effect, pose, it)
+                }, progress)
+                kantoWaterJets(ndex, pose.articulation).forEach { jet ->
+                    val origin = pose.project(jet.origin)
+                    val nearby = (-2..2).flatMap { dy -> (-2..2).map { dx ->
+                        (origin.y.toInt() + dy) * 320 + origin.x.toInt() + dx
+                    } }
+                    assertTrue("#$ndex jet must remain attached at $progress",
+                        nearby.count { it in frame.indices && frame[it] != white } > 3)
+                }
+            }
+        }
+    }
+
+    @Test fun hangingCreaturesAttachAtTheirCocoonTipsOrArticulatedHook() {
+        assertEquals(setOf(11, 14, 70),
+            kantoSceneProfiles.filterValues { it.motion == KantoMotion.HANG }.keys)
+        assertEquals(Offset(-13f, -62f), kantoSuspensionAnchor(11, 0f))
+        assertEquals(Offset(0f, -62f), kantoSuspensionAnchor(14, 0f))
+        listOf(-1f, 0f, 1f).forEach { articulation ->
+            assertEquals(Offset(36f, -45f + articulation * 3f),
+                kantoSuspensionAnchor(70, articulation))
+        }
+    }
+
     @Test fun everyAddedPokemonMovesItsBodyAndRendersOpaqueUnclippedFrames() {
         val ink = Color(KANTO_INK).toArgb()
         Celebration.pokemons.drop(13).forEach { pokemon ->
@@ -81,7 +192,7 @@ class CelebrationDrawingsTest {
                 assertTrue("${pokemon.label} must fill the scene", frame.all { (it ushr 24) == 255 })
                 assertTrue("${pokemon.label} must animate at $progress",
                     frame.indices.count { frame[it] != previous[it] } > 300)
-                assertTrue("${pokemon.label}'s body must move, not just the confetti",
+                assertTrue("${pokemon.label}'s body must move, not just the effects",
                     frame.indices.count { (frame[it] == ink) != (previous[it] == ink) } > 80)
                 assertFalse("${pokemon.label} clips at $progress", frame.indices.any {
                     (it % 320 == 0 || it % 320 == 319 || it / 320 == 0 || it / 320 == 219) && frame[it] == ink
