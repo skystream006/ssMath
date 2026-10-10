@@ -105,7 +105,7 @@ class HistoryStoreTest {
         assertEquals(bytes, file.readText())
     }
 
-    @Test fun clearingOrDeletingHistoryNeverRemovesCollectedCelebrations() {
+    @Test fun clearingOrDeletingHistoryKeepsCelebrationsWithoutLinkedResults() {
         store.collectPokemon(Celebration.PIKACHU)
         store.collectPokemon(Celebration.PARTY)
         val expected = setOf(Celebration.PIKACHU, Celebration.PARTY)
@@ -121,6 +121,73 @@ class HistoryStoreTest {
         assertTrue(restored.history.isEmpty())
     }
 
+    @Test fun presentedCelebrationAndResultAreSavedTogetherWithoutChangingFragmentClaims() {
+        val pending = eligible(1)
+        store.add(pending)
+        val collected = store.collectPokemon(1, Celebration.PIKACHU)
+        assertEquals(pending.copy(pokemonReward = Celebration.PIKACHU), collected.history.single())
+        assertEquals(setOf(Celebration.PIKACHU), collected.pokemons)
+        assertEquals(collected, HistoryStore(file).loadSnapshot())
+        val bytes = file.readText()
+        assertEquals(collected, store.collectPokemon(1, Celebration.PIKACHU))
+        assertEquals(collected, store.collectPokemon(1, Celebration.PARTY))
+        assertEquals(bytes, file.readText())
+        store.add(pending)
+        assertEquals(collected, store.loadSnapshot())
+        val claimed = store.claimReward(1)
+        assertEquals(Celebration.PIKACHU, claimed.history.single().pokemonReward)
+        assertEquals(RewardBalance(0, 1), claimed.rewards[RewardType.LOLLIPOP])
+        assertEquals(claimed, store.collectPokemon(1, Celebration.PIKACHU))
+    }
+
+    @Test fun deletingAndClearingRemoveLinkedCelebrationsButKeepOtherResultsAndUnlinkedEntries() {
+        store.collectPokemon(Celebration.SQUIRTLE)
+        (1L..3L).forEach { store.add(eligible(it)) }
+        store.collectPokemon(1, Celebration.PIKACHU)
+        store.collectPokemon(2, Celebration.PIKACHU)
+        store.claimReward(3)
+        store.collectPokemon(3, Celebration.PARTY)
+        assertNotNull(store.load().first().prize)
+        store.delete(1)
+        assertEquals(setOf(Celebration.SQUIRTLE, Celebration.PIKACHU, Celebration.PARTY),
+            HistoryStore(file).loadSnapshot().pokemons)
+        store.delete(2)
+        assertEquals(setOf(Celebration.SQUIRTLE, Celebration.PARTY),
+            HistoryStore(file).loadSnapshot().pokemons)
+        val afterDelete = store.loadSnapshot()
+        assertEquals(afterDelete, store.collectPokemon(2, Celebration.PIKACHU))
+        assertEquals(afterDelete, store.collectPokemon(999, Celebration.MEW))
+        store.clear()
+        val cleared = HistoryStore(file).loadSnapshot()
+        assertTrue(cleared.history.isEmpty())
+        assertEquals(setOf(Celebration.SQUIRTLE), cleared.pokemons)
+        assertEquals(RewardBalance(), cleared.rewards[RewardType.LOLLIPOP])
+        assertEquals(cleared, store.collectPokemon(3, Celebration.PARTY))
+    }
+
+    @Test fun failedResultCollectionLeavesBothHistoryAndCollectionUntouchedAndCanBeRetried() {
+        store.add(eligible(1))
+        val before = file.readText()
+        val blocked = File(directory, "${file.name}.tmp").apply { mkdir() }
+        assertThrows(IOException::class.java) { store.collectPokemon(1, Celebration.PIKACHU) }
+        assertEquals(before, file.readText())
+        assertNull(store.load().single().pokemonReward)
+        assertTrue(store.loadSnapshot().pokemons.isEmpty())
+        assertTrue(blocked.delete())
+        val collected = store.collectPokemon(1, Celebration.PIKACHU)
+        assertEquals(Celebration.PIKACHU, collected.history.single().pokemonReward)
+        assertEquals(setOf(Celebration.PIKACHU), collected.pokemons)
+    }
+
+    @Test fun automaticHistoryTrimmingDoesNotRemoveCollectedRewards() {
+        store.add(eligible(1))
+        store.collectPokemon(1, Celebration.PIKACHU)
+        repeat(MAX_HISTORY_RESULTS) { store.add(result(it + 2L)) }
+        assertFalse(store.load().any { it.id == 1L })
+        store.clear()
+        assertEquals(setOf(Celebration.PIKACHU), HistoryStore(file).loadSnapshot().pokemons)
+    }
+
     @Test fun collectionMigratesBothLegacyHistoryFormats() {
         listOf(
             """[{"id":1,"finishedAt":1,"operation":"ADDITION","maximum":10,"durationMs":1000,"attempts":[]}]""",
@@ -130,6 +197,7 @@ class HistoryStoreTest {
             file.writeText(legacy)
             val before = store.loadSnapshot()
             assertTrue(before.pokemons.isEmpty())
+            assertNull(before.history.single().pokemonReward)
             val collected = store.collectPokemon(Celebration.FINIZEN)
             assertEquals(before.copy(pokemons = setOf(Celebration.FINIZEN)), collected)
             assertEquals(collected, HistoryStore(file).loadSnapshot())
@@ -344,6 +412,7 @@ class HistoryStoreTest {
     @Test fun failedDeletionAndClearKeepHistoryAndRewardsTogetherAndAllowRetry() {
         store.add(eligible(1))
         store.claimReward(1)
+        store.collectPokemon(1, Celebration.PIKACHU)
         val before = file.readText()
         val blocked = File(directory, "${file.name}.tmp").apply { mkdir() }
         assertThrows(IOException::class.java) { store.delete(1) }
@@ -354,6 +423,7 @@ class HistoryStoreTest {
         store.clear()
         assertTrue(store.load().isEmpty())
         assertEquals(RewardBalance(), HistoryStore(file).loadSnapshot().rewards[RewardType.LOLLIPOP])
+        assertTrue(HistoryStore(file).loadSnapshot().pokemons.isEmpty())
     }
 
     @Test fun staleResultSaveCannotOverwriteAnAlreadyClaimedPrize() {

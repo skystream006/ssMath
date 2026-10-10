@@ -365,6 +365,7 @@ fun HistoryScreen(model: MathViewModel) {
                                 Column {
                                     Text("${formatFinishedAt(result.finishedAt)}\n${result.correct} right · ${result.wrong} wrong · ${formatDuration(result.durationMs)}")
                                     result.prize?.let { Text("Prize: ${it.type.fragmentLabel}") }
+                                    result.pokemonReward?.let { Text("My Pokémons: ${it.collectionLabel}") }
                                     if (result.prizeType != null && result.prize == null) Text("Prize waiting — open this result to claim")
                                 }
                             },
@@ -386,14 +387,14 @@ fun HistoryScreen(model: MathViewModel) {
     if (confirmClear) {
         AlertDialog(onDismissRequest = { confirmClear = false },
             title = { Text("Clear practice history?") },
-            text = { Text("All saved results and their earned reward fragments will be permanently removed. Used rewards cannot be recovered.") },
+            text = { Text("All saved results and their earned reward fragments and My Pokémons rewards will be permanently removed. Used rewards cannot be recovered.") },
             confirmButton = { TextButton(onClick = { confirmClear = false; model.clearHistory() }) { Text("Clear") } },
             dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } })
     }
     if (confirmDelete && detail != null) {
         AlertDialog(onDismissRequest = { confirmDelete = false },
             title = { Text("Delete this result?") },
-            text = { Text("This result and its earned reward fragment will be permanently removed. Used rewards cannot be recovered.") },
+            text = { Text("This result and its earned reward fragment will be permanently removed, along with its My Pokémons reward unless another saved result also earned it. Used rewards cannot be recovered.") },
             confirmButton = { TextButton(onClick = { confirmDelete = false; model.deleteResult(detail.id) }) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } })
     }

@@ -429,6 +429,9 @@ internal fun ResultsContent(result: PracticeResult, title: String?, showCorrectA
                     Text("Wrong: ${result.wrong} · Time: ${formatDuration(result.durationMs)}",
                         style = MaterialTheme.typography.bodyMedium)
                     if (result.timedOut) Text("Time's up!", color = WrongRed)
+                    result.pokemonReward?.let {
+                        Text("My Pokémons: ${it.collectionLabel}", style = MaterialTheme.typography.titleMedium)
+                    }
                     result.prize?.let { prize ->
                         RewardImage(prize.type, fragment = true, modifier = Modifier.size(88.dp))
                         Text("Prize: ${prize.type.fragmentLabel}", style = MaterialTheme.typography.titleMedium)

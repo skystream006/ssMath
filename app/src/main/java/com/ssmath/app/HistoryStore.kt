@@ -31,7 +31,8 @@ data class PracticeResult(
     val timedOut: Boolean = false,
     val prizeType: RewardType? = null,
     val prize: PrizeAward? = null,
-    val maximumSecond: Int? = null
+    val maximumSecond: Int? = null,
+    val pokemonReward: Celebration? = null
 ) {
     val numberDescription: String get() =
         if (operation == Operation.DIVISION && maximumSecond != null) "first up to $maximum · second up to $maximumSecond"
@@ -93,7 +94,7 @@ class HistoryStore(private val file: File) {
         val snapshot = loadSnapshot()
         val existing = snapshot.history.find { it.id == result.id }
         if (existing == null && result.id in snapshot.claimedResultIds) return snapshot.history
-        return save(withResult(snapshot, existing?.takeIf { it.prize != null } ?: result)).history
+        return save(withResult(snapshot, existing?.takeIf { it.prize != null || it.pokemonReward != null } ?: result)).history
     }
 
     /** Allocate the ID and save in the same caller-held lock, including after a clock rollback. */
@@ -139,6 +140,16 @@ class HistoryStore(private val file: File) {
 
     fun collectPokemon(celebration: Celebration): PracticeSnapshot = collectPokemons(listOf(celebration))
 
+    fun collectPokemon(id: Long, celebration: Celebration): PracticeSnapshot {
+        val snapshot = loadSnapshot()
+        val result = snapshot.history.find { it.id == id } ?: return snapshot
+        if (result.pokemonReward != null) return snapshot
+        return save(snapshot.copy(
+            history = snapshot.history.map { if (it.id == id) it.copy(pokemonReward = celebration) else it },
+            pokemons = snapshot.pokemons + celebration
+        ))
+    }
+
     fun collectPokemons(celebrations: Collection<Celebration>): PracticeSnapshot {
         val snapshot = loadSnapshot()
         val collected = snapshot.pokemons + celebrations
@@ -164,10 +175,14 @@ class HistoryStore(private val file: File) {
     private fun withoutResults(snapshot: PracticeSnapshot, removed: List<PracticeResult>): PracticeSnapshot {
         val ids = removed.map { it.id }.toSet()
         val fragments = removed.mapNotNull { it.prize?.type }.groupingBy { it }.eachCount()
+        val remaining = snapshot.history.filterNot { it.id in ids }
+        val pokemonsToRemove = removed.mapNotNull { it.pokemonReward }.toSet() -
+            remaining.mapNotNull { it.pokemonReward }.toSet()
         // Keep claimed IDs to prevent a stale save from restoring a deleted prize.
         return snapshot.copy(
-            history = snapshot.history.filterNot { it.id in ids },
-            rewards = snapshot.rewards.mapValues { (type, balance) -> balance.removeFragments(fragments[type] ?: 0) }
+            history = remaining,
+            rewards = snapshot.rewards.mapValues { (type, balance) -> balance.removeFragments(fragments[type] ?: 0) },
+            pokemons = snapshot.pokemons - pokemonsToRemove
         )
     }
 
