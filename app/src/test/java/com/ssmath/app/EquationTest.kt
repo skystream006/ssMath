@@ -45,6 +45,18 @@ class EquationTest {
 
     private fun model() = MathViewModel(application, ProblemGenerator(Random(7)))
 
+    @Test fun verticalEquationsSettingAppearsBetweenShowCorrectAnswersAndAppearance() {
+        val model = model()
+        compose.setContent { MathTheme { SettingsScreen(model) } }
+        compose.onNodeWithText("Appearance").performScrollTo()
+
+        val answers = compose.onNodeWithText("Show correct answers").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val vertical = compose.onNodeWithText("Vertical equations").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val appearance = compose.onNodeWithText("Appearance").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertTrue("Vertical equations must follow Show correct answers", answers.bottom <= vertical.top)
+        assertTrue("Vertical equations must precede Appearance", vertical.bottom <= appearance.top)
+    }
+
     @Test fun settingDefaultsToHorizontalAndSwitchesLiveWithoutChangingPractice() {
         val model = model()
         assertFalse(model.verticalEquations)
