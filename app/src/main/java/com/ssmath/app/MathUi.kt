@@ -368,8 +368,15 @@ private fun PlayingScreen(model: MathViewModel) {
             Button(onClick = model::submitAnswer, enabled = parseAnswer(model.answerText) != null,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("submit-answer")) { Text("Submit") }
             model.feedback?.let {
-                Text(it.text, color = if (it.correct) CorrectGreen else WrongRed,
+                val correction = game.attempts.lastOrNull()?.takeIf {
+                    model.verticalEquations && model.showCorrectAnswers && !it.correct
+                }?.problem
+                Text(if (correction == null) it.text else "Not quite:",
+                    color = if (it.correct) CorrectGreen else WrongRed,
                     style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                if (correction != null) Equation(correction, correction.answer.toString(), vertical = true,
+                    style = MaterialTheme.typography.titleMedium.copy(color = WrongRed),
+                    modifier = Modifier.testTag("feedback-equation"))
             }
         }
         Text("Wrong: ${game.wrong}", style = MaterialTheme.typography.titleMedium, color = WrongRed,
