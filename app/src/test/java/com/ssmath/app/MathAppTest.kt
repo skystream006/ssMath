@@ -3,11 +3,14 @@ package com.ssmath.app
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -17,6 +20,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import java.io.File
 import kotlin.random.Random
@@ -547,6 +551,168 @@ class MathAppTest {
             up()
         }
         compose.runOnIdle { assertEquals(200, model.textSizePercent) }
+    }
+
+    @Test fun quitGameRequiresConfirmationAndDiscardsOnlyTheActiveGameInEitherMode() {
+        val model = model()
+        model.chooseShowTimer(true)
+        model.chooseTimeLimitMinutes(5)
+        compose.setContent { MathAppContent(model) }
+        GameMode.entries.forEach { mode ->
+            compose.onNodeWithTag("quit-game").assertDoesNotExist()
+            compose.runOnIdle {
+                if (mode == GameMode.PRACTICE) {
+                    model.selectOperation(Operation.ADDITION)
+                    model.submitSetup()
+                } else {
+                    model.openRewardsGame()
+                    model.selectRewardsGame(Operation.ADDITION)
+                }
+            }
+            compose.onNodeWithTag("quit-game").assertDoesNotExist()
+            compose.onNodeWithTag("start-button").performClick()
+            val quit = compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val points = compose.onNodeWithTag("points").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val timer = compose.onNodeWithTag("timer").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+            assertEquals(points.top, quit.top, 1f)
+            assertEquals(root.right - (points.left - root.left), quit.right, 1f)
+            assertTrue(points.right <= quit.left)
+            assertTrue(timer.right <= quit.left)
+            assertTrue(quit.bottom <= compose.onNodeWithTag("question-progress").fetchSemanticsNode().boundsInRoot.top)
+            answer(model.game!!.problem.answer)
+            compose.onNodeWithTag("answer-input").performTextReplacement("42")
+            val game = model.game
+
+            compose.onNodeWithTag("quit-game").assertIsDisplayed().assertIsEnabled().performClick()
+            compose.onNodeWithText("Quit this practice?").assertIsDisplayed()
+            compose.onNodeWithText("Keep practicing").performClick()
+            compose.onNode(isDialog()).assertDoesNotExist()
+            assertEquals(Screen.PLAYING, model.screen)
+            assertSame(game, model.game)
+            compose.onNodeWithTag("answer-input").assertTextContains("42")
+
+            compose.onNodeWithTag("quit-game").performClick()
+            compose.runOnIdle {
+                (ShadowDialog.getLatestDialog() as ComponentDialog).onBackPressedDispatcher.onBackPressed()
+            }
+            compose.onNode(isDialog()).assertDoesNotExist()
+            assertSame(game, model.game)
+            compose.onNodeWithTag("answer-input").assertTextContains("42")
+
+            compose.onNodeWithTag("quit-game").performClick()
+            compose.onNodeWithText("Quit", substring = false).performClick()
+            compose.onNodeWithTag("home-screen").assertIsDisplayed()
+            compose.onNodeWithTag("quit-game").assertDoesNotExist()
+            compose.onNode(isDialog()).assertDoesNotExist()
+            compose.runOnIdle {
+                assertEquals(Screen.SETUP, model.screen)
+                assertNull(model.game)
+                assertEquals("", model.answerText)
+                assertNull(model.activeTimeLimitMs)
+                assertNull(model.lastResult)
+                assertNull(model.rewardResult)
+                assertNull(model.celebration)
+                now += 300_000L
+                assertEquals(0L, model.elapsedMs())
+                assertFalse(model.checkTimeLimit())
+                assertTrue(model.history.isEmpty())
+                assertTrue(model.rewardBalances.isEmpty())
+                assertTrue(model.pokemons.isEmpty())
+            }
+            assertTrue(HistoryStore(File(application.filesDir, "practice_history.json")).load().isEmpty())
+        }
+    }
+
+    @Test fun timingOutWithQuitConfirmationOpenDoesNotReopenItInTheNextGame() {
+        val model = model()
+        model.chooseShowTimer(true)
+        model.chooseTimeLimitMinutes(5)
+        model.openRewardsGame()
+        model.selectRewardsGame(Operation.ADDITION)
+        model.start()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithTag("quit-game").performClick()
+        compose.onNodeWithText("Quit this practice?").assertIsDisplayed()
+        compose.runOnIdle {
+            now += 300_000L
+            model.checkTimeLimit()
+            assertEquals(Screen.RESULTS, model.screen)
+            assertTrue(model.lastResult!!.timedOut)
+        }
+        compose.onNodeWithText("Quit this practice?").assertDoesNotExist()
+        compose.onNodeWithTag("quit-game").assertDoesNotExist()
+        compose.onNodeWithTag("view-results").performClick()
+        compose.onNodeWithTag("done-button").performClick()
+        compose.onNodeWithTag("rewards-game").performClick()
+        compose.onNodeWithTag("rewards-operation-ADDITION").performClick()
+        compose.onNodeWithTag("start-button").performClick()
+        compose.onNode(isDialog()).assertDoesNotExist()
+        compose.onNodeWithTag("quit-game").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Quit this practice?").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h480dp")
+    fun quitGameStaysAtUpperRightWhenScrollingWithLargeTextOnSmallScreens() {
+        val model = model()
+        model.chooseTextSize(200)
+        model.selectOperation(Operation.ADDITION)
+        model.submitSetup()
+        model.start()
+        compose.setContent { MathAppContent(model) }
+        listOf(false, true).forEach { showTimer ->
+            compose.runOnIdle { model.chooseShowTimer(showTimer) }
+            val quit = compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val points = compose.onNodeWithTag("points").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+            assertEquals(points.top, quit.top, 1f)
+            assertEquals(root.right - (points.left - root.left), quit.right, 1f)
+            assertTrue(points.right <= quit.left)
+            if (showTimer) {
+                val timer = compose.onNodeWithTag("timer").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+                assertTrue(timer.right <= quit.left)
+            }
+            compose.onNodeWithTag("submit-answer").performScrollTo().assertIsDisplayed()
+            assertEquals(quit, compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+            compose.onNodeWithTag("question-progress").performScrollTo().assertIsDisplayed()
+            assertTrue(quit.bottom <= compose.onNodeWithTag("question-progress").fetchSemanticsNode().boundsInRoot.top)
+        }
+        compose.onNodeWithTag("quit-game").performClick()
+        compose.onNodeWithText("Quit", substring = false).performClick()
+        compose.onNodeWithTag("home-screen").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h480dp")
+    fun quitGameAndAnswerControlsRemainUsableWhenTheKeyboardReducesAvailableHeight() {
+        val model = model()
+        model.chooseTextSize(200)
+        model.chooseShowTimer(true)
+        model.selectOperation(Operation.ADDITION)
+        model.submitSetup()
+        model.start()
+        val availableHeight = mutableIntStateOf(480)
+        compose.setContent {
+            Box(Modifier.height(availableHeight.intValue.dp)) { MathAppContent(model) }
+        }
+        val quit = compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        compose.runOnIdle { availableHeight.intValue = 240 }
+        assertEquals(quit, compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithTag("problem").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("answer-input").performScrollTo().assertIsDisplayed()
+            .performTextReplacement(model.game!!.problem.answer.toString())
+        compose.onNodeWithTag("submit-answer").performScrollTo().assertIsDisplayed().performClick()
+        assertEquals(1, model.game!!.correct)
+        compose.onNodeWithTag("wrong-tally").performScrollTo().assertIsDisplayed()
+        assertEquals(quit, compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithTag("quit-game").performClick()
+        compose.onNodeWithText("Keep practicing").performClick()
+        assertEquals(Screen.PLAYING, model.screen)
+        compose.runOnIdle { availableHeight.intValue = 480 }
+        compose.onNodeWithTag("points").assertIsDisplayed().assertTextEquals("Points: 1")
+        compose.onNodeWithTag("timer").assertIsDisplayed()
+        compose.onNodeWithTag("quit-game").assertIsDisplayed()
     }
 
     @Test fun textSizeAppliesInsideConfirmationDialogs() {
