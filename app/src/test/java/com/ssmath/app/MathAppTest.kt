@@ -3,7 +3,9 @@ package com.ssmath.app
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -12,6 +14,9 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsActions
@@ -351,6 +356,64 @@ class MathAppTest {
         compose.onNodeWithTag("practice-history").performClick()
         compose.onNodeWithText("Multiplication · 4 to 6").performClick()
         compose.onNodeWithText("Multiplication · numbers 4 to 6").assertIsDisplayed()
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun rewardsHistoryHasTranslucentThemeTintWithOrWithoutPrizes() {
+        val store = HistoryStore(File(application.filesDir, "practice_history.json"))
+        val results = listOf(
+            PracticeResult(1, 1_700_000_000_000, Operation.ADDITION, 10, 1_000,
+                listOf(Attempt(Problem(1, 1, Operation.ADDITION), 2))),
+            PracticeResult(2, 1_700_000_000_001, Operation.SUBTRACTION, 10, 1_000,
+                listOf(Attempt(Problem(2, 1, Operation.SUBTRACTION), 1)), gameMode = GameMode.PRACTICE),
+            PracticeResult(3, 1_700_000_000_002, Operation.MULTIPLICATION, 10, 25_000,
+                List(25) { Attempt(Problem(2, 2, Operation.MULTIPLICATION), 4) },
+                prizeType = RewardType.LOLLIPOP)
+        )
+        results.forEach { store.add(it) }
+        val model = model()
+        val appearances = listOf(Triple("green", "dark", true)) +
+            COLOR_THEMES.flatMap { (theme, _) ->
+                listOf(Triple(theme, "light", false), Triple(theme, "dark", false))
+            }
+        val appearance = mutableIntStateOf(0)
+        var background = Color.Unspecified
+        var rewardsBackground = Color.Unspecified
+        compose.setContent {
+            val (theme, mode, wave) = appearances[appearance.intValue]
+            MathTheme(theme = theme, mode = mode, waveAppearance = wave) {
+                val colors = MaterialTheme.colorScheme
+                SideEffect {
+                    background = colors.background
+                    rewardsBackground = colors.primary.copy(alpha = 0.12f).compositeOver(background)
+                }
+                Box(Modifier.fillMaxSize().background(colors.background)) { HistoryScreen(model) }
+            }
+        }
+        compose.waitUntil(5_000) { model.history.size == results.size }
+        compose.runOnIdle { model.openHistory() }
+        appearances.indices.forEach { index ->
+            compose.runOnIdle { appearance.intValue = index }
+            results.forEach { result ->
+                val row = compose.onNode(hasText("${result.operation.label} · 1 to 10") and hasClickAction())
+                    .assertIsDisplayed()
+                val actual = row.captureToImage().toPixelMap()[1, 1]
+                val expected = if (result.gameMode == GameMode.REWARDS) rewardsBackground else background
+                val message = "${result.gameMode} in ${appearances[index]}"
+                assertEquals(message, expected.red, actual.red, 0.01f)
+                assertEquals(message, expected.green, actual.green, 0.01f)
+                assertEquals(message, expected.blue, actual.blue, 0.01f)
+            }
+        }
+        compose.onNodeWithText("Prize waiting — open this result to claim").assertIsDisplayed()
+        results.forEach { result ->
+            compose.onNodeWithText("${result.operation.label} · 1 to 10").performClick()
+            compose.runOnIdle { assertEquals(result, model.historyDetail) }
+            compose.onNodeWithContentDescription("Back").performClick()
+            compose.onNodeWithTag("history-list").assertIsDisplayed()
+        }
+        assertEquals(results.reversed(), store.load())
     }
 
     @Test
