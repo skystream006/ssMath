@@ -10,6 +10,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
@@ -924,16 +925,20 @@ class MathAppTest {
         compose.setContent { MathAppContent(model) }
         val progress = compose.onNodeWithTag("game-progress")
         progress.assertIsDisplayed().assertRangeInfoEquals(ProgressBarRangeInfo(0f, 0f..1f, 2))
-        compose.onNodeWithTag("progress-rocket").assertIsDisplayed()
+        val icon = model.progressIcon
+        compose.onNodeWithTag("progress-icon").assertIsDisplayed()
+            .assertContentDescriptionEquals("${icon.label} progress icon")
         answer(model.game!!.problem.answer)
         progress.assertRangeInfoEquals(ProgressBarRangeInfo(1f / 3, 0f..1f, 2))
         answer(model.game!!.problem.answer + 1)
         progress.assertRangeInfoEquals(ProgressBarRangeInfo(2f / 3, 0f..1f, 2))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "2 of 3 questions answered"))
+        compose.onNodeWithTag("progress-icon").assertContentDescriptionEquals("${icon.label} progress icon")
         compose.runOnIdle { model.openSettings() }
         progress.assertDoesNotExist()
         compose.runOnIdle { model.closeOverlay() }
         progress.assertRangeInfoEquals(ProgressBarRangeInfo(2f / 3, 0f..1f, 2))
+        compose.onNodeWithTag("progress-icon").assertContentDescriptionEquals("${icon.label} progress icon")
         answer(model.game!!.problem.answer)
         progress.assertDoesNotExist()
         compose.runOnIdle { model.dismissCelebration() }
@@ -942,36 +947,47 @@ class MathAppTest {
         compose.onNodeWithTag("submit-setup").performScrollTo().performClick()
         compose.onNodeWithTag("start-button").performClick()
         progress.assertRangeInfoEquals(ProgressBarRangeInfo(0f, 0f..1f, 2))
+        compose.onNodeWithTag("progress-icon").assertContentDescriptionEquals("${model.progressIcon.label} progress icon")
     }
 
-    @Test fun rocketJumpsForwardAndLandsAtTheNextProgressPoint() {
+    @Test fun everyIconJumpsForwardAndLandsAtTheNextProgressPoint() {
         compose.mainClock.autoAdvance = false
         val completed = mutableIntStateOf(0)
-        compose.setContent { MathTheme { GameProgress(completed.intValue, 4) } }
-        compose.mainClock.advanceTimeByFrame()
-        val rocket = compose.onNodeWithTag("progress-rocket")
-        val start = rocket.fetchSemanticsNode().boundsInRoot
-        compose.runOnIdle { completed.intValue = 1 }
-        compose.mainClock.advanceTimeByFrame()
-        compose.waitForIdle()
-        compose.mainClock.advanceTimeBy(250)
-        val jumping = rocket.fetchSemanticsNode().boundsInRoot
-        assertTrue("Rocket should move forward: $start -> $jumping", jumping.left > start.left)
-        assertTrue("Rocket should jump up: $start -> $jumping", jumping.top < start.top)
-        compose.mainClock.advanceTimeBy(600)
-        val landed = rocket.fetchSemanticsNode().boundsInRoot
-        assertTrue(landed.left > jumping.left)
-        assertEquals(start.top, landed.top, 1f)
-        compose.runOnIdle { completed.intValue = 4 }
-        compose.mainClock.advanceTimeByFrame()
-        compose.waitForIdle()
-        compose.mainClock.advanceTimeBy(600)
-        compose.onNodeWithTag("game-progress").assertRangeInfoEquals(ProgressBarRangeInfo(1f, 0f..1f, 3))
-        val end = rocket.fetchSemanticsNode().boundsInRoot
-        val track = compose.onNodeWithTag("game-progress").fetchSemanticsNode().boundsInRoot
-        assertTrue(end.left > landed.left)
-        assertTrue(end.right <= track.right)
-        assertEquals(start.top, end.top, 1f)
+        val selected = mutableStateOf(ProgressIcon.ROCKET)
+        compose.setContent { MathTheme { GameProgress(completed.intValue, 4, selected.value) } }
+        ProgressIcon.entries.forEach { icon ->
+            compose.runOnIdle {
+                completed.intValue = 0
+                selected.value = icon
+            }
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeBy(600)
+            val jumper = compose.onNodeWithTag("progress-icon")
+                .assertContentDescriptionEquals("${icon.label} progress icon")
+            val start = jumper.fetchSemanticsNode().boundsInRoot
+            compose.runOnIdle { completed.intValue = 1 }
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeBy(250)
+            val jumping = jumper.fetchSemanticsNode().boundsInRoot
+            assertTrue("$icon should move forward: $start -> $jumping", jumping.left > start.left)
+            assertTrue("$icon should jump up: $start -> $jumping", jumping.top < start.top)
+            compose.mainClock.advanceTimeBy(600)
+            val landed = jumper.fetchSemanticsNode().boundsInRoot
+            assertTrue(landed.left > jumping.left)
+            assertEquals(start.top, landed.top, 1f)
+            compose.runOnIdle { completed.intValue = 4 }
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeBy(600)
+            compose.onNodeWithTag("game-progress").assertRangeInfoEquals(ProgressBarRangeInfo(1f, 0f..1f, 3))
+            val end = jumper.fetchSemanticsNode().boundsInRoot
+            val track = compose.onNodeWithTag("game-progress").fetchSemanticsNode().boundsInRoot
+            assertTrue(end.left > landed.left)
+            assertTrue(end.right <= track.right)
+            assertEquals(start.top, end.top, 1f)
+        }
         compose.mainClock.autoAdvance = true
     }
 

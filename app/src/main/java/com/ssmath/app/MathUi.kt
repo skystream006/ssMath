@@ -5,6 +5,7 @@ package com.ssmath.app
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,7 +37,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.AlertDialog
@@ -476,7 +476,7 @@ private fun PlayingScreen(model: MathViewModel, onQuit: () -> Unit) {
                 if (compact) Column(Modifier.align(Alignment.Start)) { statistics() }
                 Text("Question ${game.attempts.size + 1} of ${game.questionCount}",
                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("question-progress"))
-                GameProgress(game.attempts.size, game.questionCount)
+                GameProgress(game.attempts.size, game.questionCount, model.progressIcon)
                 Equation(game.problem, "?", model.verticalEquations,
                     style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
                     modifier = Modifier.testTag("problem"))
@@ -554,7 +554,7 @@ internal fun Equation(problem: Problem, answer: String, vertical: Boolean, style
 }
 
 @Composable
-internal fun GameProgress(completed: Int, total: Int, modifier: Modifier = Modifier) {
+internal fun GameProgress(completed: Int, total: Int, icon: ProgressIcon, modifier: Modifier = Modifier) {
     val position = remember(total) { Animatable(completed.toFloat()) }
     LaunchedEffect(completed, total) {
         position.animateTo(completed.toFloat(), animationSpec = tween(500))
@@ -569,11 +569,12 @@ internal fun GameProgress(completed: Int, total: Int, modifier: Modifier = Modif
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp).height(8.dp).clearAndSetSemantics {},
             drawStopIndicator = {})
-        Icon(Icons.Rounded.RocketLaunch, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.offset {
-                val hop = sin(PI * (position.value % 1f)).toFloat()
-                IntOffset((travel.toPx() * position.value / total).roundToInt(), (24.dp.toPx() - 20.dp.toPx() * hop).roundToInt())
-            }.size(32.dp).testTag("progress-rocket"))
+        Canvas(Modifier.offset {
+            val hop = sin(PI * (position.value % 1f)).toFloat()
+            IntOffset((travel.toPx() * position.value / total).roundToInt(), (24.dp.toPx() - 20.dp.toPx() * hop).roundToInt())
+        }.size(32.dp).testTag("progress-icon").semantics {
+            contentDescription = "${icon.label} progress icon"
+        }) { drawProgressIcon(icon) }
     }
 }
 

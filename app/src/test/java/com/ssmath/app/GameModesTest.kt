@@ -40,9 +40,9 @@ class GameModesTest {
         file.delete()
     }
 
-    private fun model(): MathViewModel = MathViewModel(application,
+    private fun model(progressIconRandom: Random = Random.Default): MathViewModel = MathViewModel(application,
         generator = ProblemGenerator(Random(7)), clock = { now }, ioDispatcher = Dispatchers.Unconfined,
-        rewardRandom = Random(3), celebrationRandom = Random(5)).also {
+        rewardRandom = Random(3), celebrationRandom = Random(5), progressIconRandom = progressIconRandom).also {
         models += ViewModelStore().apply { put("model", it) }
         shadowOf(Looper.getMainLooper()).idle()
     }
@@ -67,6 +67,49 @@ class GameModesTest {
         model.updateAnswer((model.game!!.problem.answer + if (correct) 0 else 1).toString())
         model.submitAnswer()
         shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    @Test fun bothModesSelectOneRandomIconPerGameAndKeepItUntilCompletionOrQuit() {
+        var selections = 0
+        val random = object : Random() {
+            override fun nextBits(bitCount: Int): Int = error("Expected a bounded icon selection")
+            override fun nextInt(until: Int): Int {
+                assertEquals(10, until)
+                return selections++ % until
+            }
+        }
+        val model = model(random)
+        model.start()
+        assertEquals(0, selections)
+        GameMode.entries.forEach { mode ->
+            ProgressIcon.entries.forEach { expected ->
+                val before = selections
+                if (mode == GameMode.PRACTICE) readyPractice(model, 3) else readyRewards(model, 3)
+                assertEquals(before, selections)
+                model.start()
+                assertEquals(before + 1, selections)
+                assertEquals(expected, model.progressIcon)
+                model.start()
+                answer(model)
+                answer(model, correct = false)
+                assertEquals(expected, model.progressIcon)
+                model.openSettings()
+                model.start()
+                model.closeOverlay()
+                model.setForeground(false)
+                model.setForeground(true)
+                assertEquals(expected, model.progressIcon)
+                if (expected.ordinal % 2 == 0) {
+                    answer(model)
+                    assertEquals(Screen.RESULTS, model.screen)
+                    model.dismissCelebration()
+                    model.done()
+                } else model.backToSetup()
+                assertEquals(Screen.SETUP, model.screen)
+                assertEquals(before + 1, selections)
+            }
+        }
+        assertEquals(20, selections)
     }
 
     @Test fun dialogsAndReadyBackNavigationAreModeSpecificAndOnlyOpenFromHome() {
