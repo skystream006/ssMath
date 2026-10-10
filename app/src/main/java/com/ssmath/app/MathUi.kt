@@ -283,7 +283,14 @@ private fun HomeScreen(model: MathViewModel) {
             }
         }
         SetupDialog.REWARDS -> GameSetupDialog(model::dismissSetupDialog) {
-            Text("Rewards Game", style = MaterialTheme.typography.headlineSmall)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Rewards Game", modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.headlineSmall)
+                IconButton(onClick = model::openRewardsSetup, modifier = Modifier.testTag("rewards-setup")) {
+                    Icon(Icons.Rounded.Settings, contentDescription = "Setup")
+                }
+            }
             Text("Choose a math type to play with its saved parameters and earn rewards.")
             Operation.entries.forEach { operation ->
                 Button(onClick = { model.selectRewardsGame(operation) },
@@ -291,8 +298,6 @@ private fun HomeScreen(model: MathViewModel) {
                     Text("${operation.symbol}  ${operation.label}", textAlign = TextAlign.Center)
                 }
             }
-            OutlinedButton(onClick = model::openRewardsSetup,
-                modifier = Modifier.fillMaxWidth().testTag("rewards-setup")) { Text("Setup") }
             TextButton(onClick = model::dismissSetupDialog, modifier = Modifier.align(Alignment.End)) {
                 Text("Cancel")
             }

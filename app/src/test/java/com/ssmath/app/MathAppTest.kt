@@ -193,6 +193,7 @@ class MathAppTest {
         compose.setContent { MathAppContent(model) }
         compose.onNodeWithTag("rewards-game").performClick()
         compose.onNode(isDialog()).assertIsDisplayed()
+        assertRewardsSetupIconInHeader()
         Operation.entries.forEach {
             compose.onNodeWithTag("rewards-operation-${it.name}").performScrollTo().assertIsEnabled()
         }
@@ -209,6 +210,7 @@ class MathAppTest {
         }
         compose.onNodeWithTag("save-rewards-setup").performScrollTo().assertIsEnabled().performClick()
         compose.onNode(isDialog()).assertIsDisplayed()
+        assertRewardsSetupIconInHeader()
         assertEquals(model.rewardsDefaults, model().rewardsDefaults)
         Operation.entries.forEachIndexed { index, operation ->
             compose.onNodeWithTag("rewards-operation-${operation.name}").performScrollTo().performClick()
@@ -264,6 +266,12 @@ class MathAppTest {
         model.chooseTextSize(200)
         compose.setContent { MathAppContent(model) }
         compose.onNodeWithTag("rewards-game").performScrollTo().performClick()
+        assertRewardsSetupIconInHeader()
+        val titleLayouts = mutableListOf<TextLayoutResult>()
+        compose.onNode(hasText("Rewards Game") and hasAnyAncestor(isDialog()))
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(titleLayouts) }
+        assertFalse(titleLayouts.single().didOverflowWidth)
+        assertFalse(titleLayouts.single().didOverflowHeight)
         Operation.entries.forEach {
             compose.onNodeWithTag("rewards-operation-${it.name}").performScrollTo().assertIsDisplayed()
         }
@@ -1255,6 +1263,25 @@ class MathAppTest {
         compose.onNodeWithTag("start-button").performClick()
         compose.onNodeWithTag("question-progress").assertTextEquals("Question 1 of 6")
         compose.onNode(isDialog()).assertDoesNotExist()
+    }
+
+    private fun assertRewardsSetupIconInHeader() {
+        val setup = compose.onNodeWithTag("rewards-setup")
+            .assertIsDisplayed().assertIsEnabled().assertHasClickAction()
+            .assertContentDescriptionEquals("Setup")
+            .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
+            .fetchSemanticsNode().boundsInRoot
+        val title = compose.onNode(hasText("Rewards Game") and hasAnyAncestor(isDialog()))
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val description = compose.onNodeWithText("Choose a math type to play with its saved parameters and earn rewards.")
+            .fetchSemanticsNode().boundsInRoot
+        val dialog = compose.onNode(isDialog()).fetchSemanticsNode().boundsInRoot
+        assertTrue(title.right <= setup.left)
+        assertEquals(title.center.y, setup.center.y, 1f)
+        assertTrue(setup.bottom <= description.top)
+        assertTrue(setup.left >= dialog.center.x)
+        assertTrue(setup.right <= dialog.right)
+        compose.onNodeWithText("Setup").assertDoesNotExist()
     }
 
     private fun assertHomeCollectionImages() {
