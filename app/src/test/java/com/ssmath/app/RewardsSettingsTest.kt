@@ -168,9 +168,11 @@ class RewardsSettingsTest {
     @Test fun giftFollowsCelebrationAndUnopenedPrizeCanBeClaimedFromHistory() {
         val model = MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate)
         assertTrue(model.rewardsEnabled)
-        model.selectOperation(Operation.ADDITION)
-        model.updateQuestionCount("50")
-        model.submitSetup()
+        model.openRewardsGame()
+        model.openRewardsSetup()
+        model.updateRewardsParameters(Operation.ADDITION, GameParameters(questionCountText = "50"))
+        model.saveRewardsSetup()
+        model.selectRewardsGame(Operation.ADDITION)
         model.start()
         compose.mainClock.autoAdvance = false
         compose.setContent { MathAppContent(model) }

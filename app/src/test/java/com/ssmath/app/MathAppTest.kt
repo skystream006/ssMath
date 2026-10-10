@@ -2,6 +2,7 @@ package com.ssmath.app
 
 import android.app.Application
 import androidx.activity.ComponentActivity
+import androidx.activity.ComponentDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.CompositionLocalProvider
@@ -27,6 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowDialog
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class, qualifiers = "w360dp-h800dp")
@@ -87,7 +89,9 @@ class MathAppTest {
         assertEquals(pokemons, compose.onNodeWithTag("home-pokemons").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
         compose.onNodeWithContentDescription("Settings").assertIsDisplayed()
         compose.onNodeWithTag("practice-game").performClick()
-        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.runOnIdle {
+            (ShadowDialog.getLatestDialog() as ComponentDialog).onBackPressedDispatcher.onBackPressed()
+        }
         compose.onNode(isDialog()).assertDoesNotExist()
     }
 

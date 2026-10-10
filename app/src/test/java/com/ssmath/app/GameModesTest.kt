@@ -26,6 +26,7 @@ class GameModesTest {
     private val file get() = File(application.filesDir, "practice_history.json")
     private val models = mutableListOf<ViewModelStore>()
     private val otherScenes = Celebration.entries.filter { it.category == CelebrationCategory.OTHER }.toSet()
+    private var now = 1_000L
 
     @Before fun setup() {
         settings.edit().clear().commit()
@@ -40,7 +41,7 @@ class GameModesTest {
     }
 
     private fun model(): MathViewModel = MathViewModel(application,
-        generator = ProblemGenerator(Random(7)), ioDispatcher = Dispatchers.Unconfined,
+        generator = ProblemGenerator(Random(7)), clock = { now }, ioDispatcher = Dispatchers.Unconfined,
         rewardRandom = Random(3), celebrationRandom = Random(5)).also {
         models += ViewModelStore().apply { put("model", it) }
         shadowOf(Looper.getMainLooper()).idle()
@@ -420,6 +421,35 @@ class GameModesTest {
         assertNull(model.celebration)
         assertNull(model.lastResult!!.prizeType)
         assertTrue(model.pokemons.isEmpty())
+    }
+
+    @Test fun practiceKeepsElapsedTimerWithoutApplyingTheRewardsTimeLimit() {
+        val model = model()
+        model.chooseRewardsEnabled(true)
+        model.chooseShowTimer(true)
+        model.chooseTimeLimitMinutes(5)
+        readyPractice(model, count = 25)
+        model.start()
+        assertTrue(model.showTimer)
+        assertNull(model.activeTimeLimitMs)
+        now += 300_001L
+        assertEquals(300_001L, model.elapsedMs())
+        assertFalse(model.checkTimeLimit())
+        repeat(25) { answer(model) }
+        assertFalse(model.lastResult!!.timedOut)
+        assertEquals(300_001L, model.lastResult!!.durationMs)
+        assertEquals(CelebrationCategory.OTHER, model.celebration!!.category)
+        assertNull(model.lastResult!!.prizeType)
+        model.done()
+
+        readyRewards(model)
+        model.start()
+        assertEquals(300_000L, model.activeTimeLimitMs)
+        now += 300_000L
+        assertTrue(model.checkTimeLimit())
+        assertTrue(model.lastResult!!.timedOut)
+        assertNull(model.celebration)
+        assertNull(model.lastResult!!.prizeType)
     }
 
     @Test fun storedPracticeResultsCannotExposeOrClaimAnInjectedPrize() {

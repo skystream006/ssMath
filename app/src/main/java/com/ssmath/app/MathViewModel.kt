@@ -323,7 +323,8 @@ class MathViewModel(
         pendingResult = null
         dismissReward()
         rewardsEnabledAtStart = gameMode == GameMode.REWARDS && rewardsEnabled
-        activeTimeLimitMs = if (rewardsEnabled && showTimer && timeLimitMinutes > 0) timeLimitMinutes * 60_000L else null
+        activeTimeLimitMs = if (rewardsEnabledAtStart && showTimer && timeLimitMinutes > 0)
+            timeLimitMinutes * 60_000L else null
         resetTimer()
         readyGame = null
         screen = Screen.PLAYING

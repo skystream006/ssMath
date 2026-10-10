@@ -116,9 +116,12 @@ class PokemonSettingsTest {
     private fun presentationCollects(celebration: Celebration, questionCount: Int) {
         val model = model(celebration, questionCount)
         model.chooseRewardsEnabled(false)
-        model.selectOperation(Operation.ADDITION)
-        model.updateQuestionCount(questionCount.toString())
-        model.submitSetup()
+        model.openRewardsGame()
+        model.openRewardsSetup()
+        model.updateRewardsParameters(Operation.ADDITION,
+            model.rewardsDefaults.getValue(Operation.ADDITION).copy(questionCountText = questionCount.toString()))
+        model.saveRewardsSetup()
+        model.selectRewardsGame(Operation.ADDITION)
         model.start()
         compose.mainClock.autoAdvance = false
         compose.setContent { MathAppContent(model) }
