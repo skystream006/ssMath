@@ -136,13 +136,13 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
 - **Show correct answers** – off by default. Turn on to reveal correct answers after
   mistakes during practice, in Results, and in Practice History. Wrong answers are
   still marked and counted, and saved attempts are unchanged. This choice is remembered.
-- **Appearance** – the **Blue Wave** look or a **Color theme** (midnight, royal
-  purple, gold, green, pink, black) with a **Dark appearance** switch.
-- **Vertical equations** – off by default. Under Appearance, switch from horizontal
+- **Vertical equations** – off by default. Below Show correct answers, switch from horizontal
   equations to stacked numbers in practice, Results, and Practice History. Ones,
   tens, hundreds, and higher places line up, with the operator to the left and the
   answer (or `?` during practice) below a line. Works with all four operations;
   the choice is remembered and does not change saved answers.
+- **Appearance** – the **Blue Wave** look or a **Color theme** (midnight, royal
+  purple, gold, green, pink, black) with a **Dark appearance** switch.
 - **Text size** – use the slider under Appearance to adjust app text from 80% to
   200% in 10% steps (default 100%). Changes apply immediately, work with your
   device's font-size setting, and are remembered for next time.

@@ -128,8 +128,6 @@ fun SettingsScreen(model: MathViewModel) {
                 Switch(model.showCorrectAnswers, model::chooseShowCorrectAnswers,
                     modifier = Modifier.semantics { contentDescription = "Show correct answers" })
             }
-            HorizontalDivider()
-            Text("Appearance", style = MaterialTheme.typography.titleMedium)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Vertical equations")
@@ -139,6 +137,8 @@ fun SettingsScreen(model: MathViewModel) {
                 Switch(model.verticalEquations, model::chooseVerticalEquations,
                     modifier = Modifier.semantics { contentDescription = "Vertical equations" })
             }
+            HorizontalDivider()
+            Text("Appearance", style = MaterialTheme.typography.titleMedium)
             Column {
                 Text("Text size: ${model.textSizePercent}%")
                 Text("Adjust text throughout the app", style = MaterialTheme.typography.bodySmall,
