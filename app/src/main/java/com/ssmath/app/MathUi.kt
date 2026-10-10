@@ -43,9 +43,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -79,14 +81,18 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -171,7 +177,8 @@ private fun MainContent(model: MathViewModel) {
         Screen.READY -> ReadyDialog(model)
         Screen.PLAYING -> PlayingScreen(model)
         Screen.RESULTS -> model.lastResult?.let { result ->
-            ResultsContent(result, title = "Results", showCorrectAnswers = model.showCorrectAnswers) {
+            ResultsContent(result, title = "Results", showCorrectAnswers = model.showCorrectAnswers,
+                verticalEquations = model.verticalEquations) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (result.prizeType != null && result.prize == null && model.celebration == null &&
                         !model.selectingCelebration) {
@@ -349,8 +356,9 @@ private fun PlayingScreen(model: MathViewModel) {
             Text("Question ${game.attempts.size + 1} of ${game.questionCount}",
                style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("question-progress"))
             GameProgress(game.attempts.size, game.questionCount)
-            Text("${game.problem.text} = ?", style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.testTag("problem"))
+            Equation(game.problem, "?", model.verticalEquations,
+                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
+                modifier = Modifier.testTag("problem"))
             OutlinedTextField(model.answerText, model::updateAnswer, singleLine = true,
                 label = { Text("Your answer") },
                 textStyle = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center),
@@ -360,12 +368,66 @@ private fun PlayingScreen(model: MathViewModel) {
             Button(onClick = model::submitAnswer, enabled = parseAnswer(model.answerText) != null,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("submit-answer")) { Text("Submit") }
             model.feedback?.let {
-                Text(it.text, color = if (it.correct) CorrectGreen else WrongRed,
+                val correction = game.attempts.lastOrNull()?.takeIf {
+                    model.verticalEquations && model.showCorrectAnswers && !it.correct
+                }?.problem
+                Text(if (correction == null) it.text else "Not quite:",
+                    color = if (it.correct) CorrectGreen else WrongRed,
                     style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                if (correction != null) Equation(correction, correction.answer.toString(), vertical = true,
+                    style = MaterialTheme.typography.titleMedium.copy(color = WrongRed),
+                    modifier = Modifier.testTag("feedback-equation"))
             }
         }
         Text("Wrong: ${game.wrong}", style = MaterialTheme.typography.titleMedium, color = WrongRed,
             modifier = Modifier.align(Alignment.BottomStart).padding(20.dp).testTag("wrong-tally"))
+    }
+}
+
+@Composable
+internal fun Equation(problem: Problem, answer: String, vertical: Boolean, style: TextStyle, modifier: Modifier = Modifier) {
+    val description = "${problem.text} = $answer"
+    if (!vertical) {
+        Text(description, style = style, modifier = modifier)
+        return
+    }
+    val left = problem.left.toString()
+    val right = problem.right.toString()
+    val places = maxOf(left.length, right.length, answer.length)
+    val operands = "  ${left.padStart(places)}\n${problem.operation.symbol} ${right.padStart(places)}"
+    val result = "  ${answer.padStart(places)}"
+    val text = "$operands\n$result"
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    // Equal-width digits and a shared right edge keep every place aligned, even in RTL locales.
+    val numberStyle = style.copy(fontFamily = FontFamily.Monospace, letterSpacing = 0.sp,
+        textAlign = TextAlign.Right, textDirection = TextDirection.Ltr)
+    BoxWithConstraints(modifier.clearAndSetSemantics { contentDescription = description }) {
+        val fittedStyle = remember(text, numberStyle, measurer, constraints.maxWidth) {
+            val availableWidth = (constraints.maxWidth - 1).coerceAtLeast(1)
+            fun scaledStyle(scale: Float) = numberStyle.copy(
+                fontSize = numberStyle.fontSize * scale, lineHeight = numberStyle.lineHeight * scale)
+            if (measurer.measure(text, numberStyle, softWrap = false).size.width <= availableWidth) numberStyle
+            else {
+                // Measure each candidate because Android's accessibility font scaling is nonlinear.
+                var lower = 0f
+                var upper = 1f
+                repeat(12) {
+                    val scale = (lower + upper) / 2
+                    if (measurer.measure(text, scaledStyle(scale), softWrap = false).size.width <= availableWidth) lower = scale
+                    else upper = scale
+                }
+                scaledStyle(lower)
+            }
+        }
+        val width = with(density) { measurer.measure(text, fittedStyle, softWrap = false).size.width.toDp() }
+        Column(Modifier.width(width)) {
+            Text(operands, style = fittedStyle, softWrap = false,
+                modifier = Modifier.fillMaxWidth().testTag("equation-operands"))
+            HorizontalDivider(color = LocalContentColor.current, modifier = Modifier.testTag("equation-line"))
+            Text(result, style = fittedStyle, softWrap = false,
+                modifier = Modifier.fillMaxWidth().testTag("equation-answer"))
+        }
     }
 }
 
@@ -414,7 +476,7 @@ private fun TimerText(model: MathViewModel) {
 /** Shows a practice result: the score and every answered problem with a check or an X. */
 @Composable
 internal fun ResultsContent(result: PracticeResult, title: String?, showCorrectAnswers: Boolean, modifier: Modifier = Modifier,
-    actions: @Composable () -> Unit) {
+    verticalEquations: Boolean = false, actions: @Composable () -> Unit) {
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -447,14 +509,14 @@ internal fun ResultsContent(result: PracticeResult, title: String?, showCorrectA
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            itemsIndexed(result.attempts) { index, attempt -> AttemptRow(index + 1, attempt, showCorrectAnswers) }
+            itemsIndexed(result.attempts) { index, attempt -> AttemptRow(index + 1, attempt, showCorrectAnswers, verticalEquations) }
         }
         Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) { actions() }
     }
 }
 
 @Composable
-private fun AttemptRow(number: Int, attempt: Attempt, showCorrectAnswers: Boolean) {
+private fun AttemptRow(number: Int, attempt: Attempt, showCorrectAnswers: Boolean, verticalEquations: Boolean) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -463,7 +525,7 @@ private fun AttemptRow(number: Int, attempt: Attempt, showCorrectAnswers: Boolea
             Text("$number.", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.weight(1f)) {
-                Text("${attempt.problem.text} = ${attempt.given}", style = MaterialTheme.typography.titleMedium)
+                Equation(attempt.problem, attempt.given.toString(), verticalEquations, style = MaterialTheme.typography.titleMedium)
                 if (!attempt.correct && showCorrectAnswers) Text("Correct answer: ${attempt.problem.answer}",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
