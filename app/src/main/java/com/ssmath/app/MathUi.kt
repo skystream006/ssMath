@@ -403,11 +403,22 @@ internal fun Equation(problem: Problem, answer: String, vertical: Boolean, style
     val numberStyle = style.copy(fontFamily = FontFamily.Monospace, letterSpacing = 0.sp,
         textAlign = TextAlign.Right, textDirection = TextDirection.Ltr)
     BoxWithConstraints(modifier.clearAndSetSemantics { contentDescription = description }) {
-        val naturalWidth = measurer.measure(text, numberStyle, softWrap = false).size.width
-        val scale = ((constraints.maxWidth - 1).coerceAtLeast(1).toFloat() / naturalWidth.coerceAtLeast(1)).coerceAtMost(1f)
-        val fittedStyle = with(density) {
-            numberStyle.copy(fontSize = (numberStyle.fontSize.toPx() * scale).toSp(),
-                lineHeight = (numberStyle.lineHeight.toPx() * scale).toSp())
+        val fittedStyle = remember(text, numberStyle, measurer, constraints.maxWidth) {
+            val availableWidth = (constraints.maxWidth - 1).coerceAtLeast(1)
+            fun scaledStyle(scale: Float) = numberStyle.copy(
+                fontSize = numberStyle.fontSize * scale, lineHeight = numberStyle.lineHeight * scale)
+            if (measurer.measure(text, numberStyle, softWrap = false).size.width <= availableWidth) numberStyle
+            else {
+                // Measure each candidate because Android's accessibility font scaling is nonlinear.
+                var lower = 0f
+                var upper = 1f
+                repeat(12) {
+                    val scale = (lower + upper) / 2
+                    if (measurer.measure(text, scaledStyle(scale), softWrap = false).size.width <= availableWidth) lower = scale
+                    else upper = scale
+                }
+                scaledStyle(lower)
+            }
         }
         val width = with(density) { measurer.measure(text, fittedStyle, softWrap = false).size.width.toDp() }
         Column(Modifier.width(width)) {

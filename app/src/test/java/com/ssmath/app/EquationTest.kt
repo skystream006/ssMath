@@ -81,13 +81,15 @@ class EquationTest {
         model.start()
         compose.setContent { MathAppContent(model) }
         val first = model.game!!.problem
-        compose.onNodeWithTag("answer-input").performTextReplacement(first.answer.toString())
-        compose.onNodeWithTag("submit-answer").performClick()
+        compose.onNodeWithTag("answer-input").performScrollTo().performTextReplacement(first.answer.toString())
+        compose.onNodeWithTag("submit-answer").performScrollTo().performClick()
         compose.onNodeWithTag("points").assertTextEquals("Points: 1")
         val second = model.game!!.problem
         val given = second.answer + 1
-        compose.onNodeWithTag("answer-input").performTextReplacement(given.toString())
-        compose.onNodeWithTag("submit-answer").performClick()
+        compose.onNodeWithTag("answer-input").performScrollTo().performTextReplacement(given.toString())
+        compose.onNodeWithTag("submit-answer").performScrollTo().performClick()
+        assertEquals(Screen.RESULTS, model.screen)
+        compose.waitForIdle()
         compose.waitUntil(5_000) { model.history.size == 1 && !model.selectingCelebration }
         compose.runOnIdle { model.dismissCelebration() }
 
@@ -196,7 +198,7 @@ class EquationTest {
         val operandText = "  ${left.padStart(places)}\n${problem.operation.symbol} ${right.padStart(places)}"
         assertEquals(operandText, operands.layoutInput.text.text)
         assertEquals("  ${answer.padStart(places)}", result.layoutInput.text.text)
-        assertEquals(2, operands.lineCount)
+        assertEquals("Unexpected operand layout: ${operands.layoutInput}", 2, operands.lineCount)
         assertEquals(1, result.lineCount)
         listOf(operands, result).forEach {
             assertFalse("Equation must not clip horizontally", it.didOverflowWidth)
