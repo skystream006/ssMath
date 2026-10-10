@@ -238,6 +238,28 @@ class GameModesTest {
         }
     }
 
+    @Test fun savedDefaultsNormalizeWhitespaceAndLeadingZerosBeforeReload() {
+        val model = model()
+        model.openRewardsGame()
+        model.openRewardsSetup()
+        Operation.entries.forEach { operation ->
+            model.updateRewardsParameters(operation, if (operation == Operation.DIVISION)
+                GameParameters(" 0100 ", " 0007 ", "\t0050 ")
+            else GameParameters(" 0002 ", " 0010 ", "\t0025 "))
+        }
+        assertTrue(model.canSaveRewardsSetup)
+        model.saveRewardsSetup()
+        val expected = Operation.entries.associateWith { operation ->
+            if (operation == Operation.DIVISION) GameParameters("100", "7", "50")
+            else GameParameters("2", "10", "25")
+        }
+        assertEquals(expected, model.rewardsDefaults)
+        assertEquals(expected, model.rewardsSetupDraft)
+        assertEquals(expected, model().rewardsDefaults)
+        model.selectRewardsGame(Operation.DIVISION)
+        assertEquals(expected[Operation.DIVISION], model.readyParameters)
+    }
+
     @Test fun invalidDraftNeverPartiallySavesAndCancelOrBackRestoresAllDefaults() {
         val model = model()
         val saved = model.rewardsDefaults

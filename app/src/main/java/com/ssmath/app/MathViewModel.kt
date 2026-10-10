@@ -223,8 +223,13 @@ class MathViewModel(
 
     fun saveRewardsSetup() {
         if (screen != Screen.REWARDS_SETUP || overlay != null || !canSaveRewardsSetup) return
-        persistRewardsDefaults(rewardsSetupDraft)
-        rewardsDefaults = rewardsSetupDraft
+        val defaults = rewardsSetupDraft.mapValues { (_, parameters) ->
+            GameParameters(requireNotNull(parameters.first).toString(), requireNotNull(parameters.second).toString(),
+                requireNotNull(parameters.questionCount).toString())
+        }
+        persistRewardsDefaults(defaults)
+        rewardsDefaults = defaults
+        rewardsSetupDraft = defaults
         screen = Screen.SETUP
         setupDialog = SetupDialog.REWARDS
     }
