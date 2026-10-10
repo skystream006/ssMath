@@ -34,7 +34,8 @@ class MathViewModel(
     private val wallClock: () -> Long = System::currentTimeMillis,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val rewardRandom: Random = Random.Default,
-    private val celebrationRandom: Random = Random.Default
+    private val celebrationRandom: Random = Random.Default,
+    private val progressIconRandom: Random = Random.Default
 ) : AndroidViewModel(application) {
     constructor(application: Application) : this(application, ProblemGenerator())
 
@@ -72,6 +73,8 @@ class MathViewModel(
     var rewardsSetupDraft by mutableStateOf(rewardsDefaults)
         private set
     var game by mutableStateOf<GameState?>(null)
+        private set
+    internal var progressIcon by mutableStateOf(ProgressIcon.ROCKET)
         private set
     var answerText by mutableStateOf("")
         private set
@@ -320,6 +323,7 @@ class MathViewModel(
         val questionCount = parameters.questionCount ?: return
         gameMode = ready.mode
         game = GameState.start(operation, maximum, generator, questionCount, minimum, maximumSecond)
+        progressIcon = ProgressIcon.entries.random(progressIconRandom)
         answerText = ""
         celebration = null
         selectingCelebration = false
@@ -348,6 +352,7 @@ class MathViewModel(
         val value = parseAnswer(answerText) ?: return
         val next = current.answer(value, generator)
         game = next
+        progressIcon = ProgressIcon.entries.filter { it != progressIcon }.random(progressIconRandom)
         answerText = ""
         if (next.finished) finish(next)
     }
