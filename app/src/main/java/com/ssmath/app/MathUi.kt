@@ -449,15 +449,20 @@ private fun PlayingScreen(model: MathViewModel, onQuit: () -> Unit) {
     val game = model.game ?: return
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-    Box(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Points: ${game.correct}", style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f).testTag("points"))
-            if (model.showTimer || model.activeTimeLimitMs != null) TimerText(model)
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                Text("Points: ${game.correct}", style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.testTag("points"))
+                if (model.showTimer || model.activeTimeLimitMs != null) TimerText(model)
+            }
+            OutlinedButton(onClick = onQuit,
+                modifier = Modifier.heightIn(min = 48.dp).testTag("quit-game")) { Text("Quit game") }
         }
-        Column(Modifier.align(Alignment.Center).widthIn(max = 440.dp).fillMaxWidth()
-            .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 64.dp),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.weight(1f).align(Alignment.CenterHorizontally).widthIn(max = 440.dp).fillMaxWidth()
+            .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
             Text("Question ${game.attempts.size + 1} of ${game.questionCount}",
                style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("question-progress"))
             GameProgress(game.attempts.size, game.questionCount)
@@ -472,8 +477,6 @@ private fun PlayingScreen(model: MathViewModel, onQuit: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("answer-input"))
             Button(onClick = model::submitAnswer, enabled = parseAnswer(model.answerText) != null,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("submit-answer")) { Text("Submit") }
-            OutlinedButton(onClick = onQuit,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("quit-game")) { Text("Quit game") }
             model.feedback?.let {
                 val correction = game.attempts.lastOrNull()?.takeIf {
                     model.verticalEquations && model.showCorrectAnswers && !it.correct
@@ -487,7 +490,7 @@ private fun PlayingScreen(model: MathViewModel, onQuit: () -> Unit) {
             }
         }
         Text("Wrong: ${game.wrong}", style = MaterialTheme.typography.titleMedium, color = WrongRed,
-            modifier = Modifier.align(Alignment.BottomStart).padding(20.dp).testTag("wrong-tally"))
+            modifier = Modifier.padding(20.dp).testTag("wrong-tally"))
     }
 }
 

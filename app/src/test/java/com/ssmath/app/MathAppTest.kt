@@ -567,6 +567,15 @@ class MathAppTest {
             }
             compose.onNodeWithTag("quit-game").assertDoesNotExist()
             compose.onNodeWithTag("start-button").performClick()
+            val quit = compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val points = compose.onNodeWithTag("points").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val timer = compose.onNodeWithTag("timer").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+            assertEquals(points.top, quit.top, 1f)
+            assertEquals(root.right - (points.left - root.left), quit.right, 1f)
+            assertTrue(points.right <= quit.left)
+            assertTrue(timer.right <= quit.left)
+            assertTrue(quit.bottom <= compose.onNodeWithTag("question-progress").fetchSemanticsNode().boundsInRoot.top)
             answer(model.game!!.problem.answer)
             compose.onNodeWithTag("answer-input").performTextReplacement("42")
             val game = model.game
@@ -641,14 +650,31 @@ class MathAppTest {
 
     @Test
     @Config(qualifiers = "w320dp-h480dp")
-    fun quitGameRemainsReachableWithLargeTextOnSmallScreens() {
+    fun quitGameStaysAtUpperRightWhenScrollingWithLargeTextOnSmallScreens() {
         val model = model()
         model.chooseTextSize(200)
         model.selectOperation(Operation.ADDITION)
         model.submitSetup()
         model.start()
         compose.setContent { MathAppContent(model) }
-        compose.onNodeWithTag("quit-game").performScrollTo().assertIsDisplayed().performClick()
+        listOf(false, true).forEach { showTimer ->
+            compose.runOnIdle { model.chooseShowTimer(showTimer) }
+            val quit = compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val points = compose.onNodeWithTag("points").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+            assertEquals(points.top, quit.top, 1f)
+            assertEquals(root.right - (points.left - root.left), quit.right, 1f)
+            assertTrue(points.right <= quit.left)
+            if (showTimer) {
+                val timer = compose.onNodeWithTag("timer").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+                assertTrue(timer.right <= quit.left)
+            }
+            compose.onNodeWithTag("submit-answer").performScrollTo().assertIsDisplayed()
+            assertEquals(quit, compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+            compose.onNodeWithTag("question-progress").performScrollTo().assertIsDisplayed()
+            assertTrue(quit.bottom <= compose.onNodeWithTag("question-progress").fetchSemanticsNode().boundsInRoot.top)
+        }
+        compose.onNodeWithTag("quit-game").performClick()
         compose.onNodeWithText("Quit", substring = false).performClick()
         compose.onNodeWithTag("home-screen").assertIsDisplayed()
     }
