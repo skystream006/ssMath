@@ -17,7 +17,7 @@ import kotlinx.serialization.json.JsonObject
 
 const val MAX_HISTORY_RESULTS = 500
 
-/** A finished practice session saved with the date and time it ended. */
+/** A finished game saved with the date and time it ended. */
 @Serializable
 data class PracticeResult(
     val id: Long,
@@ -32,7 +32,8 @@ data class PracticeResult(
     val prizeType: RewardType? = null,
     val prize: PrizeAward? = null,
     val maximumSecond: Int? = null,
-    val pokemonReward: Celebration? = null
+    val pokemonReward: Celebration? = null,
+    val gameMode: GameMode = GameMode.REWARDS
 ) {
     val numberDescription: String get() =
         if (operation == Operation.DIVISION && maximumSecond != null) "first up to $maximum · second up to $maximumSecond"
@@ -117,6 +118,7 @@ class HistoryStore(private val file: File) {
     fun claimReward(id: Long): PracticeSnapshot {
         val snapshot = loadSnapshot()
         val result = snapshot.history.find { it.id == id } ?: return snapshot
+        if (result.gameMode != GameMode.REWARDS) return snapshot
         val type = result.prizeType ?: return snapshot
         if (result.prize != null || id in snapshot.claimedResultIds ||
             !qualifiesForReward(result.questionCount, result.correct, result.attempts.size, result.timedOut)) return snapshot
@@ -144,6 +146,7 @@ class HistoryStore(private val file: File) {
         val snapshot = loadSnapshot()
         val result = snapshot.history.find { it.id == id } ?: return snapshot
         if (result.pokemonReward != null) return snapshot
+        if (result.gameMode == GameMode.PRACTICE && celebration.category != CelebrationCategory.OTHER) return snapshot
         return save(snapshot.copy(
             history = snapshot.history.map { if (it.id == id) it.copy(pokemonReward = celebration) else it },
             pokemons = snapshot.pokemons + celebration

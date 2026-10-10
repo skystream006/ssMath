@@ -93,6 +93,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -141,7 +143,9 @@ internal fun MathAppContent(model: MathViewModel) {
                         Overlay.POKEMONS -> PokemonsScreen(model)
                         null -> {
                             MainContent(model)
-                            SettingsButton(model::openSettings, Modifier.align(Alignment.BottomEnd))
+                            if (model.screen != Screen.REWARDS_SETUP) {
+                                SettingsButton(model::openSettings, Modifier.align(Alignment.BottomEnd))
+                            }
                         }
                     }
                     model.rewardResult?.let { result ->
@@ -169,11 +173,13 @@ private fun MainContent(model: MathViewModel) {
             Screen.READY -> model.backToSetup()
             Screen.PLAYING -> confirmQuit = true
             Screen.RESULTS -> model.done()
+            Screen.REWARDS_SETUP -> model.cancelRewardsSetup()
             Screen.SETUP -> Unit
         }
     }
     when (model.screen) {
         Screen.SETUP -> HomeScreen(model)
+        Screen.REWARDS_SETUP -> RewardsSetupScreen(model)
         Screen.READY -> ReadyDialog(model)
         Screen.PLAYING -> PlayingScreen(model)
         Screen.RESULTS -> model.lastResult?.let { result ->
@@ -254,8 +260,103 @@ private fun HomeScreen(model: MathViewModel) {
                 Text("Pokémon", Modifier.width(IntrinsicSize.Max), textAlign = TextAlign.Center)
             }
         }
-        SetupForm(model, Modifier.weight(1f).widthIn(max = 440.dp).fillMaxWidth()
-            .padding(bottom = 64.dp).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp))
+        Column(Modifier.weight(1f).widthIn(max = 440.dp).fillMaxWidth()
+            .padding(bottom = 64.dp).verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+            Button(onClick = model::openPracticeGame,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("practice-game")) {
+                Text("Practice Game", textAlign = TextAlign.Center)
+            }
+            Button(onClick = model::openRewardsGame,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("rewards-game")) {
+                Text("Rewards Game", textAlign = TextAlign.Center)
+            }
+        }
+    }
+    when (model.setupDialog) {
+        SetupDialog.PRACTICE -> GameSetupDialog(model::dismissSetupDialog) {
+            Text("Practice Game", style = MaterialTheme.typography.headlineSmall)
+            Text("Practice with Other animations only. No prizes or Pokémon are awarded.")
+            SetupForm(model, Modifier.fillMaxWidth())
+            TextButton(onClick = model::dismissSetupDialog, modifier = Modifier.align(Alignment.End)) {
+                Text("Cancel")
+            }
+        }
+        SetupDialog.REWARDS -> GameSetupDialog(model::dismissSetupDialog) {
+            Text("Rewards Game", style = MaterialTheme.typography.headlineSmall)
+            Text("Choose a math type to play with its saved parameters and earn rewards.")
+            Operation.entries.forEach { operation ->
+                Button(onClick = { model.selectRewardsGame(operation) },
+                    modifier = Modifier.fillMaxWidth().testTag("rewards-operation-${operation.name}")) {
+                    Text("${operation.symbol}  ${operation.label}", textAlign = TextAlign.Center)
+                }
+            }
+            OutlinedButton(onClick = model::openRewardsSetup,
+                modifier = Modifier.fillMaxWidth().testTag("rewards-setup")) { Text("Setup") }
+            TextButton(onClick = model::dismissSetupDialog, modifier = Modifier.align(Alignment.End)) {
+                Text("Cancel")
+            }
+        }
+        null -> Unit
+    }
+}
+
+@Composable
+private fun GameSetupDialog(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Card(Modifier.widthIn(max = 480.dp).fillMaxWidth().padding(16.dp).imePadding(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
+        }
+    }
+}
+
+@Composable
+private fun RewardsSetupScreen(model: MathViewModel) {
+    Column(Modifier.fillMaxSize().testTag("rewards-setup-screen").verticalScroll(rememberScrollState())
+        .padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        TextButton(onClick = model::cancelRewardsSetup) { Text("Back") }
+        Text("Rewards Game setup", style = MaterialTheme.typography.headlineSmall)
+        Text("Save default parameters for each math type. Practice Game settings stay separate.")
+        Operation.entries.forEach { operation ->
+            val parameters = model.rewardsSetupDraft.getValue(operation)
+            val division = operation == Operation.DIVISION
+            Card(Modifier.widthIn(max = 600.dp).fillMaxWidth().align(Alignment.CenterHorizontally)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(operation.label, style = MaterialTheme.typography.titleLarge)
+                    OutlinedTextField(parameters.firstText,
+                        { model.updateRewardsParameters(operation, parameters.copy(firstText = it)) },
+                        label = { Text(if (division) "Maximum First number" else "Minimum number") },
+                        supportingText = { Text(if (division) "Whole number from $MIN_MAXIMUM to ${"%,d".format(MAX_MAXIMUM)}"
+                            else "Whole number from $MIN_MAXIMUM to the maximum number") },
+                        isError = parameters.firstText.isNotEmpty() && (parameters.first == null ||
+                            (!division && parameters.second != null && (parameters.first ?: 0) > requireNotNull(parameters.second))),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth().testTag("rewards-${operation.name}-first"))
+                    OutlinedTextField(parameters.secondText,
+                        { model.updateRewardsParameters(operation, parameters.copy(secondText = it)) },
+                        label = { Text(if (division) "Maximum Second number" else "Maximum number") },
+                        supportingText = { Text("Whole number from $MIN_MAXIMUM to ${"%,d".format(MAX_MAXIMUM)}") },
+                        isError = parameters.secondText.isNotEmpty() && parameters.second == null,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth().testTag("rewards-${operation.name}-second"))
+                    OutlinedTextField(parameters.questionCountText,
+                        { model.updateRewardsParameters(operation, parameters.copy(questionCountText = it)) },
+                        label = { Text("Number of questions") },
+                        supportingText = { Text("Whole number from $MIN_QUESTION_COUNT to ${"%,d".format(MAX_QUESTION_COUNT)}") },
+                        isError = parameters.questionCountText.isNotEmpty() && parameters.questionCount == null,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        modifier = Modifier.fillMaxWidth().testTag("rewards-${operation.name}-count"))
+                }
+            }
+        }
+        Button(onClick = model::saveRewardsSetup, enabled = model.canSaveRewardsSetup,
+            modifier = Modifier.widthIn(max = 600.dp).fillMaxWidth().align(Alignment.CenterHorizontally)
+                .testTag("save-rewards-setup")) { Text("Save defaults") }
     }
 }
 
@@ -319,16 +420,20 @@ private fun SetupForm(model: MathViewModel, modifier: Modifier) {
 
 @Composable
 private fun ReadyDialog(model: MathViewModel) {
-    val numbers = if (model.selectedOperation == Operation.DIVISION)
-        "first up to ${model.divisionMaximumFirst} · second up to ${model.divisionMaximumSecond}"
-        else "numbers ${model.minimum} to ${model.maximum}"
+    val operation = model.readyOperation ?: return
+    val parameters = model.readyParameters ?: return
+    val numbers = if (operation == Operation.DIVISION)
+        "first up to ${parameters.first} · second up to ${parameters.second}"
+        else "numbers ${parameters.first} to ${parameters.second}"
     DialogCard {
+        Text(if (model.gameMode == GameMode.PRACTICE) "Practice Game" else "Rewards Game",
+            style = MaterialTheme.typography.titleMedium)
         Text("Press Start when Ready", style = MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Text("${model.selectedOperation?.label} · $numbers · ${model.questionCount} questions",
+        Text("${operation.label} · $numbers · ${parameters.questionCount} questions",
             style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
-        if (model.rewardsEnabled && model.showTimer && model.timeLimitMinutes > 0) {
+        if (model.gameMode == GameMode.REWARDS && model.rewardsEnabled && model.showTimer && model.timeLimitMinutes > 0) {
             Text("Time limit: ${model.timeLimitMinutes} minutes", modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center)
         }

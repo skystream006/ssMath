@@ -57,9 +57,13 @@ class PokemonCollectionTest {
     }
 
     private fun start(model: MathViewModel, count: Int = 15) {
-        model.selectOperation(Operation.ADDITION)
-        model.updateQuestionCount(count.toString())
-        model.submitSetup()
+        if (model.screen != Screen.SETUP) model.done()
+        model.openRewardsGame()
+        model.openRewardsSetup()
+        model.updateRewardsParameters(Operation.ADDITION,
+            model.rewardsDefaults.getValue(Operation.ADDITION).copy(questionCountText = count.toString()))
+        model.saveRewardsSetup()
+        model.selectRewardsGame(Operation.ADDITION)
         model.start()
     }
 

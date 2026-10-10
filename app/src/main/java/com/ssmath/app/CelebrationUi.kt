@@ -237,13 +237,14 @@ enum class Celebration(
         fun select(
             questionCount: Int,
             random: Random = Random.Default,
-            collected: Set<Celebration> = emptySet()
+            collected: Set<Celebration> = emptySet(),
+            gameMode: GameMode = GameMode.REWARDS
         ): Celebration? {
-            val collectionComplete = collected.containsAll(entries)
-            return entries.filter {
-                (questionCount >= 15 || it.category != CelebrationCategory.POKEMONS) &&
-                    (collectionComplete || it !in collected)
-            }.randomOrNull(random)
+            val eligible = entries.filter {
+                it.category == CelebrationCategory.OTHER || (gameMode == GameMode.REWARDS && questionCount >= 15)
+            }
+            val collectionComplete = collected.containsAll(if (gameMode == GameMode.PRACTICE) eligible else entries)
+            return eligible.filter { collectionComplete || it !in collected }.randomOrNull(random)
         }
     }
 }

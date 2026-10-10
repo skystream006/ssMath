@@ -101,7 +101,7 @@ fun SettingsScreen(model: MathViewModel) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Rewards system")
-                    Text("Earn prize fragments by completing 25 or more questions with over 90% correct",
+                    Text("Earn prize fragments in Rewards Game by completing 25 or more questions with over 90% correct",
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(model.rewardsEnabled, model::chooseRewardsEnabled,
@@ -202,7 +202,7 @@ private fun AdminDialog(model: MathViewModel, onDismiss: () -> Unit) {
                 Text("${model.pokemons.size}/${Celebration.entries.size} animations collected")
                 HorizontalDivider()
                 Text("Available rewards", style = MaterialTheme.typography.titleMedium)
-                Text("Choose which rewards can be awarded when a practice finishes. Existing prizes and fragments stay available.")
+                Text("Choose which rewards can be awarded when a Rewards Game finishes. Existing prizes and fragments stay available.")
                 RewardTier.entries.forEach { tier ->
                     Text("${tier.label} · ${tier.questionCountLabel}", Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.titleSmall)
@@ -215,7 +215,7 @@ private fun AdminDialog(model: MathViewModel, onDismiss: () -> Unit) {
                         }
                     }
                 }
-                Text("If all rewards in a tier are disabled, practices in that tier give no prize.")
+                Text("If all rewards in a tier are disabled, Rewards Games in that tier give no prize.")
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
@@ -241,7 +241,7 @@ private fun TimeLimitSetting(minutes: Int, onChange: (Int) -> Unit) {
                 }
             }
         }
-        Text("Applies to the next practice. Time pauses in settings and in the background.",
+        Text("Applies to the next Rewards Game. Time pauses in settings and in the background.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -325,7 +325,7 @@ fun PokemonsScreen(model: MathViewModel) {
             }
             if (collected.isEmpty()) {
                 item(key = "empty-collection", span = { GridItemSpan(maxLineSpan) }) {
-                    Text("Finish practices to discover celebrations and collect them here. Pokémon can appear after 15 or more questions.",
+                    Text("Finish practices to collect Other celebrations. Pokémon can appear in Rewards Game after 15 or more questions.",
                         Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
