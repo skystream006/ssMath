@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
@@ -514,6 +515,73 @@ class MathAppTest {
         assertFalse(model().showCorrectAnswers)
     }
 
+    @Test fun appearanceStartsCollapsedAndKeepsChoicesWhenToggledOrReopened() {
+        val model = model()
+        model.chooseSkin(AppSkin.GALAXY)
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithContentDescription("Settings").performClick()
+        val appearance = compose.onNodeWithText("Appearance")
+        appearance.performScrollTo().assertHasClickAction()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed"))
+        compose.onNodeWithContentDescription("Text size").assertDoesNotExist()
+        compose.onNodeWithText("Blue Wave").assertDoesNotExist()
+        compose.onNodeWithText("Color theme").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Skins").assertDoesNotExist()
+        compose.onNodeWithText("Debug logging").performScrollTo().assertIsDisplayed()
+
+        appearance.performScrollTo().performClick()
+        appearance.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Expanded"))
+        compose.onNodeWithContentDescription("Text size").performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(120f)) }
+        compose.onNodeWithText("Color theme").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("pink theme").performScrollTo().performClick()
+        compose.onNodeWithText("Dark appearance").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Skins").performScrollTo().assertIsOff().performClick()
+        compose.onNodeWithText("Galaxy").performScrollTo().assertIsDisplayed()
+
+        appearance.performScrollTo().performClick()
+        appearance.assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed"))
+        compose.onNodeWithContentDescription("Text size").assertDoesNotExist()
+        compose.onNodeWithText("Dark appearance").assertDoesNotExist()
+        compose.onNodeWithContentDescription("pink theme").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Skins").assertDoesNotExist()
+        appearance.performClick()
+        compose.onNodeWithContentDescription("Text size").performScrollTo()
+            .assertRangeInfoEquals(ProgressBarRangeInfo(120f, 80f..200f, 11))
+        compose.onNodeWithText("Color theme").performScrollTo().assertIsSelected()
+        compose.onNodeWithContentDescription("pink theme").performScrollTo().assertIsSelected()
+        compose.onNodeWithContentDescription("Skins").performScrollTo().assertIsOn()
+
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        appearance.performScrollTo()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed"))
+        compose.onNodeWithContentDescription("Skins").assertDoesNotExist()
+        val restored = model()
+        assertEquals(120, restored.textSizePercent)
+        assertFalse(restored.waveAppearance)
+        assertEquals("pink", restored.theme)
+        assertTrue(restored.skinsEnabled)
+        assertEquals(AppSkin.GALAXY, restored.skin)
+    }
+
+    @Test fun appearanceExpansionSurvivesSavedStateRestoration() {
+        val model = model()
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { MathTheme { SettingsScreen(model) } }
+        val appearance = compose.onNodeWithText("Appearance")
+        appearance.performScrollTo().performClick()
+        restoration.emulateSavedInstanceStateRestore()
+        appearance.performScrollTo()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Expanded"))
+        compose.onNodeWithContentDescription("Text size").performScrollTo().assertIsDisplayed()
+        appearance.performScrollTo().performClick()
+        restoration.emulateSavedInstanceStateRestore()
+        appearance.performScrollTo()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Collapsed"))
+        compose.onNodeWithContentDescription("Text size").assertDoesNotExist()
+    }
+
     @Test fun textSizeDefaultsToNormalAndIsRemembered() {
         val model = model()
         assertEquals(100, model.textSizePercent)
@@ -576,6 +644,7 @@ class MathAppTest {
         assertEquals(Typography().titleLarge.fontSize, textLayout("What would you like to practice?").layoutInput.style.fontSize)
         compose.onNodeWithText("Cancel").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithText("Appearance").performScrollTo().performClick()
         val slider = compose.onNodeWithContentDescription("Text size")
         slider.performScrollTo().assertRangeInfoEquals(ProgressBarRangeInfo(100f, 80f..200f, 11))
         listOf(150, 80, 100, 160, 170, 180, 190, 200).forEach { percent ->
@@ -605,6 +674,7 @@ class MathAppTest {
         assertEquals(Typography().titleLarge.fontSize * 2f, textLayout("You got 0 right!").layoutInput.style.fontSize)
         compose.onNodeWithTag("done-button").assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription("Settings").performClick()
+        compose.onNodeWithText("Appearance").performScrollTo().performClick()
         slider.performScrollTo().assertRangeInfoEquals(ProgressBarRangeInfo(200f, 80f..200f, 11))
     }
 
@@ -613,6 +683,7 @@ class MathAppTest {
         model.chooseTextSize(80)
         model.openSettings()
         compose.setContent { MathAppContent(model) }
+        compose.onNodeWithText("Appearance").performScrollTo().performClick()
         val slider = compose.onNodeWithContentDescription("Text size")
         slider.performScrollTo().assertIsDisplayed().performTouchInput {
             down(Offset(24f, centerY))

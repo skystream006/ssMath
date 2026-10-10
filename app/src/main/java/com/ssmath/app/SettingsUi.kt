@@ -138,42 +138,43 @@ fun SettingsScreen(model: MathViewModel) {
                     modifier = Modifier.semantics { contentDescription = "Vertical equations" })
             }
             HorizontalDivider()
-            Text("Appearance", style = MaterialTheme.typography.titleMedium)
-            Column {
-                Text("Text size: ${model.textSizePercent}%")
-                Text("Adjust text throughout the app", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Slider(value = model.textSizePercent.toFloat(),
-                    onValueChange = { model.chooseTextSize(it.roundToInt()) },
-                    valueRange = MIN_TEXT_SIZE_PERCENT.toFloat()..MAX_TEXT_SIZE_PERCENT.toFloat(),
-                    steps = (MAX_TEXT_SIZE_PERCENT - MIN_TEXT_SIZE_PERCENT) / 10 - 1,
-                    modifier = Modifier.fillMaxWidth().semantics {
-                        contentDescription = "Text size"
-                        stateDescription = "${model.textSizePercent}%"
-                    })
-            }
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                listOf("Blue Wave", "Color theme").forEachIndexed { index, label ->
-                    SegmentedButton(selected = model.waveAppearance == (index == 0),
-                        onClick = { model.chooseWaveAppearance(index == 0) },
-                        shape = SegmentedButtonDefaults.itemShape(index, 2)) { Text(label) }
+            CollapsibleSettingsSection("Appearance", defaultExpanded = false) {
+                Column {
+                    Text("Text size: ${model.textSizePercent}%")
+                    Text("Adjust text throughout the app", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Slider(value = model.textSizePercent.toFloat(),
+                        onValueChange = { model.chooseTextSize(it.roundToInt()) },
+                        valueRange = MIN_TEXT_SIZE_PERCENT.toFloat()..MAX_TEXT_SIZE_PERCENT.toFloat(),
+                        steps = (MAX_TEXT_SIZE_PERCENT - MIN_TEXT_SIZE_PERCENT) / 10 - 1,
+                        modifier = Modifier.fillMaxWidth().semantics {
+                            contentDescription = "Text size"
+                            stateDescription = "${model.textSizePercent}%"
+                        })
                 }
-            }
-            if (!model.waveAppearance) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    COLOR_THEMES.forEach { (id, color) ->
-                        Box(Modifier.size(48.dp).semantics { contentDescription = "$id theme"; selected = model.theme == id }
-                            .clickable { model.chooseTheme(id) }.padding(6.dp)
-                            .border(if (model.theme == id) 3.dp else 0.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                            .padding(5.dp).background(Color(color), CircleShape))
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    listOf("Blue Wave", "Color theme").forEachIndexed { index, label ->
+                        SegmentedButton(selected = model.waveAppearance == (index == 0),
+                            onClick = { model.chooseWaveAppearance(index == 0) },
+                            shape = SegmentedButtonDefaults.itemShape(index, 2)) { Text(label) }
                     }
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Dark appearance", Modifier.weight(1f))
-                    Switch(isDarkTheme(model.theme, model.mode), model::chooseDark)
+                if (!model.waveAppearance) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        COLOR_THEMES.forEach { (id, color) ->
+                            Box(Modifier.size(48.dp).semantics { contentDescription = "$id theme"; selected = model.theme == id }
+                                .clickable { model.chooseTheme(id) }.padding(6.dp)
+                                .border(if (model.theme == id) 3.dp else 0.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                .padding(5.dp).background(Color(color), CircleShape))
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Dark appearance", Modifier.weight(1f))
+                        Switch(isDarkTheme(model.theme, model.mode), model::chooseDark)
+                    }
                 }
+                SkinSetting(model.skinsEnabled, model.skin, model::chooseSkin, model::chooseSkins)
             }
-            SkinSetting(model.skinsEnabled, model.skin, model::chooseSkin, model::chooseSkins)
             HorizontalDivider()
             DebugLogSettings(onOpenAdmin = { showingAdmin = true })
             Text("ssMath ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall,

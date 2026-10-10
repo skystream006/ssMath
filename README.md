@@ -146,14 +146,19 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   tens, hundreds, and higher places line up, with the operator to the left and the
   answer (or `?` during practice) below a line. Works with all four operations;
   the choice is remembered and does not change saved answers.
-- **Appearance** – the **Blue Wave** look or a **Color theme** (midnight, royal
-  purple, gold, green, pink, black) with a **Dark appearance** switch.
+- **Appearance** – collapsed by default; tap the heading to expand or collapse
+  text size, theme, and skin controls without changing your choices. Choose the
+  **Blue Wave** look or a **Color theme** (midnight, royal purple, gold, green,
+  pink, black) with a **Dark appearance** switch.
 - **Text size** – use the slider under Appearance to adjust app text from 80% to
   200% in 10% steps (default 100%). Changes apply immediately, work with your
   device's font-size setting, and are remembered for next time.
-- **Skins** – optional background images (Cherry Blossom Sunset, Starry City
-  Sunset, Ocean Wave, Ocean Moonlight, Galaxy, Tropical, Mechanics). Your color
-  theme stays the same.
+- **Skins** – 17 optional offline background images under Appearance: Cherry
+  Blossom Sunset, Starry City Sunset, Ocean Wave, Ocean Moonlight, Galaxy, Tropical,
+  Mechanics, Aurora Borealis, Desert Dunes, Bamboo Grove, Autumn River, Alpine Dawn,
+  Rainy Window, Volcanic Ember, Crystal Cavern, Paper Lanterns, and Synthwave Grid.
+  The ten additions come from [ssMusic Player PR #155](https://github.com/skystream006/ssMusic_Player/pull/155).
+  Your color theme stays the same.
 - **Debug logging** – off by default. See [Debug logging](#debug-logging).
 
 ## Build and Install
