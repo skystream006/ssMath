@@ -38,6 +38,9 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    the **Wrong** tally in the bottom-left corner. Either way, a new problem of the
    same type follows, with your question progress shown above it. A progress bar fills
    after each answered question, correct or wrong, as a rocket jumps to the next point.
+   Tap **Quit game** below **Submit** (or use Android Back) to leave an unfinished test.
+   Confirm **Quit** to return home without saving that game's progress, or choose
+   **Keep practicing** to continue.
 4. **Results** – after the chosen number of questions (correct or wrong), or
    the wrong-answer limit (or an optional time limit), whichever comes first, the practice stops and shows how many you
    got right, plus every answered problem with a green check (correct) or a red X

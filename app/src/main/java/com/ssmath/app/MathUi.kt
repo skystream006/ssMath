@@ -167,7 +167,7 @@ internal fun SettingsButton(onClick: () -> Unit, modifier: Modifier = Modifier) 
 
 @Composable
 private fun MainContent(model: MathViewModel) {
-    var confirmQuit by rememberSaveable { mutableStateOf(false) }
+    var confirmQuit by rememberSaveable(model.screen) { mutableStateOf(false) }
     BackHandler(enabled = model.screen != Screen.SETUP) {
         when (model.screen) {
             Screen.READY -> model.backToSetup()
@@ -181,7 +181,7 @@ private fun MainContent(model: MathViewModel) {
         Screen.SETUP -> HomeScreen(model)
         Screen.REWARDS_SETUP -> RewardsSetupScreen(model)
         Screen.READY -> ReadyDialog(model)
-        Screen.PLAYING -> PlayingScreen(model)
+        Screen.PLAYING -> PlayingScreen(model, onQuit = { confirmQuit = true })
         Screen.RESULTS -> model.lastResult?.let { result ->
             ResultsContent(result, title = "Results", showCorrectAnswers = model.showCorrectAnswers,
                 verticalEquations = model.verticalEquations) {
@@ -445,7 +445,7 @@ private fun ReadyDialog(model: MathViewModel) {
 }
 
 @Composable
-private fun PlayingScreen(model: MathViewModel) {
+private fun PlayingScreen(model: MathViewModel, onQuit: () -> Unit) {
     val game = model.game ?: return
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
@@ -472,6 +472,8 @@ private fun PlayingScreen(model: MathViewModel) {
                 modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("answer-input"))
             Button(onClick = model::submitAnswer, enabled = parseAnswer(model.answerText) != null,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("submit-answer")) { Text("Submit") }
+            OutlinedButton(onClick = onQuit,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("quit-game")) { Text("Quit game") }
             model.feedback?.let {
                 val correction = game.attempts.lastOrNull()?.takeIf {
                     model.verticalEquations && model.showCorrectAnswers && !it.correct
