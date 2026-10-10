@@ -1269,7 +1269,7 @@ class MathAppTest {
         val setup = compose.onNodeWithTag("rewards-setup")
             .assertIsDisplayed().assertIsEnabled().assertHasClickAction()
             .assertContentDescriptionEquals("Setup")
-            .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
+            .assertTouchWidthIsEqualTo(48.dp).assertTouchHeightIsEqualTo(48.dp)
             .fetchSemanticsNode().boundsInRoot
         val title = compose.onNode(hasText("Rewards Game") and hasAnyAncestor(isDialog()))
             .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
