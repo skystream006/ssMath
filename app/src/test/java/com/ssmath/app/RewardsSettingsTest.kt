@@ -47,7 +47,7 @@ class RewardsSettingsTest {
     @Test fun timeLimitRequiresBothSwitchesAndRemembersSelection() {
         val model = MathViewModel(application)
         compose.setContent { MathTheme { SettingsScreen(model) } }
-        compose.onNodeWithText("Earn prize fragments by completing 25 or more questions with over 90% correct")
+        compose.onNodeWithText("Earn prize fragments in Rewards Game by completing 25 or more questions with over 90% correct")
             .performScrollTo().assertIsDisplayed()
         compose.onNodeWithContentDescription("Rewards system").assertIsOn()
         compose.onNodeWithContentDescription("Show correct answers").performScrollTo().assertIsOff()
@@ -168,9 +168,11 @@ class RewardsSettingsTest {
     @Test fun giftFollowsCelebrationAndUnopenedPrizeCanBeClaimedFromHistory() {
         val model = MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate)
         assertTrue(model.rewardsEnabled)
-        model.selectOperation(Operation.ADDITION)
-        model.updateQuestionCount("50")
-        model.submitSetup()
+        model.openRewardsGame()
+        model.openRewardsSetup()
+        model.updateRewardsParameters(Operation.ADDITION, GameParameters(questionCountText = "50"))
+        model.saveRewardsSetup()
+        model.selectRewardsGame(Operation.ADDITION)
         model.start()
         compose.mainClock.autoAdvance = false
         compose.setContent { MathAppContent(model) }

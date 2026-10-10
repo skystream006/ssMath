@@ -8,8 +8,9 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
 1. **Home screen** – use the **Rewards** (gift box) and **Pokémon** (Poké Ball) buttons
    at the top, each with its image to the left of the label, to open
    your collections; Back returns you to the home screen without losing your setup choices.
-   Below the buttons, choose what to practice (**Addition**, **Subtraction**,
-   **Multiplication** or **Division**), enter the **Minimum number** (defaults to 1)
+   Below the collections, choose **Practice Game** or **Rewards Game**.
+   **Practice Game** opens the question setup in a dialog. Choose **Addition**, **Subtraction**,
+   **Multiplication** or **Division**, enter the **Minimum number** (defaults to 1)
    above the **Maximum number** (both 1 to 10,000; minimum cannot exceed maximum),
    and answer **How many questions would you like?** using the **Number of questions**
    field (1 to 1,000; defaults to 10), then press **Submit**.
@@ -17,8 +18,19 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    and **What is the Maximum Second number?** Each is an independent limit from
    1 to 10,000, for the dividend and divisor respectively; either limit may be larger.
    Your choices are remembered for next time, with division limits saved separately.
+   Practice Game never awards prize fragments or Pokémon; completing its questions
+   gives only **Other** animations. Once all five Other scenes have been collected,
+   practice can repeat them.
+   **Rewards Game** opens a dialog with the four math types. Choose one to use its
+   saved parameters, or tap **Setup** to open a screen with number limits and question
+   counts for all four types. **Save defaults** saves all four together; **Back**
+   discards unsaved edits. Division's two maximums are independent. Defaults are
+   remembered on this device separately from Practice Game choices, and initially
+   use your previous setup (or 1–10 and 10 questions on a new install).
+   Rewards Game can award all available prizes and animation categories under the
+   eligibility rules below. **Cancel** or Android Back closes either game dialog.
 2. **Press Start when Ready** – press **Start** to begin. The timer starts now.
-3. **Practice** – addition, subtraction and multiplication use two random numbers
+3. **Play** – in either mode, addition, subtraction and multiplication use two random numbers
    between the minimum and maximum, inclusive. Subtraction never goes below zero.
    Division always has a whole-number answer, using a first number from 1 to its first maximum
    and a second number from 1 to its second maximum, choosing only exactly divisible pairs.
@@ -31,7 +43,7 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    got right, plus every answered problem with a green check (correct) or a red X
    (wrong, with the correct answer if **Show correct answers** is enabled).
    Results are saved with the date and time.
-   If all the chosen questions were answered, even with mistakes, one of 162 randomly chosen
+   In Rewards Game, if all the chosen questions were answered, even with mistakes, one of 162 randomly chosen
    congratulations animations plays: dolphins, whales, or anchovies jumping out
    of the water, a balloon-and-confetti party, a candy shower, Pikachu running toward
    the screen and zapping lightning, Squirtle shooting water from his mouth,
@@ -44,11 +56,13 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    and psychic rings. Related species have different scenery layouts and motion.
    The 157 Pokémon scenes belong to the
    **Pokémons** category and can only appear after completing **15 or more questions**.
-   The remaining five scenes belong to **Other** and can appear at any practice length;
+   The remaining five scenes belong to **Other** and can appear at any game length;
    below 15 questions, only **Other** scenes appear. Only scenes not yet in **My Pokémons**
    are selected until all 162 animations have been collected; after that, repeats are allowed.
    If all five **Other** scenes are collected but the full collection is incomplete,
-   practices below 15 questions go straight to results without an animation.
+   Rewards Games below 15 questions go straight to results without an animation.
+   Practice Game uses only the five Other scenes, regardless of question count,
+   without awarding prizes or Pokémon.
    Each scene says **Hurray!!**. These animations
    are drawn in the app and work offline. Press **View results** to
    skip the animation, or wait for it to finish.
@@ -73,7 +87,8 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   Only whole rewards can be used. Remaining counts are saved on this device;
   fragments and practice history are unchanged.
 - **My Pokémons** – directly below My Rewards, collect a still image of each
-  celebration you see after completing a practice, even when rewards are disabled.
+  celebration you see after completing a game, even when rewards are disabled.
+  Practice Game contributes only to **Other**; Pokémon require Rewards Game.
   Each celebration is collected only once and labelled with its name, grouped under
   **Pokémons** or **Other**. Pokémon are sorted by their National Pokédex number
   (Ndex) and labelled with a four-digit number and name, such as **#0025 Pikachu**.
@@ -89,8 +104,9 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   already used. The result's My Pokémons reward is also removed unless another saved
   result earned the same celebration. Older collection entries without a linked result
   are kept, as are unrelated celebrations added through Admin.
-- **Rewards system** – on by default. Earn
+- **Rewards system** – on by default. In **Rewards Game**, earn
   prizes for completing **25 or more questions** with **more than 90% correct**.
+  This setting never enables prizes in Practice Game.
   After the celebration, tap the hopping gift box to open it and release confetti.
   **Tier 1** rewards are for sessions of **25–49 questions**: a random Lollipop,
   Ice Cream Cone, Gummi Bear, Ramen, or Bed Time Fragment. **Tier 2** rewards are for sessions
@@ -111,7 +127,7 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   Settings, Practice History, My Rewards, or My Pokémons is open, or the app is in the background.
   When both Rewards system and Show timer are enabled, **Time limit** offers
   **None** or **5–60 minutes** in 5-minute increments. The selection applies to the
-  next practice. A timed practice shows time remaining and ends when time runs out,
+  next Rewards Game, not Practice Game. A timed game shows time remaining and ends when time runs out,
   saving the partial result without a prize. Changing settings during practice does
   not remove its active time limit.
 - **Show correct answers** – off by default. Turn on to reveal correct answers after

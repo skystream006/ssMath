@@ -5,6 +5,7 @@ import java.io.IOException
 import java.time.ZoneOffset
 import java.util.UUID
 import java.util.Locale
+import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
@@ -48,6 +49,54 @@ class HistoryStoreTest {
         assertEquals(1, result.minimum)
         assertEquals(10, result.maximum)
         assertEquals(1, result.correct)
+    }
+
+    @Test fun bothGameModesRoundTripWithoutChangingResultMetadata() {
+        val practice = result(1).copy(gameMode = GameMode.PRACTICE)
+        val rewards = eligible(2).copy(gameMode = GameMode.REWARDS)
+        store.add(practice)
+        store.add(rewards)
+        assertEquals(listOf(rewards, practice), HistoryStore(file).load())
+        assertTrue(file.readText().contains("\"gameMode\":\"PRACTICE\""))
+        assertTrue(file.readText().contains("\"gameMode\":\"REWARDS\""))
+    }
+
+    @Test fun legacyResultsDefaultToRewardsAndKeepPrizeClaimsAndCollections() {
+        val pending = eligible(1)
+        val encoded = Json.encodeToString(PracticeResult.serializer(), pending)
+        assertFalse(encoded.contains("gameMode"))
+        listOf(
+            "[$encoded]",
+            """{"history":[$encoded],"rewards":{"LOLLIPOP":{"whole":2,"fragments":1}},
+                "pokemons":["PIKACHU"]}"""
+        ).forEach { legacy ->
+            file.writeText(legacy)
+            val before = store.loadSnapshot()
+            assertEquals(GameMode.REWARDS, before.history.single().gameMode)
+            assertEquals(pending, before.history.single())
+            val claimed = store.claimReward(1)
+            val expected = (before.rewards[RewardType.LOLLIPOP] ?: RewardBalance()).addFragment()
+            assertEquals(expected, claimed.rewards[RewardType.LOLLIPOP])
+            assertEquals(before.pokemons, claimed.pokemons)
+            assertEquals(PrizeAward(RewardType.LOLLIPOP, expected), claimed.history.single().prize)
+            assertEquals(claimed, HistoryStore(file).loadSnapshot())
+            assertEquals(claimed, store.claimReward(1))
+        }
+    }
+
+    @Test fun practiceCannotClaimAPrizeOrCollectAPokemonButCanCollectOtherScenes() {
+        val practice = eligible(1).copy(gameMode = GameMode.PRACTICE)
+        store.add(practice)
+        val before = store.loadSnapshot()
+        val bytes = file.readText()
+        assertEquals(before, store.claimReward(1))
+        assertEquals(before, store.collectPokemon(1, Celebration.PIKACHU))
+        assertEquals(bytes, file.readText())
+        val collected = store.collectPokemon(1, Celebration.PARTY)
+        assertEquals(setOf(Celebration.PARTY), collected.pokemons)
+        assertEquals(practice.copy(pokemonReward = Celebration.PARTY), collected.history.single())
+        assertTrue(collected.rewards.isEmpty())
+        assertEquals(collected, HistoryStore(file).loadSnapshot())
     }
 
     @Test fun divisionLimitsRoundTripWithoutReinterpretingLegacyResults() {

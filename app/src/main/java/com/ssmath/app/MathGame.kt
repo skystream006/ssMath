@@ -12,6 +12,31 @@ const val DEFAULT_QUESTION_COUNT = 10
 private const val MAX_ANSWER_DIGITS = 9
 
 @Serializable
+enum class GameMode { PRACTICE, REWARDS }
+
+data class GameParameters(
+    val firstText: String = "1",
+    val secondText: String = "10",
+    val questionCountText: String = DEFAULT_QUESTION_COUNT.toString()
+) {
+    val first: Int? get() = parseMaximum(firstText)
+    val second: Int? get() = parseMaximum(secondText)
+    val questionCount: Int? get() = parseQuestionCount(questionCountText)
+
+    fun isValid(operation: Operation): Boolean {
+        val first = first ?: return false
+        val second = second ?: return false
+        return questionCount != null && (operation == Operation.DIVISION || first <= second)
+    }
+
+    companion object {
+        fun defaults(operation: Operation) = GameParameters(
+            firstText = if (operation == Operation.DIVISION) "10" else "1"
+        )
+    }
+}
+
+@Serializable
 enum class Operation(val label: String, val symbol: String) {
     ADDITION("Addition", "+"),
     SUBTRACTION("Subtraction", "−"),
