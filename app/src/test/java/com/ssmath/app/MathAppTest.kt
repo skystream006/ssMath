@@ -1233,7 +1233,7 @@ class MathAppTest {
         }
         assertEquals(2, model.lastResult!!.attempts.size)
         assertEquals(celebration, model.celebration)
-        compose.waitUntil(5_000) { model.history.size == 1 }
+        compose.waitUntil(5_000) { model.history.size == 1 && model.lastResult?.pokemonReward != null }
         assertEquals(model.lastResult, HistoryStore(File(application.filesDir, "practice_history.json")).load().single())
 
         compose.onNodeWithTag("view-results").performClick()
@@ -1275,7 +1275,7 @@ class MathAppTest {
         assertNull(model.celebration)
         assertEquals(2, model.lastResult!!.attempts.size)
         assertEquals(1, model.lastResult!!.wrong)
-        compose.waitUntil(5_000) { model.history.size == 1 }
+        compose.waitUntil(5_000) { model.history.size == 1 && model.lastResult?.pokemonReward != null }
         assertEquals(model.lastResult, HistoryStore(File(application.filesDir, "practice_history.json")).load().single())
     }
 
@@ -1302,7 +1302,7 @@ class MathAppTest {
         compose.onNodeWithText("Nice try!", substring = true).assertDoesNotExist()
         assertEquals(6, model.lastResult!!.attempts.size)
         assertEquals(MAX_WRONG_ANSWERS, model.lastResult!!.wrong)
-        compose.waitUntil(5_000) { model.history.size == 1 }
+        compose.waitUntil(5_000) { model.history.size == 1 && model.lastResult?.pokemonReward != null }
         assertEquals(model.lastResult, HistoryStore(File(application.filesDir, "practice_history.json")).load().single())
         compose.onNodeWithTag("view-results").performClick()
         compose.mainClock.autoAdvance = true
