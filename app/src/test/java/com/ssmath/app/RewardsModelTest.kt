@@ -638,6 +638,96 @@ class RewardsModelTest {
         assertEquals(RewardBalance(1, 2), model.rewardBalances[RewardType.LOLLIPOP])
     }
 
+    @Test fun adminRemovalWorksWithRewardsDisabledAndPreservesHistoryAcrossReloads() {
+        collectLollipops()
+        HistoryStore(file).collectPokemon(Celebration.PIKACHU)
+        val model = model()
+        val before = HistoryStore(file).loadSnapshot()
+        model.chooseRewardsEnabled(false)
+        model.chooseRewardEnabled(RewardType.LOLLIPOP, false)
+        model.openSettings()
+        model.removeReward(RewardType.LOLLIPOP, fragment = true)
+        assertEquals(RewardBalance(2, 1), model.rewardBalances[RewardType.LOLLIPOP])
+        model.removeReward(RewardType.LOLLIPOP, fragment = false)
+        assertEquals(RewardBalance(1, 1), model.rewardBalances[RewardType.LOLLIPOP])
+        assertFalse(model.removingReward)
+        assertNull(model.rewardRemovalError)
+        assertEquals(before.history, model.history)
+        assertEquals(before.pokemons, model.pokemons)
+        assertEquals(model.rewardBalances, model().rewardBalances)
+        assertEquals(before.copy(rewards = model.rewardBalances), HistoryStore(file).loadSnapshot())
+    }
+
+    @Test fun adminRemovalRequiresSettingsAndAnAvailableUnit() {
+        collectLollipops()
+        val model = model()
+        model.removeReward(RewardType.LOLLIPOP, fragment = true)
+        model.openRewards()
+        model.removeReward(RewardType.LOLLIPOP, fragment = false)
+        assertEquals(RewardBalance(2, 2), model.rewardBalances[RewardType.LOLLIPOP])
+        model.openSettings()
+        model.removeReward(RewardType.VIDEO_GAME, fragment = true)
+        repeat(4) { model.removeReward(RewardType.LOLLIPOP, fragment = true) }
+        assertEquals(RewardBalance(2, 0), model.rewardBalances[RewardType.LOLLIPOP])
+        repeat(4) { model.removeReward(RewardType.LOLLIPOP, fragment = false) }
+        assertEquals(RewardBalance(), model.rewardBalances[RewardType.LOLLIPOP])
+        assertNull(model.rewardRemovalError)
+        assertEquals(model.rewardBalances, model().rewardBalances)
+    }
+
+    @Test fun rapidAdminRemovalsOnlyRemoveOnceAndSerializeWithUseAndHistoryChanges() {
+        collectLollipops()
+        val dispatcher = QueuedDispatcher()
+        val model = model(dispatcher)
+        dispatcher.drain()
+        model.openSettings()
+        repeat(4) {
+            model.removeReward(RewardType.LOLLIPOP, fragment = true)
+            model.removeReward(RewardType.LOLLIPOP, fragment = false)
+        }
+        assertTrue(model.removingReward)
+        assertEquals(RewardBalance(2, 2), model.rewardBalances[RewardType.LOLLIPOP])
+        model.openRewards()
+        model.useReward(RewardType.LOLLIPOP)
+        dispatcher.drain()
+        assertFalse(model.removingReward)
+        assertFalse(model.usingReward)
+        assertEquals(Overlay.REWARDS, model.overlay)
+        assertEquals(RewardBalance(1, 1), model.rewardBalances[RewardType.LOLLIPOP])
+        model.openSettings()
+        model.removeReward(RewardType.LOLLIPOP, fragment = false)
+        model.clearHistory()
+        model.closeOverlay()
+        dispatcher.drain()
+        assertNull(model.overlay)
+        assertTrue(model.history.isEmpty())
+        assertEquals(RewardBalance(), model.rewardBalances[RewardType.LOLLIPOP])
+        assertEquals(model.rewardBalances, model().rewardBalances)
+    }
+
+    @Test fun failedAdminRemovalDoesNotChangeBalancesAndAllowsRetry() {
+        collectLollipops()
+        val model = model()
+        model.openSettings()
+        listOf(true, false).forEach { fragment ->
+            val before = file.readText()
+            val balance = model.rewardBalances
+            assertTrue(blockedWrite.mkdir())
+            repeat(2) {
+                model.removeReward(RewardType.LOLLIPOP, fragment)
+                assertFalse(model.removingReward)
+                assertNotNull(model.rewardRemovalError)
+                assertEquals(balance, model.rewardBalances)
+                assertEquals(before, file.readText())
+            }
+            assertTrue(blockedWrite.delete())
+            model.removeReward(RewardType.LOLLIPOP, fragment)
+            assertNull(model.rewardRemovalError)
+        }
+        assertEquals(RewardBalance(1, 1), model.rewardBalances[RewardType.LOLLIPOP])
+        assertEquals(model.rewardBalances, model().rewardBalances)
+    }
+
     private fun collectLollipops() {
         val store = HistoryStore(file)
         repeat(8) {

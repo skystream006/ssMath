@@ -260,9 +260,16 @@ seven times to open the **Admin** dialog. Opening or closing it does not add ani
 Press **Add all animations** to add every celebration to **My Pokémons**, without
 duplicating ones already collected or changing history and rewards.
 
+Press **Remove rewards** to view available balances by tier. Choose **Remove 1 fragment**
+or **Remove 1 whole reward** for a reward, then confirm **Remove**; **Cancel** leaves it
+unchanged. Each action removes one of the selected units, without breaking whole rewards
+into fragments or changing the other units, practice history, or My Pokémons. Empty balances
+cannot be removed. Changes are saved on this device and cannot be undone; claimed gifts
+cannot be claimed again. **Back to admin** returns to the Admin dialog.
+
 Under **Available rewards**, enable or disable each reward, grouped by tier. Choices
 are saved on this device and apply when a practice finishes, including a practice
 already in progress. Disabling every reward in a tier means no prize for that tier;
 it does not prevent celebrations or remove existing prizes and fragments, including
 unopened gifts in history. Re-enable a reward to make it available for future awards.
-Both admin sections work even while debug logging and the rewards system are disabled.
+All admin sections work even while debug logging and the rewards system are disabled.

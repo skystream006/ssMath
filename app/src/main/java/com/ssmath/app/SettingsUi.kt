@@ -41,8 +41,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -188,6 +190,14 @@ fun SettingsScreen(model: MathViewModel) {
 
 @Composable
 private fun AdminDialog(model: MathViewModel, onDismiss: () -> Unit) {
+    var showingRemoval by rememberSaveable { mutableStateOf(false) }
+    if (showingRemoval) {
+        RemoveRewardsDialog(
+            model.rewardBalances, model.removingReward, model.rewardRemovalError,
+            model::removeReward, { showingRemoval = false }
+        )
+        return
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Admin", Modifier.fillMaxWidth()) },
@@ -201,6 +211,11 @@ private fun AdminDialog(model: MathViewModel, onDismiss: () -> Unit) {
                     Text("Add all animations", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
                 Text("${model.pokemons.size}/${Celebration.entries.size} animations collected")
+                HorizontalDivider()
+                Text("My Rewards", style = MaterialTheme.typography.titleMedium)
+                Button(onClick = { showingRemoval = true }) {
+                    Text("Remove rewards", Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                }
                 HorizontalDivider()
                 Text("Available rewards", style = MaterialTheme.typography.titleMedium)
                 Text("Choose which rewards can be awarded when a Rewards Game finishes. Existing prizes and fragments stay available.")
@@ -220,6 +235,95 @@ private fun AdminDialog(model: MathViewModel, onDismiss: () -> Unit) {
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+    )
+}
+
+@Composable
+internal fun RemoveRewardsDialog(
+    balances: Map<RewardType, RewardBalance>,
+    removingReward: Boolean,
+    error: String?,
+    onRemove: (RewardType, Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selected by rememberSaveable { mutableStateOf<RewardType?>(null) }
+    var fragment by rememberSaveable { mutableStateOf(false) }
+    val choice = selected
+    val balance = balances[choice] ?: RewardBalance()
+    AlertDialog(
+        onDismissRequest = { if (choice != null) selected = null else onDismiss() },
+        title = { Text(if (choice == null) "Remove rewards" else "Remove reward?") },
+        text = {
+            if (choice != null) {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(if (fragment) "Permanently remove 1 ${choice.label} fragment?"
+                        else "Permanently remove 1 whole ${choice.label} reward?")
+                    Text("Practice history and My Pokémons will not change. This cannot be undone.")
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (removingReward) {
+                        Text("Removing reward…", modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    }
+                    if (error != null) {
+                        Text(error, color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    }
+                    Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Remove one fragment or whole reward at a time. Removing a fragment does not break a whole reward.")
+                        if (balances.values.none { it.totalFragments > 0 }) {
+                            Text("No rewards or fragments available.")
+                        }
+                        RewardTier.entries.forEach { tier ->
+                            Text(tier.label, style = MaterialTheme.typography.titleMedium)
+                            RewardType.entries.filter { it.tier == tier }.forEach { type ->
+                                val available = balances[type] ?: RewardBalance()
+                                Column(Modifier.fillMaxWidth().testTag("remove-reward-${type.name}"),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(type.label, style = MaterialTheme.typography.titleSmall)
+                                    Text("Whole: ${available.whole} · Fragments: ${available.fragments}/3")
+                                    OutlinedButton(
+                                        onClick = { selected = type; fragment = true },
+                                        enabled = !removingReward && available.fragments > 0,
+                                        modifier = Modifier.fillMaxWidth().semantics {
+                                            contentDescription = "Remove 1 ${type.label} fragment"
+                                        }
+                                    ) { Text("Remove 1 fragment", textAlign = TextAlign.Center) }
+                                    OutlinedButton(
+                                        onClick = { selected = type; fragment = false },
+                                        enabled = !removingReward && available.whole > 0,
+                                        modifier = Modifier.fillMaxWidth().semantics {
+                                            contentDescription = "Remove 1 whole ${type.label} reward"
+                                        }
+                                    ) { Text("Remove 1 whole reward", textAlign = TextAlign.Center) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (choice != null) {
+                TextButton(
+                    enabled = !removingReward && (if (fragment) balance.fragments else balance.whole) > 0,
+                    onClick = {
+                        if (selected == choice) {
+                            selected = null
+                            onRemove(choice, fragment)
+                        }
+                    }
+                ) { Text("Remove") }
+            } else {
+                TextButton(onClick = onDismiss) { Text("Back to admin") }
+            }
+        },
+        dismissButton = {
+            if (choice != null) {
+                TextButton(onClick = { selected = null }) { Text("Cancel") }
+            }
+        }
     )
 }
 
