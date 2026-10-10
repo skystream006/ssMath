@@ -449,48 +449,60 @@ private fun PlayingScreen(model: MathViewModel, onQuit: () -> Unit) {
     val game = model.game ?: return
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
-            Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                Text("Points: ${game.correct}", style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.testTag("points"))
-                if (model.showTimer || model.activeTimeLimitMs != null) TimerText(model)
-            }
-            OutlinedButton(onClick = onQuit,
-                modifier = Modifier.heightIn(min = 48.dp).testTag("quit-game")) { Text("Quit game") }
-        }
-        Column(Modifier.weight(1f).align(Alignment.CenterHorizontally).widthIn(max = 440.dp).fillMaxWidth()
-            .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-            Text("Question ${game.attempts.size + 1} of ${game.questionCount}",
-               style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("question-progress"))
-            GameProgress(game.attempts.size, game.questionCount)
-            Equation(game.problem, "?", model.verticalEquations,
-                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
-                modifier = Modifier.testTag("problem"))
-            OutlinedTextField(model.answerText, model::updateAnswer, singleLine = true,
-                label = { Text("Your answer") },
-                textStyle = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { model.submitAnswer() }),
-                modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("answer-input"))
-            Button(onClick = model::submitAnswer, enabled = parseAnswer(model.answerText) != null,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("submit-answer")) { Text("Submit") }
-            model.feedback?.let {
-                val correction = game.attempts.lastOrNull()?.takeIf {
-                    model.verticalEquations && model.showCorrectAnswers && !it.correct
-                }?.problem
-                Text(if (correction == null) it.text else "Not quite:",
-                    color = if (it.correct) CorrectGreen else WrongRed,
-                    style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-                if (correction != null) Equation(correction, correction.answer.toString(), vertical = true,
-                    style = MaterialTheme.typography.titleMedium.copy(color = WrongRed),
-                    modifier = Modifier.testTag("feedback-equation"))
-            }
-        }
+    val statistics: @Composable () -> Unit = {
+        Text("Points: ${game.correct}", style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.testTag("points"))
+        if (model.showTimer || model.activeTimeLimitMs != null) TimerText(model)
+    }
+    val wrongTally: @Composable () -> Unit = {
         Text("Wrong: ${game.wrong}", style = MaterialTheme.typography.titleMedium, color = WrongRed,
             modifier = Modifier.padding(20.dp).testTag("wrong-tally"))
+    }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // In short windows, only Quit stays fixed so the keyboard cannot hide the answer controls.
+        val compact = maxHeight < 400.dp
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                    if (!compact) statistics()
+                }
+                OutlinedButton(onClick = onQuit,
+                    modifier = Modifier.heightIn(min = 48.dp).testTag("quit-game")) { Text("Quit game") }
+            }
+            Column(Modifier.weight(1f).align(Alignment.CenterHorizontally).widthIn(max = 440.dp).fillMaxWidth()
+                .verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+                if (compact) Column(Modifier.align(Alignment.Start)) { statistics() }
+                Text("Question ${game.attempts.size + 1} of ${game.questionCount}",
+                   style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("question-progress"))
+                GameProgress(game.attempts.size, game.questionCount)
+                Equation(game.problem, "?", model.verticalEquations,
+                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center),
+                    modifier = Modifier.testTag("problem"))
+                OutlinedTextField(model.answerText, model::updateAnswer, singleLine = true,
+                    label = { Text("Your answer") },
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(textAlign = TextAlign.Center),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { model.submitAnswer() }),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("answer-input"))
+                Button(onClick = model::submitAnswer, enabled = parseAnswer(model.answerText) != null,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("submit-answer")) { Text("Submit") }
+                model.feedback?.let {
+                    val correction = game.attempts.lastOrNull()?.takeIf {
+                        model.verticalEquations && model.showCorrectAnswers && !it.correct
+                    }?.problem
+                    Text(if (correction == null) it.text else "Not quite:",
+                        color = if (it.correct) CorrectGreen else WrongRed,
+                        style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                    if (correction != null) Equation(correction, correction.answer.toString(), vertical = true,
+                        style = MaterialTheme.typography.titleMedium.copy(color = WrongRed),
+                        modifier = Modifier.testTag("feedback-equation"))
+                }
+                if (compact) Box(Modifier.align(Alignment.Start)) { wrongTally() }
+            }
+            if (!compact) wrongTally()
+        }
     }
 }
 

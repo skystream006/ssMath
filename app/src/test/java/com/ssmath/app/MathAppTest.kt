@@ -3,11 +3,14 @@ package com.ssmath.app
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -17,6 +20,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import java.io.File
 import kotlin.random.Random
@@ -677,6 +681,38 @@ class MathAppTest {
         compose.onNodeWithTag("quit-game").performClick()
         compose.onNodeWithText("Quit", substring = false).performClick()
         compose.onNodeWithTag("home-screen").assertIsDisplayed()
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h480dp")
+    fun quitGameAndAnswerControlsRemainUsableWhenTheKeyboardReducesAvailableHeight() {
+        val model = model()
+        model.chooseTextSize(200)
+        model.chooseShowTimer(true)
+        model.selectOperation(Operation.ADDITION)
+        model.submitSetup()
+        model.start()
+        val availableHeight = mutableIntStateOf(480)
+        compose.setContent {
+            Box(Modifier.height(availableHeight.intValue.dp)) { MathAppContent(model) }
+        }
+        val quit = compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        compose.runOnIdle { availableHeight.intValue = 240 }
+        assertEquals(quit, compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithTag("problem").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("answer-input").performScrollTo().assertIsDisplayed()
+            .performTextReplacement(model.game!!.problem.answer.toString())
+        compose.onNodeWithTag("submit-answer").performScrollTo().assertIsDisplayed().performClick()
+        assertEquals(1, model.game!!.correct)
+        compose.onNodeWithTag("wrong-tally").performScrollTo().assertIsDisplayed()
+        assertEquals(quit, compose.onNodeWithTag("quit-game").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithTag("quit-game").performClick()
+        compose.onNodeWithText("Keep practicing").performClick()
+        assertEquals(Screen.PLAYING, model.screen)
+        compose.runOnIdle { availableHeight.intValue = 480 }
+        compose.onNodeWithTag("points").assertIsDisplayed().assertTextEquals("Points: 1")
+        compose.onNodeWithTag("timer").assertIsDisplayed()
+        compose.onNodeWithTag("quit-game").assertIsDisplayed()
     }
 
     @Test fun textSizeAppliesInsideConfirmationDialogs() {
