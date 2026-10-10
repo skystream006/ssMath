@@ -69,47 +69,78 @@ class GameModesTest {
         shadowOf(Looper.getMainLooper()).idle()
     }
 
-    @Test fun bothModesSelectOneRandomIconPerGameAndKeepItUntilCompletionOrQuit() {
-        var selections = 0
+    @Test fun bothModesChangeIconsOnEveryAnswerWithoutRepeatsOrChangesBetweenJumps() {
+        var starts = 0
+        var jumps = 0
         val random = object : Random() {
             override fun nextBits(bitCount: Int): Int = error("Expected a bounded icon selection")
-            override fun nextInt(until: Int): Int {
-                assertEquals(10, until)
-                return selections++ % until
+            override fun nextInt(until: Int): Int = when (until) {
+                10 -> starts++ % until
+                9 -> jumps++ % until
+                else -> error("Expected all icons at start or all other icons on a jump")
             }
         }
         val model = model(random)
         model.start()
-        assertEquals(0, selections)
+        model.submitAnswer()
+        assertEquals(0, starts)
+        assertEquals(0, jumps)
+
+        fun answerAndCheckIcon(correct: Boolean = true) {
+            val previous = model.progressIcon
+            val candidates = ProgressIcon.entries.filter { it != previous }
+            val expected = candidates[jumps % candidates.size]
+            val before = jumps
+            answer(model, correct)
+            assertEquals(before + 1, jumps)
+            assertNotEquals(previous, model.progressIcon)
+            assertEquals(expected, model.progressIcon)
+            model.submitAnswer()
+            assertEquals(before + 1, jumps)
+            assertEquals(expected, model.progressIcon)
+        }
+
         GameMode.entries.forEach { mode ->
             ProgressIcon.entries.forEach { expected ->
-                val before = selections
+                val beforeStart = starts
+                val beforeJump = jumps
                 if (mode == GameMode.PRACTICE) readyPractice(model, 3) else readyRewards(model, 3)
-                assertEquals(before, selections)
+                assertEquals(beforeStart, starts)
                 model.start()
-                assertEquals(before + 1, selections)
+                assertEquals(beforeStart + 1, starts)
+                assertEquals(beforeJump, jumps)
                 assertEquals(expected, model.progressIcon)
                 model.start()
-                answer(model)
-                answer(model, correct = false)
-                assertEquals(expected, model.progressIcon)
+                answerAndCheckIcon()
+                answerAndCheckIcon(correct = false)
+                val restingIcon = model.progressIcon
+                model.updateAnswer("invalid")
+                model.submitAnswer()
+                model.updateAnswer(model.game!!.problem.answer.toString())
                 model.openSettings()
                 model.start()
+                model.submitAnswer()
                 model.closeOverlay()
                 model.setForeground(false)
+                model.submitAnswer()
                 model.setForeground(true)
-                assertEquals(expected, model.progressIcon)
+                assertEquals(2, model.game!!.attempts.size)
+                assertEquals(beforeJump + 2, jumps)
+                assertEquals(restingIcon, model.progressIcon)
                 if (expected.ordinal % 2 == 0) {
-                    answer(model)
+                    answerAndCheckIcon()
                     assertEquals(Screen.RESULTS, model.screen)
                     model.dismissCelebration()
                     model.done()
                 } else model.backToSetup()
                 assertEquals(Screen.SETUP, model.screen)
-                assertEquals(before + 1, selections)
+                model.submitAnswer()
+                assertEquals(beforeStart + 1, starts)
+                assertEquals(beforeJump + if (expected.ordinal % 2 == 0) 3 else 2, jumps)
             }
         }
-        assertEquals(20, selections)
+        assertEquals(20, starts)
+        assertEquals(50, jumps)
     }
 
     @Test fun dialogsAndReadyBackNavigationAreModeSpecificAndOnlyOpenFromHome() {

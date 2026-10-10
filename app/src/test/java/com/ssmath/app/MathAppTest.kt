@@ -925,20 +925,25 @@ class MathAppTest {
         compose.setContent { MathAppContent(model) }
         val progress = compose.onNodeWithTag("game-progress")
         progress.assertIsDisplayed().assertRangeInfoEquals(ProgressBarRangeInfo(0f, 0f..1f, 2))
-        val icon = model.progressIcon
+        val initialIcon = model.progressIcon
         compose.onNodeWithTag("progress-icon").assertIsDisplayed()
-            .assertContentDescriptionEquals("${icon.label} progress icon")
+            .assertContentDescriptionEquals("${initialIcon.label} progress icon")
         answer(model.game!!.problem.answer)
         progress.assertRangeInfoEquals(ProgressBarRangeInfo(1f / 3, 0f..1f, 2))
+        val firstJumpIcon = model.progressIcon
+        assertNotEquals(initialIcon, firstJumpIcon)
+        compose.onNodeWithTag("progress-icon").assertContentDescriptionEquals("${firstJumpIcon.label} progress icon")
         answer(model.game!!.problem.answer + 1)
+        val secondJumpIcon = model.progressIcon
+        assertNotEquals(firstJumpIcon, secondJumpIcon)
         progress.assertRangeInfoEquals(ProgressBarRangeInfo(2f / 3, 0f..1f, 2))
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "2 of 3 questions answered"))
-        compose.onNodeWithTag("progress-icon").assertContentDescriptionEquals("${icon.label} progress icon")
+        compose.onNodeWithTag("progress-icon").assertContentDescriptionEquals("${secondJumpIcon.label} progress icon")
         compose.runOnIdle { model.openSettings() }
         progress.assertDoesNotExist()
         compose.runOnIdle { model.closeOverlay() }
         progress.assertRangeInfoEquals(ProgressBarRangeInfo(2f / 3, 0f..1f, 2))
-        compose.onNodeWithTag("progress-icon").assertContentDescriptionEquals("${icon.label} progress icon")
+        compose.onNodeWithTag("progress-icon").assertContentDescriptionEquals("${secondJumpIcon.label} progress icon")
         answer(model.game!!.problem.answer)
         progress.assertDoesNotExist()
         compose.runOnIdle { model.dismissCelebration() }
@@ -950,7 +955,7 @@ class MathAppTest {
         compose.onNodeWithTag("progress-icon").assertContentDescriptionEquals("${model.progressIcon.label} progress icon")
     }
 
-    @Test fun everyIconJumpsForwardAndLandsAtTheNextProgressPoint() {
+    @Test fun changingIconsStillJumpForwardAndLandAtTheNextProgressPoint() {
         compose.mainClock.autoAdvance = false
         val completed = mutableIntStateOf(0)
         val selected = mutableStateOf(ProgressIcon.ROCKET)
@@ -958,22 +963,26 @@ class MathAppTest {
         ProgressIcon.entries.forEach { icon ->
             compose.runOnIdle {
                 completed.intValue = 0
-                selected.value = icon
+                selected.value = ProgressIcon.entries[(icon.ordinal + 1) % ProgressIcon.entries.size]
             }
             compose.mainClock.advanceTimeByFrame()
             compose.waitForIdle()
             compose.mainClock.advanceTimeBy(600)
             val jumper = compose.onNodeWithTag("progress-icon")
-                .assertContentDescriptionEquals("${icon.label} progress icon")
             val start = jumper.fetchSemanticsNode().boundsInRoot
-            compose.runOnIdle { completed.intValue = 1 }
+            compose.runOnIdle {
+                completed.intValue = 1
+                selected.value = icon
+            }
             compose.mainClock.advanceTimeByFrame()
             compose.waitForIdle()
             compose.mainClock.advanceTimeBy(250)
+            jumper.assertContentDescriptionEquals("${icon.label} progress icon")
             val jumping = jumper.fetchSemanticsNode().boundsInRoot
             assertTrue("$icon should move forward: $start -> $jumping", jumping.left > start.left)
             assertTrue("$icon should jump up: $start -> $jumping", jumping.top < start.top)
             compose.mainClock.advanceTimeBy(600)
+            jumper.assertContentDescriptionEquals("${icon.label} progress icon")
             val landed = jumper.fetchSemanticsNode().boundsInRoot
             assertTrue(landed.left > jumping.left)
             assertEquals(start.top, landed.top, 1f)
