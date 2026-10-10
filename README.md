@@ -22,8 +22,9 @@ A native Kotlin / Jetpack Compose Android app for practicing math. Android 8.0
    gives only **Other** animations. Once all five Other scenes have been collected,
    practice can repeat them.
    **Rewards Game** opens a dialog with the four math types. Choose one to use its
-   saved parameters, or tap **Setup** to open a screen with number limits and question
-   counts for all four types. **Save defaults** saves all four together; **Back**
+   saved parameters, or tap the **Setup** gear icon in the dialog's upper-right corner
+   to open a screen with number limits and question counts for all four types.
+   **Save defaults** saves all four together; **Back**
    discards unsaved edits. Division's two maximums are independent. Defaults are
    remembered on this device separately from Practice Game choices, and initially
    use your previous setup (or 1–10 and 10 questions on a new install).
