@@ -101,6 +101,8 @@ The semi-transparent (50% opacity) settings button in the bottom-right corner op
   The collection is saved on this device. Each presented celebration is also recorded
   with its practice result, including repeat celebrations; replaying an image does not award it again.
 - **Practice History** – review any previously saved result, delete one, or clear all.
+  Rewards Game entries have a translucent theme-colored background to distinguish
+  them from Practice Game entries, even when no prize was earned.
   Deleting results also removes their claimed reward fragments from the available
   balance, breaking whole prizes back into fragments when necessary. Clearing history
   does this for every deleted result. Balances never go below zero if rewards were

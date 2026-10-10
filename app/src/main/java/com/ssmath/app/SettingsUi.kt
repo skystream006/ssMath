@@ -387,7 +387,10 @@ fun HistoryScreen(model: MathViewModel) {
                                 }
                             },
                             trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            colors = ListItemDefaults.colors(
+                                containerColor = if (result.gameMode == GameMode.REWARDS)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                else Color.Transparent),
                             modifier = Modifier.clickable { model.showHistoryDetail(result) })
                     }
                 }
