@@ -370,6 +370,84 @@ class HistoryStoreTest {
         assertEquals(before, file.readText())
     }
 
+    @Test fun adminRemovalPersistsEachUnitWithoutChangingHistoryCollectionsOrOtherRewards() {
+        RewardType.entries.forEachIndexed { index, type ->
+            repeat(5) {
+                val saved = store.addNewResult(eligible(index * 5 + it + 1L, type))
+                store.claimReward(saved.result.id)
+            }
+        }
+        store.collectPokemon(Celebration.PIKACHU)
+        val original = store.loadSnapshot()
+        RewardType.entries.forEach { type ->
+            val before = store.loadSnapshot()
+            val fragmentRemoved = before.copy(rewards = before.rewards + (type to RewardBalance(1, 1)))
+            assertEquals(fragmentRemoved, store.removeReward(type, fragment = true))
+            assertEquals(fragmentRemoved, HistoryStore(file).loadSnapshot())
+            val wholeRemoved = fragmentRemoved.copy(rewards = fragmentRemoved.rewards + (type to RewardBalance(0, 1)))
+            assertEquals(wholeRemoved, store.removeReward(type, fragment = false))
+            assertEquals(wholeRemoved, HistoryStore(file).loadSnapshot())
+            original.history.forEach {
+                store.add(it.copy(prize = null))
+                store.claimReward(it.id)
+            }
+            assertEquals(wholeRemoved, store.loadSnapshot())
+        }
+        store.delete(original.history.first().id)
+        store.clear()
+        val cleared = HistoryStore(file).loadSnapshot()
+        assertTrue(cleared.rewards.values.all { it == RewardBalance() })
+        assertEquals(original.claimedResultIds, cleared.claimedResultIds)
+        assertEquals(original.pokemons, cleared.pokemons)
+    }
+
+    @Test fun adminRemovalNeverBreaksWholeRewardsOrConsumesTheWrongUnit() {
+        listOf(true, false).forEach {
+            assertEquals(PracticeSnapshot(), store.removeReward(RewardType.LOLLIPOP, fragment = it))
+        }
+        assertFalse(file.exists())
+        repeat(3) {
+            store.add(eligible(it + 1L))
+            store.claimReward(it + 1L)
+        }
+        val wholeOnly = file.readText()
+        store.removeReward(RewardType.LOLLIPOP, fragment = true)
+        store.removeReward(RewardType.VIDEO_GAME, fragment = false)
+        assertEquals(wholeOnly, file.readText())
+        store.removeReward(RewardType.LOLLIPOP, fragment = false)
+        repeat(2) {
+            store.add(eligible(it + 4L))
+            store.claimReward(it + 4L)
+        }
+        val fragmentsOnly = file.readText()
+        store.removeReward(RewardType.LOLLIPOP, fragment = false)
+        assertEquals(fragmentsOnly, file.readText())
+        repeat(4) { store.removeReward(RewardType.LOLLIPOP, fragment = true) }
+        assertEquals(RewardBalance(), HistoryStore(file).loadSnapshot().rewards[RewardType.LOLLIPOP])
+        val empty = file.readText()
+        listOf(true, false).forEach { store.removeReward(RewardType.LOLLIPOP, fragment = it) }
+        assertEquals(empty, file.readText())
+    }
+
+    @Test fun failedAdminRemovalPreservesTheSnapshotAndAllowsRetryForEitherUnit() {
+        repeat(5) {
+            store.add(eligible(it + 1L))
+            store.claimReward(it + 1L)
+        }
+        listOf(true, false).forEach { fragment ->
+            val before = file.readText()
+            val blocked = File(directory, "${file.name}.tmp").apply { mkdir() }
+            assertThrows(IOException::class.java) { store.removeReward(RewardType.LOLLIPOP, fragment) }
+            assertEquals(before, file.readText())
+            assertTrue(blocked.delete())
+            val removed = store.removeReward(RewardType.LOLLIPOP, fragment)
+            assertEquals(removed, HistoryStore(file).loadSnapshot())
+        }
+        assertEquals(RewardBalance(0, 1), store.loadSnapshot().rewards[RewardType.LOLLIPOP])
+        store.add(eligible(6))
+        assertEquals(RewardBalance(0, 2), store.claimReward(6).rewards[RewardType.LOLLIPOP])
+    }
+
     @Test fun failedRewardUseLeavesTheSavedSnapshotUntouchedAndCanBeRetried() {
         repeat(3) {
             store.add(eligible(it + 1L))
@@ -511,6 +589,8 @@ class HistoryStoreTest {
             assertThrows(IOException::class.java) { store.add(result(2)) }
             assertThrows(IOException::class.java) { store.claimReward(1) }
             assertThrows(IOException::class.java) { store.useReward(RewardType.LOLLIPOP) }
+            assertThrows(IOException::class.java) { store.removeReward(RewardType.LOLLIPOP, fragment = true) }
+            assertThrows(IOException::class.java) { store.removeReward(RewardType.LOLLIPOP, fragment = false) }
             assertThrows(IOException::class.java) { store.delete(1) }
             assertThrows(IOException::class.java) { store.clear() }
             assertEquals(text, file.readText())

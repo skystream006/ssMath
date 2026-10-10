@@ -2,6 +2,7 @@ package com.ssmath.app
 
 import android.app.Application
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -163,6 +164,103 @@ class RewardsSettingsTest {
         compose.onNodeWithText("Prize: Video Game Fragment").assertIsDisplayed()
         compose.onNodeWithText("Total collected: 3 fragments").assertIsDisplayed()
         compose.onNodeWithText("1 Video Games · 0/3 fragments").assertIsDisplayed()
+    }
+
+    @Test fun adminCanCancelOrRemoveEitherUnitForEveryRewardWithEarningDisabled() {
+        val file = File(application.filesDir, "practice_history.json")
+        val store = HistoryStore(file)
+        RewardType.entries.forEachIndexed { index, type ->
+            repeat(5) {
+                val result = PracticeResult(index * 5 + it + 1L, index * 5 + it + 1L,
+                    Operation.ADDITION, 10, 1_000,
+                    List(50) { Attempt(Problem(1, 1, Operation.ADDITION), 2) }, prizeType = type)
+                store.add(result)
+                store.claimReward(result.id)
+            }
+        }
+        store.collectPokemon(Celebration.PIKACHU)
+        val before = store.loadSnapshot()
+        val model = MathViewModel(application, ioDispatcher = Dispatchers.Main.immediate)
+        model.chooseRewardsEnabled(false)
+        RewardType.entries.forEach { model.chooseRewardEnabled(it, false) }
+        model.openSettings()
+        compose.setContent { MathAppContent(model) }
+        compose.onNodeWithText("Remove rewards").assertDoesNotExist()
+        compose.onNodeWithText("Debug logging").performScrollTo().performClick()
+        val description = compose.onNodeWithTag("debug-logging-description").performScrollTo()
+        repeat(7) { description.performClick() }
+        compose.onNodeWithText("Remove rewards").performScrollTo().performClick()
+        RewardTier.entries.forEach { tier ->
+            compose.onNodeWithText(tier.label).performScrollTo().assertIsDisplayed()
+            RewardType.entries.filter { it.tier == tier }.forEach { type ->
+                compose.onNodeWithContentDescription("Remove 1 ${type.label} fragment")
+                    .performScrollTo().performClick()
+                compose.onNodeWithText("Permanently remove 1 ${type.label} fragment?").assertIsDisplayed()
+                compose.onNodeWithText("Cancel").performClick()
+                assertEquals(RewardBalance(1, 2), model.rewardBalances[type])
+                compose.onNodeWithContentDescription("Remove 1 ${type.label} fragment")
+                    .performScrollTo().performClick()
+                compose.onNodeWithText("Remove").performClick()
+                assertEquals(RewardBalance(1, 1), model.rewardBalances[type])
+                compose.onNodeWithContentDescription("Remove 1 whole ${type.label} reward")
+                    .performScrollTo().performClick()
+                compose.onNodeWithText("Permanently remove 1 whole ${type.label} reward?").assertIsDisplayed()
+                compose.onNodeWithText("Remove").performClick()
+                compose.onNodeWithContentDescription("Remove 1 whole ${type.label} reward")
+                    .performScrollTo().assertIsNotEnabled()
+                compose.onNodeWithTag("remove-reward-${type.name}").onChildren()
+                    .filterToOne(hasText("Whole: 0 · Fragments: 1/3")).assertExists()
+                assertEquals(RewardBalance(0, 1), model.rewardBalances[type])
+            }
+        }
+        assertEquals(before.copy(rewards = model.rewardBalances), HistoryStore(file).loadSnapshot())
+        compose.onNodeWithText("Back to admin").performClick()
+        compose.onNodeWithText("Admin").assertIsDisplayed()
+        compose.onNodeWithText("Close").performClick()
+        assertEquals(Overlay.SETTINGS, model.overlay)
+        assertFalse(DebugLog.enabled.value)
+        assertFalse(model.rewardsEnabled)
+        assertEquals(RewardType.entries.toSet(), model.disabledRewards)
+    }
+
+    @Test fun emptyRemovalInventoryDisablesBothUnitsForEveryReward() {
+        compose.setContent {
+            MathTheme {
+                RemoveRewardsDialog(emptyMap(), false, null, { _, _ -> fail("Nothing can be removed") }, {})
+            }
+        }
+        compose.onNodeWithText("No rewards or fragments available.").assertIsDisplayed()
+        RewardType.entries.forEach { type ->
+            compose.onNodeWithContentDescription("Remove 1 ${type.label} fragment")
+                .performScrollTo().assertIsNotEnabled()
+            compose.onNodeWithContentDescription("Remove 1 whole ${type.label} reward")
+                .performScrollTo().assertIsNotEnabled()
+        }
+    }
+
+    @Test fun removalShowsSaveErrorsAllowsRetryAndDisablesControlsWhileSaving() {
+        val saving = mutableStateOf(false)
+        val error = mutableStateOf<String?>(null)
+        var requests = 0
+        compose.setContent {
+            MathTheme {
+                RemoveRewardsDialog(mapOf(RewardType.LOLLIPOP to RewardBalance(1, 1)), saving.value, error.value,
+                    { _, _ -> requests++; saving.value = true; error.value = null }, {})
+            }
+        }
+        compose.onNodeWithContentDescription("Remove 1 Lollipop fragment").performScrollTo().performClick()
+        compose.onNodeWithText("Remove").performClick()
+        compose.onNodeWithText("Removing reward…").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Remove 1 Lollipop fragment").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Remove 1 whole Lollipop reward").performScrollTo().assertIsNotEnabled()
+        compose.runOnIdle {
+            saving.value = false
+            error.value = "Unable to remove this reward. Free device storage and try again."
+        }
+        compose.onNodeWithText(error.value!!).assertIsDisplayed()
+        compose.onNodeWithContentDescription("Remove 1 Lollipop fragment").performScrollTo().performClick()
+        compose.onNodeWithText("Remove").performClick()
+        compose.runOnIdle { assertEquals(2, requests) }
     }
 
     @Test fun giftFollowsCelebrationAndUnopenedPrizeCanBeClaimedFromHistory() {
