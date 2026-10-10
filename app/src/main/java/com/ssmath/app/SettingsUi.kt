@@ -130,6 +130,15 @@ fun SettingsScreen(model: MathViewModel) {
             }
             HorizontalDivider()
             Text("Appearance", style = MaterialTheme.typography.titleMedium)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Vertical equations")
+                    Text("Stack numbers with ones, tens, and hundreds aligned in practice, results, and history",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(model.verticalEquations, model::chooseVerticalEquations,
+                    modifier = Modifier.semantics { contentDescription = "Vertical equations" })
+            }
             Column {
                 Text("Text size: ${model.textSizePercent}%")
                 Text("Adjust text throughout the app", style = MaterialTheme.typography.bodySmall,
@@ -336,7 +345,8 @@ fun HistoryScreen(model: MathViewModel) {
         ScreenScaffold("Practice result", model::closeOverlay, actions = {
             IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Rounded.Delete, contentDescription = "Delete result") }
         }) {
-            ResultsContent(detail, title = null, showCorrectAnswers = model.showCorrectAnswers) {
+            ResultsContent(detail, title = null, showCorrectAnswers = model.showCorrectAnswers,
+                verticalEquations = model.verticalEquations) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (detail.prizeType != null && detail.prize == null) {
                         Button(onClick = { model.showRewardForResult(detail) }) { Text("Open gift box") }

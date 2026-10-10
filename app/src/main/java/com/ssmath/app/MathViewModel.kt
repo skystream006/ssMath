@@ -107,6 +107,8 @@ class MathViewModel(
         private set
     var showCorrectAnswers by mutableStateOf(settings.getBoolean("show_correct_answers", false))
         private set
+    var verticalEquations by mutableStateOf(settings.getBoolean("vertical_equations", false))
+        private set
     var textSizePercent by mutableStateOf(settings.getInt("text_size_percent", DEFAULT_TEXT_SIZE_PERCENT)
         .coerceIn(MIN_TEXT_SIZE_PERCENT, MAX_TEXT_SIZE_PERCENT))
         private set
@@ -597,6 +599,11 @@ class MathViewModel(
     fun chooseShowCorrectAnswers(value: Boolean) {
         showCorrectAnswers = value
         settings.edit().putBoolean("show_correct_answers", value).apply()
+    }
+
+    fun chooseVerticalEquations(value: Boolean) {
+        verticalEquations = value
+        settings.edit().putBoolean("vertical_equations", value).apply()
     }
 
     fun chooseTextSize(value: Int) {
