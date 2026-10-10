@@ -107,6 +107,10 @@ class MathViewModel(
         private set
     var rewardUseError by mutableStateOf<String?>(null)
         private set
+    var removingReward by mutableStateOf(false)
+        private set
+    var rewardRemovalError by mutableStateOf<String?>(null)
+        private set
     var message by mutableStateOf<String?>(null)
         private set
 
@@ -513,6 +517,7 @@ class MathViewModel(
 
     fun openSettings() {
         dismissOverlayReward()
+        rewardRemovalError = null
         overlay = Overlay.SETTINGS
         updateTimer()
     }
@@ -631,6 +636,28 @@ class MathViewModel(
                 rewardUseError = "Unable to use this reward. Free device storage and try again."
             } finally {
                 usingReward = false
+            }
+        }
+    }
+
+    fun removeReward(type: RewardType, fragment: Boolean) {
+        val balance = rewardBalances[type] ?: return
+        if (removingReward || overlay != Overlay.SETTINGS ||
+            (if (fragment) balance.fragments else balance.whole) == 0) return
+        removingReward = true
+        rewardRemovalError = null
+        viewModelScope.launch {
+            try {
+                storeLock.withLock {
+                    applySnapshot(withContext(ioDispatcher) { store.removeReward(type, fragment) })
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                DebugLog.event(DebugEvent.HISTORY_FAILURE, error = error)
+                rewardRemovalError = "Unable to remove this reward. Free device storage and try again."
+            } finally {
+                removingReward = false
             }
         }
     }

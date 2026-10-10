@@ -131,12 +131,20 @@ class HistoryStore(private val file: File) {
         ))
     }
 
-    fun useReward(type: RewardType): PracticeSnapshot {
+    fun useReward(type: RewardType): PracticeSnapshot = removeReward(type, fragment = false)
+
+    fun removeReward(type: RewardType, fragment: Boolean): PracticeSnapshot {
         val snapshot = loadSnapshot()
         val balance = snapshot.rewards[type] ?: return snapshot
-        if (balance.whole == 0) return snapshot
+        val remaining = if (fragment) {
+            if (balance.fragments == 0) return snapshot
+            balance.copy(fragments = balance.fragments - 1)
+        } else {
+            if (balance.whole == 0) return snapshot
+            balance.copy(whole = balance.whole - 1)
+        }
         return save(snapshot.copy(
-            rewards = snapshot.rewards + (type to balance.copy(whole = balance.whole - 1))
+            rewards = snapshot.rewards + (type to remaining)
         ))
     }
 
