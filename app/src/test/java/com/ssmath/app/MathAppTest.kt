@@ -1,6 +1,9 @@
 package com.ssmath.app
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
 import androidx.compose.foundation.background
@@ -16,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsActions
@@ -398,7 +400,15 @@ class MathAppTest {
             results.forEach { result ->
                 val row = compose.onNode(hasText("${result.operation.label} · 1 to 10") and hasClickAction())
                     .assertIsDisplayed()
-                val actual = row.captureToImage().toPixelMap()[1, 1]
+                val bounds = row.fetchSemanticsNode().boundsInRoot
+                val actual = compose.runOnIdle {
+                    val view = compose.activity.findViewById<View>(android.R.id.content)
+                    val image = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+                    view.draw(Canvas(image))
+                    Color(image.getPixel(bounds.left.toInt() + 1, bounds.top.toInt() + 1)).also {
+                        image.recycle()
+                    }
+                }
                 val expected = if (result.gameMode == GameMode.REWARDS) rewardsBackground else background
                 val message = "${result.gameMode} in ${appearances[index]}"
                 assertEquals(message, expected.red, actual.red, 0.01f)
